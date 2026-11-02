@@ -1,0 +1,15 @@
+{
+  "name": "golden-hour-casino",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A multiplayer casino lounge with play chips, roulette, and blackjack.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
