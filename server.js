@@ -55,6 +55,14 @@ function addChips(room, player, amount) {
   setChips(room, player, chipsFor(room, player) + amount);
 }
 
+function claimDailyGlobalBonus(player) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (player.lastGlobalRewardDate === today) return false;
+  player.lastGlobalRewardDate = today;
+  player.chips += 3000;
+  return true;
+}
+
 function allRoomPlayersReady(roomCode, readyIds) {
   const room = rooms.get(roomCode);
   const members = connectedRoomPlayers(roomCode);
@@ -124,7 +132,11 @@ function refundRoomEntries(player, room) {
 function savePlayers() {
   fs.mkdirSync(dataDirectory, { recursive: true });
   for (const player of players.values()) {
-    savedPlayers[player.id] = { name: player.name, chips: player.chips };
+    savedPlayers[player.id] = {
+      name: player.name,
+      chips: player.chips,
+      lastGlobalRewardDate: player.lastGlobalRewardDate,
+    };
   }
   const temporaryFile = `${playersFile}.tmp`;
   fs.writeFileSync(temporaryFile, JSON.stringify(savedPlayers, null, 2));
@@ -445,6 +457,9 @@ function handleMessage(socket, message) {
         chips: saved && Number.isSafeInteger(saved.chips) && saved.chips >= 0
           ? saved.chips
           : 1000,
+        lastGlobalRewardDate: typeof saved?.lastGlobalRewardDate === "string"
+          ? saved.lastGlobalRewardDate
+          : null,
         roomCode: requestedRoom,
         connected: false,
         sockets: new Set(),
@@ -468,6 +483,8 @@ function handleMessage(socket, message) {
     player.connected = true;
     player.sockets.add(socket);
     const registeredRoom = rooms.get(requestedRoom);
+    const earnedDailyBonus =
+      !registeredRoom.isPrivate && claimDailyGlobalBonus(player);
     if (registeredRoom.isPrivate && !registeredRoom.bankrolls.has(player.id)) {
       registeredRoom.bankrolls.set(player.id, 1000);
     }
@@ -492,6 +509,9 @@ function handleMessage(socket, message) {
       }
     }
     broadcast();
+    if (earnedDailyBonus && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "daily-global-bonus", amount: 3000 }));
+    }
     return;
   }
 
@@ -524,6 +544,7 @@ function handleMessage(socket, message) {
         return sendError(socket, "That private room has ended. Ask the host to start a new game.");
       }
     }
+    let earnedDailyBonus = false;
     if (currentRoom.code !== targetCode) {
       refundRoomEntries(player, currentRoom);
       if (currentRoom.isPrivate) currentRoom.bankrolls.delete(player.id);
@@ -534,6 +555,8 @@ function handleMessage(socket, message) {
       currentRoom.replayVotes.delete(player.id);
       player.roomCode = targetCode;
       const targetRoom = rooms.get(targetCode);
+      earnedDailyBonus =
+        !targetRoom.isPrivate && claimDailyGlobalBonus(player);
       if (targetRoom.isPrivate && !targetRoom.ownerId) targetRoom.ownerId = player.id;
       if (targetRoom.isPrivate && !targetRoom.bankrolls.has(player.id)) {
         targetRoom.bankrolls.set(player.id, 1000);
@@ -549,6 +572,9 @@ function handleMessage(socket, message) {
       savePlayers();
     }
     broadcast();
+    if (earnedDailyBonus && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "daily-global-bonus", amount: 3000 }));
+    }
     return;
   }
 
