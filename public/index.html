@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111311">
+    <meta name="description" content="A live multiplayer casino lounge. Play roulette and blackjack with friends using free chips.">
+    <title>Golden Hour — Casino Lounge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <main id="auth-screen" class="auth-screen" aria-live="polite"></main>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#" aria-label="Golden Hour home">
+          <span class="brand-mark">G<span>H</span></span>
+          <span class="brand-name">GOLDEN HOUR<small>THE SOCIAL CASINO</small></span>
+        </a>
+        <div class="side-label">YOUR LOUNGE</div>
+        <nav class="navigation" aria-label="Main navigation">
+          <button class="nav-link active" data-view="lobby"><span class="nav-icon">⌂</span> Lobby</button>
+          <button class="nav-link" data-view="roulette"><span class="nav-icon">◉</span> Roulette <span class="nav-dot"></span></button>
+          <button class="nav-link" data-view="blackjack"><span class="nav-icon">♠</span> Blackjack <span class="nav-dot"></span></button>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="play-note"><span class="note-icon">✳</span><p><strong>Just for fun</strong><br>Chips have no real-world value.</p></div>
+          <div class="profile">
+            <div class="avatar" id="avatar">G</div>
+            <div class="profile-copy"><strong id="profile-name">Guest</strong><small>LOUNGE MEMBER</small></div>
+            <button class="edit-name" id="edit-name" aria-label="Edit display name" title="Edit display name">✎</button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="mobile-brand"><span class="brand-mark">G<span>H</span></span> GOLDEN HOUR</div>
+          <div class="breadcrumb"><span>THE LOUNGE</span><span class="crumb-slash">/</span><strong id="crumb-current">OVERVIEW</strong></div>
+          <div class="topbar-right">
+            <div class="online-count"><span class="online-pulse"></span><strong id="online-count">0</strong> online</div>
+            <div class="wallet"><span class="chip-icon">✳</span><span id="chip-count">1,000</span><small>CHIPS</small></div>
+            <button class="logout-button" id="logout" type="button">Log out</button>
+          </div>
+        </header>
+        <section id="content" class="page-content" aria-live="polite"></section>
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      </main>
+    </div>
+    <script src="/client.js" defer></script>
+  </body>
+</html>
