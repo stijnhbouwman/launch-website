@@ -24,6 +24,7 @@ function createRoom(code, isPrivate, ownerId = null) {
     code,
     isPrivate,
     ownerId,
+    selectedGame: null,
     roulette: { bets: [], lastResult: null, history: [], spinning: false },
     slots: { history: [] },
     horseRace: { phase: "waiting", bets: [], winner: null, history: [] },
@@ -251,6 +252,7 @@ function snapshot(roomCode) {
       code: room.code,
       isPrivate: room.isPrivate,
       ownerId: room.ownerId,
+      selectedGame: room.selectedGame,
       members: connectedRoomPlayers(roomCode).map(({ id, name }) => ({ id, name })),
     },
     roulette: {
@@ -461,6 +463,38 @@ function handleMessage(socket, message) {
     return;
   }
 
+  if (message.type === "select-game") {
+    const availableGames = ["roulette", "blackjack", "slots", "horses", "poker"];
+    if (!room.isPrivate || !availableGames.includes(message.game)) {
+      return sendError(socket, "Choose a valid game for a private room.");
+    }
+    if (room.selectedGame && room.selectedGame !== message.game) {
+      return sendError(socket, `This room is locked to ${room.selectedGame}.`);
+    }
+    room.selectedGame = message.game;
+    broadcast();
+    return;
+  }
+
+  const gameByMessageType = {
+    "roulette-bet": "roulette",
+    "roulette-spin": "roulette",
+    "slots-spin": "slots",
+    "horse-bet": "horses",
+    "horse-start": "horses",
+    "join-poker": "poker",
+    "start-poker": "poker",
+    "join-blackjack": "blackjack",
+    "start-blackjack": "blackjack",
+    "blackjack-action": "blackjack",
+  };
+  const requestedGame = gameByMessageType[message.type];
+  if (room.isPrivate && requestedGame && room.selectedGame !== requestedGame) {
+    return sendError(socket, room.selectedGame
+      ? `This room is locked to ${room.selectedGame}.`
+      : "Choose the room's game before playing.");
+  }
+
   if (message.type === "set-name") {
     const name = safeName(message.name);
     if (!name) {
@@ -525,7 +559,7 @@ function handleMessage(socket, message) {
     if (roulette.spinning) return sendError(socket, "The wheel is already spinning.");
     if (roulette.bets.length === 0) return sendError(socket, "Place a bet before the spin.");
     const readyIds = new Set(roulette.bets.map((bet) => bet.playerId));
-    if (!allRoomPlayersReady(room.code, readyIds)) {
+    if (room.isPrivate && !allRoomPlayersReady(room.code, readyIds)) {
       return sendError(socket, "Wait until everyone in the room has placed a roulette bet.");
     }
     if (room.isPrivate && room.ownerId !== player.id) {
@@ -621,7 +655,7 @@ function handleMessage(socket, message) {
       return sendError(socket, "Place a bet before starting the race.");
     }
     const readyIds = new Set(horseRace.bets.map((bet) => bet.playerId));
-    if (!allRoomPlayersReady(room.code, readyIds)) {
+    if (room.isPrivate && !allRoomPlayersReady(room.code, readyIds)) {
       return sendError(socket, "Wait until everyone in the room has placed a horse bet.");
     }
     if (room.isPrivate && room.ownerId !== player.id) {
@@ -684,7 +718,7 @@ function handleMessage(socket, message) {
       return sendError(socket, "At least two players must join before the poker showdown.");
     }
     const readyIds = new Set(poker.players.map((seat) => seat.id));
-    if (!allRoomPlayersReady(room.code, readyIds)) {
+    if (room.isPrivate && !allRoomPlayersReady(room.code, readyIds)) {
       return sendError(socket, "Wait until everyone in the room has joined the poker round.");
     }
     if (room.isPrivate && room.ownerId !== player.id) {
@@ -766,7 +800,7 @@ function handleMessage(socket, message) {
       return sendError(socket, "Join the table before starting a round.");
     }
     const readyIds = new Set(blackjack.players.map((seat) => seat.id));
-    if (!allRoomPlayersReady(room.code, readyIds)) {
+    if (room.isPrivate && !allRoomPlayersReady(room.code, readyIds)) {
       return sendError(socket, "Wait until everyone in the room has placed a blackjack bet.");
     }
     if (room.isPrivate && room.ownerId !== player.id) {
