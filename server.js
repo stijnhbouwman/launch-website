@@ -25,6 +25,9 @@ function createRoom(code, isPrivate, ownerId = null) {
     isPrivate,
     ownerId,
     selectedGame: null,
+    bankrolls: new Map(),
+    ended: false,
+    replayVotes: new Set(),
     roulette: { bets: [], lastResult: null, history: [], spinning: false },
     slots: { history: [] },
     horseRace: { phase: "waiting", bets: [], winner: null, history: [] },
@@ -39,9 +42,26 @@ function connectedRoomPlayers(roomCode) {
   return [...players.values()].filter((player) => player.connected && player.roomCode === roomCode);
 }
 
+function chipsFor(room, player) {
+  return room.isPrivate ? room.bankrolls.get(player.id) ?? 1000 : player.chips;
+}
+
+function setChips(room, player, amount) {
+  if (room.isPrivate) room.bankrolls.set(player.id, amount);
+  else player.chips = amount;
+}
+
+function addChips(room, player, amount) {
+  setChips(room, player, chipsFor(room, player) + amount);
+}
+
 function allRoomPlayersReady(roomCode, readyIds) {
+  const room = rooms.get(roomCode);
   const members = connectedRoomPlayers(roomCode);
-  return members.length > 0 && members.every((player) => readyIds.has(player.id));
+  const playersWithChips = room
+    ? members.filter((player) => chipsFor(room, player) > 0 || readyIds.has(player.id))
+    : members;
+  return playersWithChips.length > 0 && playersWithChips.every((player) => readyIds.has(player.id));
 }
 
 function roomHasRunningGame(room) {
@@ -51,9 +71,35 @@ function roomHasRunningGame(room) {
     room.poker.phase === "playing";
 }
 
+function endRoomIfBroke(room) {
+  if (
+    !room.isPrivate ||
+    room.ended ||
+    roomHasRunningGame(room) ||
+    room.roulette.bets.length > 0 ||
+    room.horseRace.bets.length > 0 ||
+    (room.blackjack.phase !== "done" && room.blackjack.players.length > 0) ||
+    (room.poker.phase !== "done" && room.poker.players.length > 0)
+  ) return false;
+  const balances = [...room.bankrolls.values()];
+  if (balances.length === 0 || balances.some((balance) => balance > 0)) return false;
+  room.ended = true;
+  room.replayVotes.clear();
+  return true;
+}
+
+function replayPrivateRoom(room) {
+  const nextRoom = createRoom(room.code, true, room.ownerId);
+  nextRoom.selectedGame = room.selectedGame;
+  for (const player of connectedRoomPlayers(room.code)) {
+    nextRoom.bankrolls.set(player.id, 1000);
+  }
+  rooms.set(room.code, nextRoom);
+}
+
 function refundRoomEntries(player, room) {
   const refund = (amount) => {
-    if (Number.isSafeInteger(amount) && amount > 0) player.chips += amount;
+    if (Number.isSafeInteger(amount) && amount > 0) addChips(room, player, amount);
   };
   for (const bet of room.roulette.bets.filter((item) => item.playerId === player.id)) {
     refund(bet.amount);
@@ -208,22 +254,22 @@ function finishBlackjack(room) {
       seat.result = "Bust";
       seat.status = "bust";
     } else if (natural && !dealerNatural) {
-      player.chips += Math.floor(seat.bet * 2.5);
+      addChips(room, player, Math.floor(seat.bet * 2.5));
       seat.result = "Blackjack!";
       seat.status = "done";
     } else if (dealerNatural && natural) {
-      player.chips += seat.bet;
+      addChips(room, player, seat.bet);
       seat.result = "Push";
       seat.status = "done";
     } else if (dealerNatural) {
       seat.result = "Dealer blackjack";
       seat.status = "done";
     } else if (dealerBust || playerScore > dealerScore) {
-      player.chips += seat.bet * 2;
+      addChips(room, player, seat.bet * 2);
       seat.result = "Win";
       seat.status = "done";
     } else if (playerScore === dealerScore) {
-      player.chips += seat.bet;
+      addChips(room, player, seat.bet);
       seat.result = "Push";
       seat.status = "done";
     } else {
@@ -234,6 +280,7 @@ function finishBlackjack(room) {
   blackjack.phase = "done";
   blackjack.turnIndex = -1;
   savePlayers();
+  endRoomIfBroke(room);
 }
 
 function snapshot(roomCode) {
@@ -247,13 +294,23 @@ function snapshot(roomCode) {
   return {
     players: [...players.values()]
       .filter((player) => player.connected && player.roomCode === roomCode)
-      .map(({ id, name, chips }) => ({ id, name, chips })),
+      .map((player) => ({
+        id: player.id,
+        name: player.name,
+        chips: chipsFor(room, player),
+      })),
     room: {
       code: room.code,
       isPrivate: room.isPrivate,
       ownerId: room.ownerId,
       selectedGame: room.selectedGame,
-      members: connectedRoomPlayers(roomCode).map(({ id, name }) => ({ id, name })),
+      ended: room.ended,
+      replayVotes: [...room.replayVotes],
+      members: connectedRoomPlayers(roomCode).map((player) => ({
+        id: player.id,
+        name: player.name,
+        chips: chipsFor(room, player),
+      })),
     },
     roulette: {
       bets: roulette.bets.map(({ playerId, name, selection, amount }) => ({
@@ -363,6 +420,13 @@ function handleMessage(socket, message) {
       sendError(socket, "That private room does not exist. Check the invite link or code.");
       return;
     }
+    if (
+      rooms.get(requestedRoom).ended &&
+      players.get(message.id)?.roomCode !== requestedRoom
+    ) {
+      sendError(socket, "That private room has ended. Ask the host to start a new game.");
+      return;
+    }
     const nameTaken = [...players.values()].some(
       (candidate) =>
         candidate.id !== message.id &&
@@ -395,20 +459,36 @@ function handleMessage(socket, message) {
         sendError(socket, "Finish the current round before changing rooms.");
         return;
       }
-      if (previousRoom) refundRoomEntries(player, previousRoom);
+      if (previousRoom) {
+        refundRoomEntries(player, previousRoom);
+        if (previousRoom.isPrivate) previousRoom.bankrolls.delete(player.id);
+      }
     }
     player.roomCode = requestedRoom;
     player.name = name;
     player.connected = true;
     player.sockets.add(socket);
+    const registeredRoom = rooms.get(requestedRoom);
+    if (registeredRoom.isPrivate && !registeredRoom.bankrolls.has(player.id)) {
+      registeredRoom.bankrolls.set(player.id, 1000);
+    }
     socket.playerId = player.id;
     savePlayers();
     if (previousRoomCode && previousRoomCode !== requestedRoom) {
       const previousRoom = rooms.get(previousRoomCode);
       if (previousRoom) {
+        previousRoom.replayVotes.delete(player.id);
         if (previousRoom.ownerId === player.id) {
           previousRoom.ownerId = connectedRoomPlayers(previousRoomCode)
             .find((member) => member.id !== player.id)?.id ?? null;
+        }
+        const remainingMembers = connectedRoomPlayers(previousRoomCode);
+        if (
+          previousRoom.ended &&
+          remainingMembers.length > 0 &&
+          remainingMembers.every((member) => previousRoom.replayVotes.has(member.id))
+        ) {
+          replayPrivateRoom(previousRoom);
         }
       }
     }
@@ -441,16 +521,32 @@ function handleMessage(socket, message) {
       if (!rooms.has(targetCode)) {
         return sendError(socket, "That private room does not exist. Check the code.");
       }
+      if (rooms.get(targetCode).ended && targetCode !== player.roomCode) {
+        return sendError(socket, "That private room has ended. Ask the host to start a new game.");
+      }
     }
     if (currentRoom.code !== targetCode) {
       refundRoomEntries(player, currentRoom);
+      if (currentRoom.isPrivate) currentRoom.bankrolls.delete(player.id);
       if (currentRoom.ownerId === player.id) {
         currentRoom.ownerId = connectedRoomPlayers(currentRoom.code)
           .find((member) => member.id !== player.id)?.id ?? null;
       }
+      currentRoom.replayVotes.delete(player.id);
       player.roomCode = targetCode;
       const targetRoom = rooms.get(targetCode);
       if (targetRoom.isPrivate && !targetRoom.ownerId) targetRoom.ownerId = player.id;
+      if (targetRoom.isPrivate && !targetRoom.bankrolls.has(player.id)) {
+        targetRoom.bankrolls.set(player.id, 1000);
+      }
+      const remainingMembers = connectedRoomPlayers(currentRoom.code);
+      if (
+        currentRoom.ended &&
+        remainingMembers.length > 0 &&
+        remainingMembers.every((member) => currentRoom.replayVotes.has(member.id))
+      ) {
+        replayPrivateRoom(currentRoom);
+      }
       savePlayers();
     }
     broadcast();
@@ -461,6 +557,23 @@ function handleMessage(socket, message) {
   if (!room) {
     sendError(socket, "Your game room is unavailable. Rejoin the global room.");
     return;
+  }
+
+  if (message.type === "replay-room") {
+    if (!room.isPrivate || !room.ended) {
+      return sendError(socket, "This private room has not ended.");
+    }
+    room.replayVotes.add(player.id);
+    const members = connectedRoomPlayers(room.code);
+    if (members.length > 0 && members.every((member) => room.replayVotes.has(member.id))) {
+      replayPrivateRoom(room);
+    }
+    broadcast();
+    return;
+  }
+
+  if (room.ended && message.type !== "set-name") {
+    return sendError(socket, "This private room has ended. Choose play again or leave the room.");
   }
 
   if (message.type === "select-game") {
@@ -539,10 +652,10 @@ function handleMessage(socket, message) {
     if (!/^(red|black|[0-9]|[12][0-9]|3[0-6])$/.test(selection)) {
       return sendError(socket, "Choose red, black, or a number from 0 to 36.");
     }
-    if (!validAmount(message.amount) || message.amount > player.chips) {
+    if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
       return sendError(socket, "That bet is not available in your chip balance.");
     }
-    player.chips -= message.amount;
+    setChips(room, player, chipsFor(room, player) - message.amount);
     roulette.bets.push({
       playerId: player.id,
       name: player.name,
@@ -580,9 +693,9 @@ function handleMessage(socket, message) {
         if (winner) {
           const winnerPlayer = players.get(bet.playerId);
           if (winnerPlayer) {
-            winnerPlayer.chips += /^\d+$/.test(bet.selection)
+            addChips(room, winnerPlayer, /^\d+$/.test(bet.selection)
               ? bet.amount * 36
-              : bet.amount * 2;
+              : bet.amount * 2);
           }
         }
       }
@@ -591,6 +704,7 @@ function handleMessage(socket, message) {
       currentRoulette.history = currentRoulette.history.slice(0, 12);
       currentRoulette.bets = [];
       currentRoulette.spinning = false;
+      endRoomIfBroke(room);
       savePlayers();
       broadcast();
     }, 2500);
@@ -598,10 +712,10 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "slots-spin") {
-    if (!validAmount(message.amount) || message.amount > player.chips) {
+    if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
       return sendError(socket, "Choose a slot wager between 1 and 500 chips within your balance.");
     }
-    player.chips -= message.amount;
+    setChips(room, player, chipsFor(room, player) - message.amount);
     const symbols = Array.from({ length: 3 }, () => slotSymbols[randomInt(slotSymbols.length)]);
     const same = symbols[0] === symbols[1] && symbols[1] === symbols[2];
     const pair = symbols.some((symbol, index) => symbols.indexOf(symbol) !== index);
@@ -609,7 +723,7 @@ function handleMessage(socket, message) {
       ? symbols[0] === "7" ? 20 : 8
       : pair ? 2 : 0;
     const payout = message.amount * multiplier;
-    player.chips += payout;
+    addChips(room, player, payout);
     room.slots.history.unshift({
       playerId: player.id,
       name: player.name,
@@ -618,6 +732,7 @@ function handleMessage(socket, message) {
       payout,
     });
     room.slots.history = room.slots.history.slice(0, 12);
+    endRoomIfBroke(room);
     savePlayers();
     broadcast();
     return;
@@ -634,10 +749,10 @@ function handleMessage(socket, message) {
     if (horseRace.bets.some((bet) => bet.playerId === player.id)) {
       return sendError(socket, "You have already placed your bet for this race.");
     }
-    if (!validAmount(message.amount) || message.amount > player.chips) {
+    if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
       return sendError(socket, "Choose a horse bet between 1 and 500 chips within your balance.");
     }
-    player.chips -= message.amount;
+    setChips(room, player, chipsFor(room, player) - message.amount);
     horseRace.bets.push({
       playerId: player.id,
       name: player.name,
@@ -670,7 +785,7 @@ function handleMessage(socket, message) {
       for (const bet of currentRace.bets) {
         if (bet.horse === winner) {
           const winnerPlayer = players.get(bet.playerId);
-          if (winnerPlayer) winnerPlayer.chips += bet.amount * 3;
+          if (winnerPlayer) addChips(room, winnerPlayer, bet.amount * 3);
         }
       }
       currentRace.winner = winner;
@@ -678,6 +793,7 @@ function handleMessage(socket, message) {
       currentRace.history = currentRace.history.slice(0, 8);
       currentRace.bets = [];
       currentRace.phase = "waiting";
+      endRoomIfBroke(room);
       savePlayers();
       broadcast();
     }, 4200);
@@ -689,7 +805,7 @@ function handleMessage(socket, message) {
     if (poker.phase === "playing") {
       return sendError(socket, "Wait for the current poker showdown to finish.");
     }
-    if (!validAmount(message.amount) || message.amount > player.chips) {
+    if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
       return sendError(socket, "Choose a poker buy-in between 1 and 500 chips within your balance.");
     }
     if (poker.phase === "done") {
@@ -699,7 +815,7 @@ function handleMessage(socket, message) {
     if (poker.players.some((seat) => seat.id === player.id)) {
       return sendError(socket, "You are already at this poker table.");
     }
-    player.chips -= message.amount;
+    setChips(room, player, chipsFor(room, player) - message.amount);
     poker.players.push({
       id: player.id,
       name: player.name,
@@ -751,7 +867,7 @@ function handleMessage(socket, message) {
         const won = winnerIndex >= 0;
         const payout = won ? share + (remainder-- > 0 ? 1 : 0) : 0;
         const winningPlayer = players.get(candidate.seat.id);
-        if (winningPlayer && won) winningPlayer.chips += payout;
+        if (winningPlayer && won) addChips(room, winningPlayer, payout);
         candidate.seat.result = won
           ? `${candidate.hand.name} · won ${payout} chips`
           : candidate.hand.name;
@@ -762,6 +878,7 @@ function handleMessage(socket, message) {
         pot,
       };
       poker.phase = "done";
+      endRoomIfBroke(room);
       savePlayers();
       broadcast();
     }, 2500);
@@ -773,14 +890,14 @@ function handleMessage(socket, message) {
     if (blackjack.phase === "playing") {
       return sendError(socket, "Wait for the current blackjack round to finish.");
     }
-    if (!validAmount(message.amount) || message.amount > player.chips) {
+    if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
       return sendError(socket, "Choose a bet between 1 and 500 chips within your balance.");
     }
     if (blackjack.phase === "done") resetBlackjack(room);
     if (blackjack.players.some((seat) => seat.id === player.id)) {
       return sendError(socket, "You are already at this blackjack table.");
     }
-    player.chips -= message.amount;
+    setChips(room, player, chipsFor(room, player) - message.amount);
     blackjack.players.push({
       id: player.id,
       name: player.name,
@@ -944,6 +1061,16 @@ webSocketServer.on("connection", (socket) => {
       if (player.sockets.size === 0 && room?.ownerId === player.id) {
         room.ownerId = connectedRoomPlayers(room.code)[0]?.id ?? null;
       }
+      if (player.sockets.size === 0 && room?.ended) {
+        const remainingMembers = connectedRoomPlayers(room.code);
+        if (
+          remainingMembers.length > 0 &&
+          remainingMembers.every((member) => room.replayVotes.has(member.id))
+        ) {
+          replayPrivateRoom(room);
+        }
+      }
+      if (player.sockets.size === 0 && room) endRoomIfBroke(room);
       broadcast();
     }
   });
