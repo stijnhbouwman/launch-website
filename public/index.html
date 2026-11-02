@@ -47,6 +47,25 @@
             <div class="wallet"><span class="chip-icon">✳</span><span id="chip-count">1,000</span><small>CHIPS</small></div>
           </div>
         </header>
+        <section id="room-controls" class="room-controls" hidden aria-label="Game room">
+          <div class="room-summary">
+            <span class="room-badge" id="room-badge">GLOBAL GAME</span>
+            <span class="room-members" id="room-members">1 player here</span>
+          </div>
+          <div class="room-actions">
+            <button class="secondary-button room-action" id="create-room" type="button">Create private room</button>
+            <form class="room-join-form" id="join-room-form">
+              <label class="sr-only" for="room-code-input">Private room code</label>
+              <input class="chip-input" id="room-code-input" maxlength="12" placeholder="Enter room code" autocomplete="off">
+              <button class="secondary-button room-action" type="submit">Join room</button>
+            </form>
+            <button class="quiet-button room-action" id="join-global" type="button">Join global game</button>
+            <div class="room-invite" id="room-invite" hidden>
+              <input class="chip-input" id="room-invite-link" readonly aria-label="Private room invite link">
+              <button class="secondary-button room-action" id="copy-invite" type="button">Copy invite link</button>
+            </div>
+          </div>
+        </section>
         <section id="content" class="page-content" aria-live="polite"></section>
         <div id="toast" class="toast" role="status" aria-live="polite"></div>
       </main>

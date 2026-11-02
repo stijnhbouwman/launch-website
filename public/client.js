@@ -2,6 +2,9 @@ const content = document.querySelector("#content");
 const socketUrl = `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/live`;
 const playerKey = "golden-hour-player";
 const nameKey = "golden-hour-name";
+const roomKey = "golden-hour-room";
+const queryRoomCode = new URLSearchParams(location.search).get("room") || "";
+let requestedRoomCode = (queryRoomCode || localStorage.getItem(roomKey) || "").toUpperCase();
 let playerId = localStorage.getItem(playerKey);
 if (!playerId) {
   playerId = crypto.randomUUID();
@@ -37,18 +40,32 @@ function connect() {
   socket = connection;
   connection.addEventListener("open", () => {
     document.querySelector(".online-pulse")?.classList.remove("offline");
-    send({ type: "register", id: playerId, name: playerName });
+    send({ type: "register", id: playerId, name: playerName, roomCode: requestedRoomCode });
   });
   connection.addEventListener("message", (event) => {
     const message = JSON.parse(event.data);
     if (message.type === "state") {
+      const previousRoomCode = state?.room.code;
       state = message.state;
+      requestedRoomCode = state.room.isPrivate ? state.room.code : "";
+      if (requestedRoomCode) localStorage.setItem(roomKey, requestedRoomCode);
+      else localStorage.removeItem(roomKey);
+      const inviteUrl = new URL(location.href);
+      if (requestedRoomCode) inviteUrl.searchParams.set("room", requestedRoomCode);
+      else inviteUrl.searchParams.delete("room");
+      history.replaceState(null, "", inviteUrl);
       if (state.players.some((player) => player.id === playerId)) {
         joined = true;
         document.body.classList.add("joined");
       }
       updateHeader();
+      updateRoomControls();
       render();
+      if (previousRoomCode && previousRoomCode !== state.room.code) {
+        showToast(state.room.isPrivate
+          ? `Joined private room ${state.room.code}. Share the invite link with friends.`
+          : "You joined the global game.");
+      }
     } else if (message.type === "error") {
       if (!joined) {
         renderUsernamePicker(message.message);
@@ -129,6 +146,42 @@ function updateHeader() {
     (player?.name ?? (playerName || "G")).slice(0, 1).toUpperCase();
   document.querySelector("#crumb-current").textContent =
     view === "lobby" ? "OVERVIEW" : view.toUpperCase();
+}
+
+function updateRoomControls() {
+  const controls = document.querySelector("#room-controls");
+  if (!state?.room) {
+    controls.hidden = true;
+    return;
+  }
+  controls.hidden = false;
+  const { room } = state;
+  document.querySelector("#room-badge").textContent =
+    room.isPrivate ? `PRIVATE · ${room.code}` : "GLOBAL GAME";
+  document.querySelector("#room-members").textContent =
+    `${room.members.length} ${room.members.length === 1 ? "player" : "players"} here`;
+  document.querySelector("#create-room").hidden = room.isPrivate;
+  document.querySelector("#join-room-form").hidden = room.isPrivate;
+  document.querySelector("#join-global").hidden = !room.isPrivate;
+  document.querySelector("#room-invite").hidden = !room.isPrivate;
+  if (room.isPrivate) {
+    document.querySelector("#room-invite-link").value =
+      `${location.origin}/?room=${encodeURIComponent(room.code)}`;
+  }
+}
+
+function roomReadiness(readyIds) {
+  const members = state.room.members;
+  const ready = members.filter((member) => readyIds.includes(member.id)).length;
+  return {
+    ready,
+    total: members.length,
+    complete: members.length > 0 && ready === members.length,
+  };
+}
+
+function canStartRoomGame() {
+  return !state.room.isPrivate || state.room.ownerId === playerId;
 }
 
 function setView(nextView) {
@@ -224,6 +277,8 @@ function betList() {
 
 function renderRoulette() {
   const roulette = state.roulette;
+  const readiness = roomReadiness(roulette.readyIds);
+  const alreadyBet = roulette.readyIds.includes(playerId);
   const result = roulette.lastResult;
   const numbers = Array.from({ length: 37 }, (_, number) => number);
   const reds = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
@@ -232,7 +287,7 @@ function renderRoulette() {
     <p class="hero-subtitle">One table, one wheel, and every player at the edge of their seat.</p>
     <div class="game-layout">
       <section class="table-panel">
-        <div class="table-panel-top"><h2>The shared wheel</h2><small>${state.players.length} players online</small></div>
+        <div class="table-panel-top"><h2>The shared wheel</h2><small>${readiness.ready} / ${readiness.total} players ready</small></div>
         <div class="roulette-table">
           <div class="roulette-result ${roulette.spinning ? "spinning" : result?.color ?? ""}">${roulette.spinning ? "✳" : result?.number ?? "—"}</div>
           <div class="result-caption">${roulette.spinning ? "The wheel is turning…" : result ? `Last result · ${result.color}` : "Place the first bet"}</div>
@@ -246,8 +301,9 @@ function renderRoulette() {
         <div class="bet-type-row"><button class="bet-type ${selectedBet === "red" ? "selected" : ""}" data-selection="red">Red · 2×</button><button class="bet-type ${selectedBet === "black" ? "selected" : ""}" data-selection="black">Black · 2×</button></div>
         <label class="field-label" for="roulette-amount">Your wager</label>
         <div class="amount-row"><input class="chip-input" id="roulette-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
-        <button class="primary-button full-button" id="place-bet" ${roulette.spinning ? "disabled" : ""}>Place bet&nbsp; · &nbsp;${selectedBet}</button>
-        <button class="secondary-button full-button" id="spin-wheel" ${roulette.spinning || !roulette.bets.length ? "disabled" : ""}>${roulette.spinning ? "Wheel spinning…" : "Spin the wheel"}&nbsp; ↗</button>
+        <button class="primary-button full-button" id="place-bet" ${roulette.spinning || alreadyBet ? "disabled" : ""}>${alreadyBet ? "Bet placed ✓" : `Place bet · ${selectedBet}`}</button>
+        <button class="secondary-button full-button" id="spin-wheel" ${roulette.spinning || !readiness.complete || !canStartRoomGame() ? "disabled" : ""}>${roulette.spinning ? "Wheel spinning…" : !readiness.complete ? "Waiting for all room bets…" : !canStartRoomGame() ? "Room host starts the game" : "Spin the wheel ↗"}</button>
+        <p class="bet-progress">${readiness.ready} of ${readiness.total} room players have placed a bet.</p>
         <div class="recent-bets"><h4>On the table</h4>${betList()}</div>
       </aside>
     </div>`;
@@ -287,6 +343,7 @@ function playerHandMarkup(seat, turnId) {
 
 function renderBlackjack() {
   const game = state.blackjack;
+  const readiness = roomReadiness(game.readyIds);
   const mySeat = game.players.find((seat) => seat.id === playerId);
   const myTurn = game.phase === "playing" && game.turnId === playerId;
   content.innerHTML = `
@@ -310,7 +367,8 @@ function renderBlackjack() {
           <div class="amount-row"><input class="chip-input" id="blackjack-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
           <button class="secondary-button full-button" id="join-blackjack">Take a seat&nbsp; +</button>`}
           <div class="recent-bets"><h4>Players ready</h4><div class="seat-list">${game.players.map((seat) => `<div class="seat-row"><span>${escapeHtml(seat.name)}</span><small>${seat.bet} chips</small></div>`).join("") || `<div class="activity-empty">No one has joined yet.</div>`}</div></div>
-          <button class="primary-button full-button" id="start-blackjack" ${game.players.length ? "" : "disabled"}>Deal the cards&nbsp; ↗</button>
+          <p class="bet-progress">${readiness.ready} of ${readiness.total} room players have placed a bet.</p>
+          <button class="primary-button full-button" id="start-blackjack" ${!readiness.complete || !canStartRoomGame() ? "disabled" : ""}>${!readiness.complete ? "Waiting for all room bets…" : !canStartRoomGame() ? "Room host starts the game" : "Deal the cards ↗"}</button>
         ` : game.phase === "playing" ? `
           <div class="seat-row"><span>Your wager</span><small>${mySeat ? `${mySeat.bet} chips` : "Watching"}</small></div>
           <button class="primary-button full-button" id="hit" ${myTurn ? "" : "disabled"}>Hit&nbsp; +</button>
@@ -391,6 +449,7 @@ function renderSlots() {
 
 function renderHorseRace() {
   const race = state.horseRace;
+  const readiness = roomReadiness(race.readyIds);
   const horses = ["Comet", "Clover", "Sundown", "Goldrush"];
   const myBet = race.bets.find((bet) => bet.playerId === playerId);
   content.innerHTML = `
@@ -403,6 +462,7 @@ function renderHorseRace() {
           ${horses.map((horse, index) => `<div class="race-lane"><span class="race-lane-name">${horse}</span><div class="track-line"><span class="horse-runner horse-${index}">♞</span><span class="finish-line"></span></div></div>`).join("")}
         </div>
         <div class="race-message">${race.phase === "racing" ? "And they’re off!" : race.winner ? `${escapeHtml(race.winner)} won the last race!` : "Choose your horse before the starting bell."}</div>
+        <p class="bet-progress race-progress">${readiness.ready} of ${readiness.total} room players have placed a bet.</p>
         <div class="recent-bets"><h4>On the track</h4>
           ${race.bets.length ? `<div class="activity-list">${race.bets.map((bet) =>
             `<div class="activity-row"><span>${escapeHtml(bet.name)} · ${escapeHtml(bet.horse)}</span><small>${bet.amount} chips</small></div>`
@@ -417,7 +477,7 @@ function renderHorseRace() {
           <label class="field-label" for="horse-amount">Your wager</label>
           <div class="amount-row"><input class="chip-input" id="horse-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
           <button class="secondary-button full-button" id="bet-horse" ${race.phase === "racing" ? "disabled" : ""}>Place bet on ${selectedHorse}&nbsp; · &nbsp;3×</button>` : ""}
-        <button class="primary-button full-button" id="start-race" ${race.phase === "racing" || !race.bets.length ? "disabled" : ""}>${race.phase === "racing" ? "Race in progress…" : "Start the race"}&nbsp; ↗</button>
+        <button class="primary-button full-button" id="start-race" ${race.phase === "racing" || !readiness.complete || !canStartRoomGame() ? "disabled" : ""}>${race.phase === "racing" ? "Race in progress…" : !readiness.complete ? "Waiting for all room bets…" : !canStartRoomGame() ? "Room host starts the game" : "Start the race ↗"}</button>
         <div class="table-rules"><div class="rule-row"><span>Winning payout</span><strong>3×</strong></div><div class="rule-row"><span>Horses</span><strong>4</strong></div></div>
       </aside>
     </div>`;
@@ -446,6 +506,7 @@ function renderHorseRace() {
 
 function renderPoker() {
   const game = state.poker;
+  const readiness = roomReadiness(game.readyIds);
   const mySeat = game.players.find((seat) => seat.id === playerId);
   content.innerHTML = `
     <span class="eyebrow">THE CARD ROOM</span><h1>Poker</h1>
@@ -472,10 +533,11 @@ function renderPoker() {
           <label class="field-label" for="poker-amount">Buy-in</label>
           <div class="amount-row"><input class="chip-input" id="poker-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
           <button class="secondary-button full-button" id="join-poker">Take a seat&nbsp; +</button>`}
-          <button class="primary-button full-button" id="start-poker" ${game.players.length < 2 ? "disabled" : ""}>Deal the hands&nbsp; ↗</button>
+          <p class="bet-progress">${readiness.ready} of ${readiness.total} room players have joined the round.</p>
+          <button class="primary-button full-button" id="start-poker" ${game.players.length < 2 || !readiness.complete || !canStartRoomGame() ? "disabled" : ""}>${game.players.length < 2 ? "Waiting for another player…" : !readiness.complete ? "Waiting for everyone to join…" : !canStartRoomGame() ? "Room host starts the game" : "Deal the hands ↗"}</button>
           ${game.players.length < 2 ? `<div class="activity-empty">At least two players are needed to start.</div>` : ""}
         ` : `<div class="seat-row"><span>Round in progress</span><small>${game.players.length} players</small></div>`}
-        <div class="table-rules"><div class="rule-row"><span>Hand size</span><strong>5 cards</strong></div><div class="rule-row"><span>Ties</span><strong>Split pot</strong></div><div class="rule-row"><span>Seats</span><strong>2–8 players</strong></div></div>
+        <div class="table-rules"><div class="rule-row"><span>Hand size</span><strong>5 cards</strong></div><div class="rule-row"><span>Ties</span><strong>Split pot</strong></div><div class="rule-row"><span>Seats</span><strong>2+ players</strong></div></div>
       </aside>
     </div>`;
   content.querySelectorAll("[data-amount]").forEach((button) => {
@@ -497,6 +559,26 @@ function renderPoker() {
 
 document.querySelectorAll(".nav-link").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
+});
+document.querySelector("#create-room").addEventListener("click", () => {
+  send({ type: "create-room" });
+});
+document.querySelector("#join-room-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const roomCode = document.querySelector("#room-code-input").value.trim();
+  send({ type: "join-room", roomCode });
+});
+document.querySelector("#join-global").addEventListener("click", () => {
+  send({ type: "join-room", roomCode: "global" });
+});
+document.querySelector("#copy-invite").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(document.querySelector("#room-invite-link").value);
+    showToast("Private room invite link copied.");
+  } catch (error) {
+    console.error("Could not copy the private room invite link:", error);
+    showToast("Copy failed. Select and copy the invite link instead.");
+  }
 });
 document.querySelector("#edit-name").addEventListener("click", () => {
   const nextName = window.prompt("Choose a username:", playerName);
