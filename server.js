@@ -417,8 +417,7 @@ function handleMessage(socket, message) {
       : "global";
     if (requestedRoom === "GLOBAL") requestedRoom = "global";
     if (!rooms.has(requestedRoom)) {
-      sendError(socket, "That private room does not exist. Check the invite link or code.");
-      return;
+      requestedRoom = "global";
     }
     if (
       rooms.get(requestedRoom).ended &&
