@@ -169,6 +169,13 @@ function updateRoomControls() {
     room.isPrivate ? `PRIVATE · ${room.code}` : "GLOBAL GAME";
   document.querySelector("#room-members").textContent =
     `${room.members.length} ${room.members.length === 1 ? "player" : "players"} here`;
+  const scoreboard = document.querySelector("#room-scoreboard");
+  scoreboard.hidden = !room.isPrivate;
+  if (room.isPrivate) {
+    document.querySelector("#room-scoreboard-list").innerHTML = room.members
+      .map((member) => `<span class="room-balance"><strong>${escapeHtml(member.name)}</strong><small>${member.chips.toLocaleString()} chips</small></span>`)
+      .join("");
+  }
   document.querySelector("#create-room").hidden = room.isPrivate;
   document.querySelector("#join-room-form").hidden = room.isPrivate;
   document.querySelector("#join-global").hidden = !room.isPrivate;
@@ -189,12 +196,14 @@ function updateRoomControls() {
 }
 
 function roomReadiness(readyIds) {
-  const members = state.room.members;
+  const members = state.room.members.filter((member) =>
+    member.chips > 0 || readyIds.includes(member.id)
+  );
   const ready = members.filter((member) => readyIds.includes(member.id)).length;
   return {
     ready,
     total: members.length,
-    complete: members.length > 0 && ready === members.length,
+    complete: members.length === 0 || ready === members.length,
   };
 }
 
@@ -232,12 +241,41 @@ function render() {
     content.innerHTML = `<div class="hero"><div class="hero-copy"><span class="eyebrow">WELCOME TO GOLDEN HOUR</span><h1>Opening the lounge...</h1><p class="hero-subtitle">Connecting you to the live tables.</p></div></div>`;
     return;
   }
+  if (state.room.isPrivate && state.room.ended) {
+    renderPrivateRoomEnded();
+    return;
+  }
   if (view === "roulette") renderRoulette();
   else if (view === "blackjack") renderBlackjack();
   else if (view === "slots") renderSlots();
   else if (view === "horses") renderHorseRace();
   else if (view === "poker") renderPoker();
   else renderLobby();
+}
+
+function renderPrivateRoomEnded() {
+  const votes = state.room.replayVotes;
+  const voted = votes.includes(playerId);
+  content.innerHTML = `
+    <section class="room-ended">
+      <span class="eyebrow">PRIVATE ROOM COMPLETE</span>
+      <h1>Everyone is out of chips.</h1>
+      <p class="hero-subtitle">This game is over. Everyone can vote to start another game with 1,000 chips each, or leave the room and return to the global game.</p>
+      <div class="room-ended-balances">${state.room.members.map((member) =>
+        `<div class="activity-row"><span>${escapeHtml(member.name)}</span><strong>${member.chips.toLocaleString()} chips</strong></div>`
+      ).join("")}</div>
+      <p class="bet-progress">${votes.length} of ${state.room.members.length} players chose to play again.</p>
+      <div class="room-ended-actions">
+        <button class="primary-button" id="replay-room" ${voted ? "disabled" : ""}>${voted ? "Play again chosen ✓" : "Play again · 1,000 chips each"}</button>
+        <button class="secondary-button" id="leave-private-room">Leave room</button>
+      </div>
+    </section>`;
+  content.querySelector("#replay-room").addEventListener("click", () => {
+    send({ type: "replay-room" });
+  });
+  content.querySelector("#leave-private-room").addEventListener("click", () => {
+    send({ type: "join-room", roomCode: "global" });
+  });
 }
 
 function renderLobby() {
