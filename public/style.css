@@ -73,7 +73,7 @@ body.joined .join-screen { display: none; }
 .wallet small { font-size: 8px; letter-spacing: 1px; color: var(--muted); font-weight: 600; }
 .chip-icon { color: var(--gold); font-size: 16px; }
 .mobile-brand { display: none; }
-.room-controls { min-height: 65px; padding: 10px clamp(22px, 5.2vw, 72px); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 14px; background: #151714; }
+.room-controls { min-height: 65px; padding: 10px clamp(22px, 5.2vw, 72px); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; background: #151714; }
 .room-summary, .room-actions, .room-join-form, .room-invite { display: flex; align-items: center; gap: 9px; }
 .room-summary { flex-wrap: wrap; }
 .room-badge { color: var(--gold-bright); font-size: 9px; letter-spacing: 1px; font-weight: 700; }
@@ -145,6 +145,16 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .activity-row small { color: var(--muted); }
 .chip-note { color: #969b91; font-size: 10px; line-height: 1.65; margin: 0; }
 .game-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(250px, .75fr); gap: 17px; margin-top: 24px; align-items: start; }
+.room-scoreboard { flex-basis: 100%; padding: 10px 0 0; color: var(--muted); font-size: 9px; letter-spacing: 1px; }
+.room-scoreboard-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 7px; }
+.room-balance { display: flex; gap: 8px; align-items: center; padding: 6px 9px; border: 1px solid var(--line); border-radius: 4px; background: #1d201b; letter-spacing: 0; }
+.room-balance strong { color: var(--text); font-size: 10px; }
+.room-balance small { color: var(--gold-bright); font-size: 10px; }
+.room-ended { max-width: 720px; margin: 55px auto; padding: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); text-align: center; }
+.room-ended h1 { margin: 12px 0; font-family: var(--serif); font-size: clamp(32px, 5vw, 48px); }
+.room-ended-balances { display: grid; gap: 10px; max-width: 400px; margin: 28px auto; padding: 16px; border: 1px solid var(--line); border-radius: 6px; text-align: left; }
+.room-ended-balances strong { color: var(--gold-bright); }
+.room-ended-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .table-panel, .control-panel { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; overflow: hidden; }
 .table-panel-top { padding: 17px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
 .table-panel-top h2 { font-size: 18px; margin: 0; }
