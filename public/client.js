@@ -1,7 +1,13 @@
 const content = document.querySelector("#content");
 const socketUrl = `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/live`;
-let playerId = null;
-let playerName = "";
+const playerKey = "golden-hour-player";
+const nameKey = "golden-hour-name";
+let playerId = localStorage.getItem(playerKey);
+if (!playerId) {
+  playerId = crypto.randomUUID();
+  localStorage.setItem(playerKey, playerId);
+}
+let playerName = localStorage.getItem(nameKey) || "";
 let state = null;
 let view = "lobby";
 let selectedBet = "red";
@@ -9,7 +15,7 @@ let selectedAmount = 25;
 let socket;
 let reconnectTimer;
 let toastTimer;
-let authMode = "login";
+let joined = false;
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -26,111 +32,77 @@ function send(message) {
 }
 
 function connect() {
-  socket = new WebSocket(socketUrl);
-  socket.addEventListener("open", () => {
+  const connection = new WebSocket(socketUrl);
+  socket = connection;
+  connection.addEventListener("open", () => {
     document.querySelector(".online-pulse")?.classList.remove("offline");
+    send({ type: "register", id: playerId, name: playerName });
   });
-  socket.addEventListener("message", (event) => {
+  connection.addEventListener("message", (event) => {
     const message = JSON.parse(event.data);
     if (message.type === "state") {
       state = message.state;
+      if (state.players.some((player) => player.id === playerId)) {
+        joined = true;
+        document.body.classList.add("joined");
+      }
       updateHeader();
       render();
     } else if (message.type === "error") {
-      showToast(message.message);
+      if (!joined) {
+        renderUsernamePicker(message.message);
+      } else {
+        playerName = currentPlayer()?.name ?? playerName;
+        localStorage.setItem(nameKey, playerName);
+        showToast(message.message);
+        updateHeader();
+      }
     }
   });
-  socket.addEventListener("close", () => {
+  connection.addEventListener("close", () => {
+    if (socket !== connection) return;
     document.querySelector(".online-pulse")?.classList.add("offline");
     clearTimeout(reconnectTimer);
-    if (document.body.classList.contains("authenticated")) {
+    if (joined) {
       reconnectTimer = setTimeout(connect, 1500);
+    } else {
+      renderUsernamePicker("Could not connect to the table. Check your connection and try again.");
     }
   });
 }
 
-function renderAuth(message = "") {
-  const screen = document.querySelector("#auth-screen");
+function renderUsernamePicker(message = "") {
+  const screen = document.querySelector("#join-screen");
   screen.innerHTML = `
-    <section class="auth-card">
-      <a class="brand auth-brand" href="#" aria-label="Golden Hour">
+    <section class="join-card">
+      <a class="brand join-brand" href="#" aria-label="Golden Hour">
         <span class="brand-mark">G<span>H</span></span>
         <span class="brand-name">GOLDEN HOUR<small>THE SOCIAL CASINO</small></span>
       </a>
-      <span class="eyebrow auth-eyebrow">YOUR SEAT IS WAITING</span>
-      <h1>${authMode === "login" ? "Welcome back." : "Join the lounge."}</h1>
-      <p class="auth-description">${authMode === "login" ? "Log in to pick up your chips and join the live tables." : "Create a player account to get your 1,000 complimentary chips."}</p>
-      <div class="auth-tabs" role="tablist" aria-label="Account options">
-        <button class="auth-tab ${authMode === "login" ? "selected" : ""}" type="button" data-auth-mode="login">Log in</button>
-        <button class="auth-tab ${authMode === "register" ? "selected" : ""}" type="button" data-auth-mode="register">Create account</button>
-      </div>
-      <form class="auth-form" id="auth-form">
-        <label class="field-label" for="auth-username">Username</label>
-        <input class="chip-input" id="auth-username" name="username" type="text" minlength="3" maxlength="18" pattern="[A-Za-z0-9_]{3,18}" autocomplete="username" placeholder="Your username" required>
-        <label class="field-label" for="auth-password">Password</label>
-        <input class="chip-input" id="auth-password" name="password" type="password" minlength="10" maxlength="128" autocomplete="${authMode === "login" ? "current-password" : "new-password"}" placeholder="At least 10 characters" required>
-        <p class="auth-error" id="auth-error" role="alert">${escapeHtml(message)}</p>
-        <button class="primary-button full-button auth-submit" id="auth-submit" type="submit">${authMode === "login" ? "Log in to the lounge" : "Create account"}&nbsp; ↗</button>
+      <span class="eyebrow join-eyebrow">YOUR SEAT IS WAITING</span>
+      <h1>Choose a username.</h1>
+      <p class="join-description">Pick a name for the table and jump straight into the lounge. No account or password needed.</p>
+      <form class="join-form" id="join-form">
+        <label class="field-label" for="join-username">Display name</label>
+        <input class="chip-input" id="join-username" name="username" type="text" minlength="1" maxlength="18" pattern="[A-Za-z0-9_]{1,18}" autocomplete="nickname" placeholder="e.g. GoldenAce" value="${escapeHtml(playerName)}" required>
+        <small class="join-hint">1–18 letters, numbers, or underscores</small>
+        <p class="join-error" id="join-error" role="alert">${escapeHtml(message)}</p>
+        <button class="primary-button full-button join-submit" id="join-submit" type="submit">Join the lounge&nbsp; ↗</button>
       </form>
-      <p class="auth-footnote">For entertainment only. Casino chips have no cash value.</p>
+      <p class="join-footnote">Everyone starts with 1,000 complimentary chips. Play for fun—chips have no cash value.</p>
     </section>`;
-  screen.querySelectorAll("[data-auth-mode]").forEach((button) => {
-    button.addEventListener("click", () => {
-      authMode = button.dataset.authMode;
-      renderAuth();
-    });
-  });
-  screen.querySelector("#auth-form").addEventListener("submit", async (event) => {
+  screen.querySelector("#join-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const submit = screen.querySelector("#auth-submit");
+    playerName = String(form.get("username")).trim();
+    localStorage.setItem(nameKey, playerName);
+    const submit = screen.querySelector("#join-submit");
     submit.disabled = true;
-    submit.textContent = authMode === "login" ? "Logging in…" : "Creating account…";
-    try {
-      const response = await fetch(`/api/${authMode}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          username: form.get("username"),
-          password: form.get("password"),
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        renderAuth(result.error || "Could not complete the account request.");
-        return;
-      }
-      authMode = "login";
-      startAuthenticatedSession(result.player);
-    } catch (error) {
-      console.error("Could not reach the casino account service:", error);
-      renderAuth("Could not reach the casino. Check your connection and try again.");
-    }
+    submit.textContent = "Joining…";
+    clearTimeout(reconnectTimer);
+    if (socket) socket.close();
+    connect();
   });
-}
-
-function startAuthenticatedSession(player) {
-  playerId = player.id;
-  playerName = player.name;
-  document.body.classList.add("authenticated");
-  updateHeader();
-  connect();
-}
-
-async function logout() {
-  clearTimeout(reconnectTimer);
-  if (socket) socket.close();
-  try {
-    await fetch("/api/logout", { method: "POST", credentials: "same-origin" });
-  } catch (error) {
-    console.error("Could not log out from the casino:", error);
-  }
-  document.body.classList.remove("authenticated");
-  state = null;
-  playerId = null;
-  playerName = "";
-  renderAuth();
 }
 
 function showToast(message) {
@@ -153,7 +125,7 @@ function updateHeader() {
     (player?.chips ?? 1000).toLocaleString();
   document.querySelector("#profile-name").textContent = player?.name ?? playerName;
   document.querySelector("#avatar").textContent =
-    (player?.name ?? playerName).slice(0, 1).toUpperCase();
+    (player?.name ?? (playerName || "G")).slice(0, 1).toUpperCase();
   document.querySelector("#crumb-current").textContent =
     view === "lobby" ? "OVERVIEW" : view.toUpperCase();
 }
@@ -355,27 +327,12 @@ document.querySelectorAll(".nav-link").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 document.querySelector("#edit-name").addEventListener("click", () => {
-  const nextName = window.prompt("Choose a display name:", playerName);
+  const nextName = window.prompt("Choose a username:", playerName);
   if (nextName === null) return;
-  playerName = nextName.trim().slice(0, 18) || "Guest";
+  playerName = nextName.trim().slice(0, 18);
+  localStorage.setItem(nameKey, playerName);
   send({ type: "set-name", name: playerName });
-  updateHeader();
-  render();
 });
 
-document.querySelector("#logout").addEventListener("click", logout);
-
-async function restoreSession() {
-  try {
-    const response = await fetch("/api/session", { credentials: "same-origin" });
-    if (!response.ok) throw new Error(`Account request failed (${response.status}).`);
-    const result = await response.json();
-    if (result.authenticated) startAuthenticatedSession(result.player);
-    else renderAuth();
-  } catch (error) {
-    console.error("Could not check the casino login:", error);
-    renderAuth("Could not reach the casino. Check your connection and try again.");
-  }
-}
-
-restoreSession();
+if (playerName && playerName.toLowerCase() !== "guest") connect();
+else renderUsernamePicker();
