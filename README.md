@@ -1,23 +1,21 @@
 # Golden Hour Casino
 
-A browser-based multiplayer casino lounge with live roulette, turn-based blackjack, username/password accounts, and complimentary play chips. No real money is used.
+A browser-based multiplayer casino lounge with live roulette, turn-based blackjack, player-chosen usernames, and complimentary play chips. No account or password is required, and no real money is used.
 
 ## Run locally
 
 1. Install Node.js 20 or newer.
-2. Run `npm install` in this folder.
+2. In this folder, run `npm install`.
 3. Run `npm start`.
-4. Open http://localhost:3000 and create an account.
+4. Open [http://localhost:3000](http://localhost:3000) and choose a username.
 
-Usernames are 3–18 letters, numbers, or underscores. Passwords must be at least 10 characters. Passwords are stored as salted, scrypt-derived hashes. There is no password reset or email recovery, so players should keep their passwords safe.
+The username and chip balance are saved on the same browser and device. A username must be 1–18 letters, numbers, or underscores and unique among players currently online. It is a display name only, not a verified identity; another player could use it when you are offline. Server-side chip balances are stored in `data/players.json` by default.
 
-## Deploy a public website on Render
+## Publish a public website on Render
 
-This repository includes `render.yaml` for Render Blueprints:
-
-1. Sign in to Render and choose **New → Blueprint**.
-2. Connect this GitHub repository and approve access if prompted.
+1. Push this project to a GitHub repository. Keep `node_modules`, `.env` files, and `data` out of Git; `.gitignore` already excludes them.
+2. Sign in to [Render](https://render.com), choose **New → Blueprint**, and connect that GitHub repository.
 3. Confirm the settings from `render.yaml` and create the service.
-4. When deployment finishes, share the public `https://…onrender.com` address with friends.
+4. Wait for the first deploy to finish. Render will show a public `https://…onrender.com` address; share that URL with your friends. Keep this single server instance running for the shared tables.
 
-The included configuration uses Render’s free service plan. Free services can sleep when idle and their local files are not durable; player accounts and chip balances may be lost after a restart or redeploy. A persistent database or paid storage is needed for durable accounts.
+The included Render configuration uses the free service plan. The site and live multiplayer tables are available over the public internet, but free services can sleep when idle and their local files are not durable. Saved chip balances may be lost after a restart or redeploy. A persistent database or paid storage is needed for durable balances.

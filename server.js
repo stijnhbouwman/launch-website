@@ -1,43 +1,19 @@
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const crypto = require("node:crypto");
-const { promisify } = require("node:util");
-const { randomInt } = crypto;
+const { randomInt } = require("node:crypto");
 const WebSocket = require("ws");
-const scrypt = promisify(crypto.scrypt);
 
 const port = Number(process.env.PORT) || 3000;
 const publicDirectory = path.join(__dirname, "public");
 const dataDirectory = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : path.join(__dirname, "data");
-const accountsFile = path.join(dataDirectory, "accounts.json");
+const playersFile = path.join(dataDirectory, "players.json");
 const players = new Map();
-const accounts = new Map();
-const sessions = new Map();
-const loginAttempts = new Map();
-const sessionDurationMs = 30 * 24 * 60 * 60 * 1000;
-
-if (fs.existsSync(accountsFile)) {
-  const savedAccounts = JSON.parse(fs.readFileSync(accountsFile, "utf8"));
-  for (const account of savedAccounts) {
-    if (
-      account &&
-      typeof account.id === "string" &&
-      typeof account.username === "string" &&
-      typeof account.name === "string" &&
-      typeof account.salt === "string" &&
-      typeof account.passwordHash === "string" &&
-      Number.isSafeInteger(account.chips) &&
-      account.chips >= 0
-    ) {
-      accounts.set(account.username.toLowerCase(), account);
-    } else {
-      throw new Error("The casino account data file contains an invalid account.");
-    }
-  }
-}
+const savedPlayers = fs.existsSync(playersFile)
+  ? JSON.parse(fs.readFileSync(playersFile, "utf8"))
+  : {};
 
 const roulette = { bets: [], lastResult: null, history: [], spinning: false };
 const blackjack = {
@@ -51,259 +27,17 @@ const blackjack = {
 function savePlayers() {
   fs.mkdirSync(dataDirectory, { recursive: true });
   for (const player of players.values()) {
-    const account = accounts.get(player.username.toLowerCase());
-    if (account) {
-      account.name = player.name;
-      account.chips = player.chips;
-    }
+    savedPlayers[player.id] = { name: player.name, chips: player.chips };
   }
-  const temporaryFile = `${accountsFile}.tmp`;
-  fs.writeFileSync(temporaryFile, JSON.stringify([...accounts.values()], null, 2));
-  fs.renameSync(temporaryFile, accountsFile);
-}
-
-function sendJson(response, status, payload, headers = {}) {
-  response.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-    ...headers,
-  });
-  response.end(JSON.stringify(payload));
-}
-
-function clearSessionCookie(request, response) {
-  const secure = request.socket.encrypted ||
-    request.headers["x-forwarded-proto"] === "https";
-  response.setHeader(
-    "set-cookie",
-    `gh_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure ? "; Secure" : ""}`
-  );
-}
-
-function sessionCookie(request, token) {
-  const secure = request.socket.encrypted ||
-    request.headers["x-forwarded-proto"] === "https";
-  return `gh_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${sessionDurationMs / 1000}${secure ? "; Secure" : ""}`;
-}
-
-function getAccountForRequest(request) {
-  const cookies = request.headers.cookie?.split(";") ?? [];
-  const token = cookies
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith("gh_session="))
-    ?.slice("gh_session=".length);
-  if (!token) return null;
-
-  const session = sessions.get(token);
-  if (!session) return null;
-  if (session.expiresAt <= Date.now()) {
-    sessions.delete(token);
-    return null;
-  }
-  return [...accounts.values()].find((account) => account.id === session.accountId) ?? null;
-}
-
-function originMatchesRequest(request) {
-  const origin = request.headers.origin;
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === request.headers.host;
-  } catch {
-    return false;
-  }
-}
-
-async function readJsonBody(request) {
-  if (!request.headers["content-type"]?.startsWith("application/json")) {
-    const error = new Error("Send this request as JSON.");
-    error.status = 415;
-    throw error;
-  }
-  const chunks = [];
-  let length = 0;
-  for await (const chunk of request) {
-    length += chunk.length;
-    if (length > 4096) {
-      const error = new Error("This request is too large.");
-      error.status = 413;
-      throw error;
-    }
-    chunks.push(chunk);
-  }
-  try {
-    const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-      throw new SyntaxError("Expected an object.");
-    }
-    return body;
-  } catch {
-    const error = new Error("Send a valid JSON object.");
-    error.status = 400;
-    throw error;
-  }
-}
-
-function consumeLoginAttempt(request, response) {
-  const key = request.socket.remoteAddress ?? "unknown";
-  const now = Date.now();
-  const attempt = loginAttempts.get(key);
-  if (!attempt || attempt.resetAt <= now) {
-    loginAttempts.set(key, { count: 1, resetAt: now + 15 * 60 * 1000 });
-    return true;
-  }
-  attempt.count += 1;
-  if (attempt.count <= 20) return true;
-  sendJson(response, 429, { error: "Too many attempts. Please wait 15 minutes and try again." });
-  return false;
-}
-
-function createAccountPlayer(account, socket) {
-  let player = players.get(account.id);
-  if (!player) {
-    player = {
-    id: account.id,
-    username: account.username,
-    name: account.name,
-    chips: account.chips,
-    connected: false,
-    sockets: new Set(),
-    };
-    players.set(account.id, player);
-  }
-  if (socket) {
-    player.sockets.add(socket);
-    player.connected = true;
-  }
-  return player;
-}
-
-async function handleAuthRequest(request, response, pathname) {
-  if (request.method === "GET" && pathname === "/api/session") {
-    const account = getAccountForRequest(request);
-    if (!account) {
-      clearSessionCookie(request, response);
-      sendJson(response, 200, { authenticated: false });
-      return;
-    }
-    sendJson(response, 200, {
-      authenticated: true,
-      player: { id: account.id, username: account.username, name: account.name, chips: account.chips },
-    });
-    return;
-  }
-
-  if (request.method === "POST" && !originMatchesRequest(request)) {
-    sendJson(response, 403, { error: "This request must come from the casino website." });
-    return;
-  }
-
-  if (request.method === "POST" && pathname === "/api/logout") {
-    const account = getAccountForRequest(request);
-    const token = request.headers.cookie
-      ?.split(";")
-      .map((cookie) => cookie.trim())
-      .find((cookie) => cookie.startsWith("gh_session="))
-      ?.slice("gh_session=".length);
-    if (token) sessions.delete(token);
-    if (account) {
-      const player = players.get(account.id);
-      if (player) {
-        for (const socket of player.sockets) socket.close();
-      }
-      players.delete(account.id);
-      broadcast();
-    }
-    clearSessionCookie(request, response);
-    sendJson(response, 200, { authenticated: false });
-    return;
-  }
-
-  if (
-    request.method === "POST" &&
-    (pathname === "/api/register" || pathname === "/api/login")
-  ) {
-    if (!consumeLoginAttempt(request, response)) return;
-    const body = await readJsonBody(request);
-    if (
-      typeof body.username !== "string" ||
-      !/^[a-zA-Z0-9_]{3,18}$/.test(body.username)
-    ) {
-      sendJson(response, 400, { error: "Use a username with 3–18 letters, numbers, or underscores." });
-      return;
-    }
-    if (
-      typeof body.password !== "string" ||
-      body.password.length < 10 ||
-      body.password.length > 128
-    ) {
-      sendJson(response, 400, { error: "Your password must be between 10 and 128 characters." });
-      return;
-    }
-
-    const usernameKey = body.username.toLowerCase();
-    let account = accounts.get(usernameKey);
-    if (pathname === "/api/register") {
-      if (account) {
-        sendJson(response, 409, { error: "That username is already taken. Please choose another." });
-        return;
-      }
-      const salt = crypto.randomBytes(16);
-      const passwordHash = await scrypt(body.password, salt, 64);
-      account = {
-        id: crypto.randomUUID(),
-        username: body.username,
-        name: safeName(body.username),
-        salt: salt.toString("hex"),
-        passwordHash: passwordHash.toString("hex"),
-        chips: 1000,
-      };
-      accounts.set(usernameKey, account);
-      try {
-        savePlayers();
-      } catch (error) {
-        accounts.delete(usernameKey);
-        throw error;
-      }
-    } else {
-      if (!account) {
-        await scrypt(body.password, Buffer.alloc(16), 64);
-        sendJson(response, 401, { error: "Username or password is incorrect." });
-        return;
-      }
-      const expectedHash = Buffer.from(account.passwordHash, "hex");
-      const submittedHash = await scrypt(body.password, Buffer.from(account.salt, "hex"), 64);
-      if (
-        expectedHash.length !== submittedHash.length ||
-        !crypto.timingSafeEqual(expectedHash, submittedHash)
-      ) {
-        sendJson(response, 401, { error: "Username or password is incorrect." });
-        return;
-      }
-    }
-
-    const token = crypto.randomBytes(32).toString("hex");
-    sessions.set(token, { accountId: account.id, expiresAt: Date.now() + sessionDurationMs });
-    createAccountPlayer(account);
-    sendJson(
-      response,
-      pathname === "/api/register" ? 201 : 200,
-      { authenticated: true, player: { id: account.id, username: account.username, name: account.name, chips: account.chips } },
-      { "set-cookie": sessionCookie(request, token) }
-    );
-    return;
-  }
-
-  if (pathname.startsWith("/api/")) {
-    sendJson(response, 404, { error: "Not found." });
-    return;
-  }
-  sendJson(response, 405, { error: "Method not allowed." });
+  const temporaryFile = `${playersFile}.tmp`;
+  fs.writeFileSync(temporaryFile, JSON.stringify(savedPlayers, null, 2));
+  fs.renameSync(temporaryFile, playersFile);
 }
 
 function safeName(value) {
   if (typeof value !== "string") return "Guest";
-  const name = value.replace(/[^\p{L}\p{N} _-]/gu, "").trim().slice(0, 18);
-  return name || "Guest";
+  const name = value.trim().slice(0, 18);
+  return /^[a-zA-Z0-9_]{1,18}$/.test(name) ? name : null;
 }
 
 function score(hand) {
@@ -463,13 +197,72 @@ function resetBlackjack() {
 }
 
 function handleMessage(socket, message) {
+  if (message.type === "register") {
+    if (
+      typeof message.id !== "string" ||
+      !/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(message.id)
+    ) {
+      sendError(socket, "This player session is invalid. Refresh to try again.");
+      return;
+    }
+    const name = safeName(message.name);
+    if (!name) {
+      sendError(socket, "Choose a username with 1–18 letters, numbers, or underscores.");
+      return;
+    }
+    const nameTaken = [...players.values()].some(
+      (candidate) =>
+        candidate.id !== message.id &&
+        candidate.connected &&
+        candidate.name.toLocaleLowerCase() === name.toLocaleLowerCase()
+    );
+    if (nameTaken) {
+      sendError(socket, "That username is already in use. Choose another.");
+      return;
+    }
+    let player = players.get(message.id);
+    if (!player) {
+      const saved = savedPlayers[message.id];
+      player = {
+        id: message.id,
+        name,
+        chips: saved && Number.isSafeInteger(saved.chips) && saved.chips >= 0
+          ? saved.chips
+          : 1000,
+        connected: false,
+        sockets: new Set(),
+      };
+      players.set(message.id, player);
+    }
+    player.name = name;
+    player.connected = true;
+    player.sockets.add(socket);
+    socket.playerId = player.id;
+    savePlayers();
+    broadcast();
+    return;
+  }
+
   const player = players.get(socket.playerId);
   if (!player || !player.sockets.has(socket)) return;
 
   if (message.type === "set-name") {
-    player.name = safeName(message.name);
-    const account = accounts.get(player.username.toLowerCase());
-    if (account) account.name = player.name;
+    const name = safeName(message.name);
+    if (!name) {
+      sendError(socket, "Choose a username with 1–18 letters, numbers, or underscores.");
+      return;
+    }
+    const nameTaken = [...players.values()].some(
+      (candidate) =>
+        candidate.id !== player.id &&
+        candidate.connected &&
+        candidate.name.toLocaleLowerCase() === name.toLocaleLowerCase()
+    );
+    if (nameTaken) {
+      sendError(socket, "That username is already in use. Choose another.");
+      return;
+    }
+    player.name = name;
     for (const seat of blackjack.players) {
       if (seat.id === player.id) seat.name = player.name;
     }
@@ -602,17 +395,6 @@ function handleMessage(socket, message) {
 
 const server = http.createServer((request, response) => {
   const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
-  if (pathname.startsWith("/api/")) {
-    handleAuthRequest(request, response, pathname).catch((error) => {
-      if (error.status) {
-        sendJson(response, error.status, { error: error.message });
-        return;
-      }
-      console.error("Could not process account request:", error);
-      sendJson(response, 500, { error: "The account request could not be completed." });
-    });
-    return;
-  }
   if (pathname === "/health") {
     response.writeHead(200, { "content-type": "application/json" });
     response.end(JSON.stringify({ status: "ok" }));
@@ -656,24 +438,12 @@ const server = http.createServer((request, response) => {
 const webSocketServer = new WebSocket.Server({ noServer: true, maxPayload: 16 * 1024 });
 server.on("upgrade", (request, socket, head) => {
   try {
-    if (
-      new URL(request.url, `http://${request.headers.host}`).pathname !== "/live" ||
-      !originMatchesRequest(request)
-    ) {
-      socket.destroy();
-      return;
-    }
-    const account = getAccountForRequest(request);
-    if (!account) {
-      socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+    if (new URL(request.url, `http://${request.headers.host}`).pathname !== "/live") {
       socket.destroy();
       return;
     }
     webSocketServer.handleUpgrade(request, socket, head, (webSocket) => {
-      const player = createAccountPlayer(account, webSocket);
-      webSocket.playerId = player.id;
       webSocketServer.emit("connection", webSocket, request);
-      broadcast();
     });
   } catch (error) {
     console.error("Could not establish multiplayer connection:", error);
