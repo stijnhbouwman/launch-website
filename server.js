@@ -16,6 +16,10 @@ const savedPlayers = fs.existsSync(playersFile)
   : {};
 
 const roulette = { bets: [], lastResult: null, history: [], spinning: false };
+const slotSymbols = ["✦", "♣", "♦", "♠", "7"];
+const slots = { history: [] };
+const horseNames = ["Comet", "Clover", "Sundown", "Goldrush"];
+const horseRace = { phase: "waiting", bets: [], winner: null, history: [] };
 const blackjack = {
   phase: "waiting",
   players: [],
@@ -23,6 +27,7 @@ const blackjack = {
   deck: [],
   turnIndex: 0,
 };
+const poker = { phase: "waiting", players: [], lastResult: null };
 
 function savePlayers() {
   fs.mkdirSync(dataDirectory, { recursive: true });
@@ -64,6 +69,55 @@ function makeDeck() {
     [deck[index], deck[swapIndex]] = [deck[swapIndex], deck[index]];
   }
   return deck;
+}
+
+function evaluatePokerHand(hand) {
+  const ranks = hand.map((card) =>
+    card.rank === "A" ? 14 : card.rank === "K" ? 13 : card.rank === "Q" ? 12 :
+      card.rank === "J" ? 11 : Number(card.rank)
+  ).sort((a, b) => b - a);
+  const counts = new Map();
+  for (const rank of ranks) counts.set(rank, (counts.get(rank) || 0) + 1);
+  const groups = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0]);
+  const flush = hand.every((card) => card.suit === hand[0].suit);
+  const uniqueRanks = [...new Set(ranks)];
+  const straightHigh = uniqueRanks.length === 5 &&
+    (uniqueRanks[0] - uniqueRanks[4] === 4 ? uniqueRanks[0] :
+      uniqueRanks.join(",") === "14,5,4,3,2" ? 5 : 0);
+
+  if (flush && straightHigh) return { rank: [8, straightHigh], name: "Straight flush" };
+  if (groups[0][1] === 4) {
+    return { rank: [7, groups[0][0], groups[1][0]], name: "Four of a kind" };
+  }
+  if (groups[0][1] === 3 && groups[1][1] === 2) {
+    return { rank: [6, groups[0][0], groups[1][0]], name: "Full house" };
+  }
+  if (flush) return { rank: [5, ...ranks], name: "Flush" };
+  if (straightHigh) return { rank: [4, straightHigh], name: "Straight" };
+  if (groups[0][1] === 3) {
+    return { rank: [3, groups[0][0], ...groups.slice(1).map(([rank]) => rank).sort((a, b) => b - a)], name: "Three of a kind" };
+  }
+  if (groups[0][1] === 2 && groups[1][1] === 2) {
+    return {
+      rank: [2, groups[0][0], groups[1][0], groups[2][0]],
+      name: "Two pair",
+    };
+  }
+  if (groups[0][1] === 2) {
+    return {
+      rank: [1, groups[0][0], ...groups.slice(1).map(([rank]) => rank).sort((a, b) => b - a)],
+      name: "Pair",
+    };
+  }
+  return { rank: [0, ...ranks], name: "High card" };
+}
+
+function comparePokerHands(first, second) {
+  for (let index = 0; index < Math.max(first.rank.length, second.rank.length); index += 1) {
+    const difference = (first.rank[index] || 0) - (second.rank[index] || 0);
+    if (difference) return difference;
+  }
+  return 0;
 }
 
 function currentTurn() {
@@ -164,6 +218,26 @@ function snapshot() {
       dealer,
       dealerScore: blackjack.phase === "playing" ? null : score(blackjack.dealer),
       turnId: blackjack.phase === "playing" ? currentTurn()?.id ?? null : null,
+    },
+    slots: { history: slots.history },
+    horseRace: {
+      phase: horseRace.phase,
+      bets: horseRace.bets.map(({ playerId, name, horse, amount }) => ({
+        playerId, name, horse, amount,
+      })),
+      winner: horseRace.winner,
+      history: horseRace.history,
+    },
+    poker: {
+      phase: poker.phase,
+      players: poker.players.map(({ id, name, bet, hand, result }) => ({
+        id,
+        name,
+        bet,
+        hand: poker.phase === "done" ? hand : hand.map(() => ({ hidden: true })),
+        result,
+      })),
+      lastResult: poker.lastResult,
     },
   };
 }
@@ -266,6 +340,15 @@ function handleMessage(socket, message) {
     for (const seat of blackjack.players) {
       if (seat.id === player.id) seat.name = player.name;
     }
+    for (const bet of roulette.bets) {
+      if (bet.playerId === player.id) bet.name = player.name;
+    }
+    for (const bet of horseRace.bets) {
+      if (bet.playerId === player.id) bet.name = player.name;
+    }
+    for (const seat of poker.players) {
+      if (seat.id === player.id) seat.name = player.name;
+    }
     savePlayers();
     broadcast();
     return;
@@ -320,6 +403,157 @@ function handleMessage(socket, message) {
       roulette.history = roulette.history.slice(0, 12);
       roulette.bets = [];
       roulette.spinning = false;
+      savePlayers();
+      broadcast();
+    }, 2500);
+    return;
+  }
+
+  if (message.type === "slots-spin") {
+    if (!validAmount(message.amount) || message.amount > player.chips) {
+      return sendError(socket, "Choose a slot wager between 1 and 500 chips within your balance.");
+    }
+    player.chips -= message.amount;
+    const symbols = Array.from({ length: 3 }, () => slotSymbols[randomInt(slotSymbols.length)]);
+    const same = symbols[0] === symbols[1] && symbols[1] === symbols[2];
+    const pair = symbols.some((symbol, index) => symbols.indexOf(symbol) !== index);
+    const multiplier = same
+      ? symbols[0] === "7" ? 20 : 8
+      : pair ? 2 : 0;
+    const payout = message.amount * multiplier;
+    player.chips += payout;
+    slots.history.unshift({
+      playerId: player.id,
+      name: player.name,
+      symbols,
+      amount: message.amount,
+      payout,
+    });
+    slots.history = slots.history.slice(0, 12);
+    savePlayers();
+    broadcast();
+    return;
+  }
+
+  if (message.type === "horse-bet") {
+    if (horseRace.phase !== "waiting") {
+      return sendError(socket, "Wait until the current horse race is over.");
+    }
+    if (!horseNames.includes(message.horse)) {
+      return sendError(socket, "Choose one of the horses on the track.");
+    }
+    if (!validAmount(message.amount) || message.amount > player.chips) {
+      return sendError(socket, "Choose a horse bet between 1 and 500 chips within your balance.");
+    }
+    player.chips -= message.amount;
+    horseRace.bets.push({
+      playerId: player.id,
+      name: player.name,
+      horse: message.horse,
+      amount: message.amount,
+    });
+    savePlayers();
+    broadcast();
+    return;
+  }
+
+  if (message.type === "horse-start") {
+    if (horseRace.phase !== "waiting" || horseRace.bets.length === 0) {
+      return sendError(socket, "Place a bet before starting the race.");
+    }
+    horseRace.phase = "racing";
+    horseRace.winner = null;
+    broadcast();
+    setTimeout(() => {
+      const winner = horseNames[randomInt(horseNames.length)];
+      for (const bet of horseRace.bets) {
+        if (bet.horse === winner) {
+          const winnerPlayer = players.get(bet.playerId);
+          if (winnerPlayer) winnerPlayer.chips += bet.amount * 3;
+        }
+      }
+      horseRace.winner = winner;
+      horseRace.history.unshift({ winner, bets: horseRace.bets.length });
+      horseRace.history = horseRace.history.slice(0, 8);
+      horseRace.bets = [];
+      horseRace.phase = "waiting";
+      savePlayers();
+      broadcast();
+    }, 4200);
+    return;
+  }
+
+  if (message.type === "join-poker") {
+    if (poker.phase === "playing") {
+      return sendError(socket, "Wait for the current poker showdown to finish.");
+    }
+    if (!validAmount(message.amount) || message.amount > player.chips) {
+      return sendError(socket, "Choose a poker buy-in between 1 and 500 chips within your balance.");
+    }
+    if (poker.phase === "done") {
+      poker.phase = "waiting";
+      poker.players = [];
+    }
+    if (poker.players.some((seat) => seat.id === player.id)) {
+      return sendError(socket, "You are already at this poker table.");
+    }
+    if (poker.players.length >= 8) {
+      return sendError(socket, "This poker table is full. Join the next round.");
+    }
+    player.chips -= message.amount;
+    poker.players.push({
+      id: player.id,
+      name: player.name,
+      bet: message.amount,
+      hand: [],
+      result: null,
+    });
+    savePlayers();
+    broadcast();
+    return;
+  }
+
+  if (message.type === "start-poker") {
+    if (poker.phase !== "waiting" || poker.players.length < 2) {
+      return sendError(socket, "At least two players must join before the poker showdown.");
+    }
+    const deck = makeDeck();
+    for (const seat of poker.players) {
+      seat.hand = Array.from({ length: 5 }, () => deck.pop());
+      seat.result = null;
+    }
+    poker.phase = "playing";
+    broadcast();
+    setTimeout(() => {
+      const ranked = poker.players.map((seat) => ({
+        seat,
+        hand: evaluatePokerHand(seat.hand),
+      }));
+      const best = ranked.reduce((winner, current) =>
+        comparePokerHands(current.hand, winner.hand) > 0 ? current : winner
+      );
+      const winners = ranked.filter((candidate) =>
+        comparePokerHands(candidate.hand, best.hand) === 0
+      );
+      const pot = poker.players.reduce((total, seat) => total + seat.bet, 0);
+      const share = Math.floor(pot / winners.length);
+      let remainder = pot % winners.length;
+      for (const candidate of ranked) {
+        const winnerIndex = winners.findIndex((winner) => winner.seat.id === candidate.seat.id);
+        const won = winnerIndex >= 0;
+        const payout = won ? share + (remainder-- > 0 ? 1 : 0) : 0;
+        const winningPlayer = players.get(candidate.seat.id);
+        if (winningPlayer && won) winningPlayer.chips += payout;
+        candidate.seat.result = won
+          ? `${candidate.hand.name} · won ${payout} chips`
+          : candidate.hand.name;
+      }
+      poker.lastResult = {
+        winners: winners.map(({ seat }) => seat.name),
+        hand: best.hand.name,
+        pot,
+      };
+      poker.phase = "done";
       savePlayers();
       broadcast();
     }, 2500);

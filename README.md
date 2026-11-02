@@ -1,6 +1,16 @@
 # Golden Hour Casino
 
-A browser-based multiplayer casino lounge with live roulette, turn-based blackjack, player-chosen usernames, and complimentary play chips. No account or password is required, and no real money is used.
+A browser-based multiplayer casino lounge with roulette, turn-based blackjack, slots, shared horse races, and multiplayer poker showdowns. Players choose their own usernames and use complimentary play chips. No account or password is required, and no real money is used.
+
+## Games
+
+- **Roulette:** Place bets on red, black, or a number and spin the shared wheel.
+- **Blackjack:** Join the shared table, take turns, and play against the dealer.
+- **Slots:** Spin three reels; pairs pay 2×, three of a kind 8×, and three sevens 20×.
+- **Horse race:** Back one of four horses in a shared race; a winning bet pays 3×.
+- **Poker:** Join a five-card showdown with 2–8 players. The best hand wins the pot, and ties split it. Each round is a single buy-in and showdown, not a full betting-round version of Texas Hold'em.
+
+All game outcomes and chip changes are calculated by the server. Chips are for entertainment only and have no cash value.
 
 ## Run locally
 
