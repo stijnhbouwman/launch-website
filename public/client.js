@@ -75,6 +75,8 @@ function connect() {
           ? `Joined private room ${state.room.code}. Share the invite link with friends.`
           : "You joined the global game.");
       }
+    } else if (message.type === "daily-global-bonus") {
+      showToast(`Daily global bonus: +${message.amount.toLocaleString()} chips!`);
     } else if (message.type === "error") {
       if (!joined) {
         renderUsernamePicker(message.message);
