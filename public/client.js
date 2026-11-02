@@ -12,6 +12,7 @@ let state = null;
 let view = "lobby";
 let selectedBet = "red";
 let selectedAmount = 25;
+let selectedHorse = "Comet";
 let socket;
 let reconnectTimer;
 let toastTimer;
@@ -146,6 +147,9 @@ function render() {
   }
   if (view === "roulette") renderRoulette();
   else if (view === "blackjack") renderBlackjack();
+  else if (view === "slots") renderSlots();
+  else if (view === "horses") renderHorseRace();
+  else if (view === "poker") renderPoker();
   else renderLobby();
 }
 
@@ -175,6 +179,27 @@ function renderLobby() {
         <div class="game-card-content"><div class="game-card-head"><h3>Blackjack</h3><span class="table-live"><span></span> LIVE TABLE</span></div>
           <p>Take a seat around the shared table. Play your hand, watch the dealer, and aim for 21.</p>
           <div class="game-card-footer"><span class="players-label"><strong>${state.blackjack.players.length}</strong> at the table</span><button class="primary-button" data-go="blackjack">Join the table&nbsp; ↗</button></div>
+        </div>
+      </article>
+      <article class="game-card">
+        <div class="game-art slots-art"><div class="slot-preview">7&nbsp; ✦&nbsp; 7</div></div>
+        <div class="game-card-content"><div class="game-card-head"><h3>Slots</h3><span class="table-live"><span></span> PLAY ANYTIME</span></div>
+          <p>Spin the reels for pairs and three-of-a-kind prizes. Your result and payout are shared live.</p>
+          <div class="game-card-footer"><span class="players-label"><strong>${state.slots.history.length}</strong> recent spins</span><button class="primary-button" data-go="slots">Play slots&nbsp; ↗</button></div>
+        </div>
+      </article>
+      <article class="game-card">
+        <div class="game-art horses-art"><div class="horse-preview">♞ &nbsp; ♞ &nbsp; ♞ &nbsp; ♞</div></div>
+        <div class="game-card-content"><div class="game-card-head"><h3>Horse race</h3><span class="table-live"><span></span> SHARED RACE</span></div>
+          <p>Choose your horse, place a chip bet, and race together for a 3× payout.</p>
+          <div class="game-card-footer"><span class="players-label"><strong>${state.horseRace.bets.length}</strong> bets this race</span><button class="primary-button" data-go="horses">Visit the track&nbsp; ↗</button></div>
+        </div>
+      </article>
+      <article class="game-card">
+        <div class="game-art poker-art"><div class="poker-preview">♣ &nbsp; ♠ &nbsp; ♥ &nbsp; ♦</div></div>
+        <div class="game-card-content"><div class="game-card-head"><h3>Poker</h3><span class="table-live"><span></span> MULTIPLAYER</span></div>
+          <p>Join a five-card showdown with friends. Best poker hand takes the pot; ties split it.</p>
+          <div class="game-card-footer"><span class="players-label"><strong>${state.poker.players.length}</strong> at the table</span><button class="primary-button" data-go="poker">Join poker&nbsp; ↗</button></div>
         </div>
       </article>
     </div>
@@ -320,6 +345,153 @@ function renderBlackjack() {
   });
   content.querySelector("#new-blackjack")?.addEventListener("click", () => {
     send({ type: "join-blackjack", amount: selectedAmount });
+  });
+}
+
+function renderSlots() {
+  const history = state.slots.history;
+  const latest = history.find((spin) => spin.playerId === playerId);
+  content.innerHTML = `
+    <span class="eyebrow">THE REEL ROOM</span><h1>Slots</h1>
+    <p class="hero-subtitle">Spin three reels for a lucky match. Pair any symbols for 2×, three of a kind for 8×, or three sevens for 20×.</p>
+    <div class="game-layout">
+      <section class="table-panel">
+        <div class="table-panel-top"><h2>Golden reels</h2><small>Single-player spins · shared results</small></div>
+        <div class="slot-machine">
+          <div class="slot-reels">${(latest?.symbols || ["✦", "♣", "7"]).map((symbol) => `<span>${symbol}</span>`).join("")}</div>
+          <p>${latest ? `${latest.name === currentPlayer()?.name ? "Your" : `${escapeHtml(latest.name)}’s`} last spin · ${latest.payout ? `won ${latest.payout.toLocaleString()} chips` : "no match this time"}` : "Place a wager and spin the reels."}</p>
+        </div>
+        <div class="recent-bets"><h4>Recent spins</h4>
+          ${history.length ? `<div class="activity-list">${history.slice(0, 8).map((spin) =>
+            `<div class="activity-row"><span>${escapeHtml(spin.name)} · ${spin.symbols.join(" ")}</span><small>${spin.payout ? `+${spin.payout}` : `−${spin.amount}`} chips</small></div>`
+          ).join("")}</div>` : `<div class="activity-empty">The reels are ready for their first spin.</div>`}
+        </div>
+      </section>
+      <aside class="control-panel">
+        <h3>Try your luck</h3><p class="control-copy">The wager is taken before the reels spin. All prizes are paid in complimentary chips.</p>
+        <label class="field-label" for="slots-amount">Your wager</label>
+        <div class="amount-row"><input class="chip-input" id="slots-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
+        <button class="primary-button full-button" id="spin-slots">Spin the reels&nbsp; ↗</button>
+        <div class="table-rules"><div class="rule-row"><span>Any pair</span><strong>2×</strong></div><div class="rule-row"><span>Three of a kind</span><strong>8×</strong></div><div class="rule-row"><span>Three sevens</span><strong>20×</strong></div></div>
+      </aside>
+    </div>`;
+  content.querySelectorAll("[data-amount]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedAmount = Number(button.dataset.amount);
+      renderSlots();
+    });
+  });
+  content.querySelector("#slots-amount").addEventListener("input", (event) => {
+    selectedAmount = Number(event.target.value);
+  });
+  content.querySelector("#spin-slots").addEventListener("click", () => {
+    send({ type: "slots-spin", amount: selectedAmount });
+  });
+}
+
+function renderHorseRace() {
+  const race = state.horseRace;
+  const horses = ["Comet", "Clover", "Sundown", "Goldrush"];
+  const myBet = race.bets.find((bet) => bet.playerId === playerId);
+  content.innerHTML = `
+    <span class="eyebrow">THE GRANDSTAND</span><h1>Horse race</h1>
+    <p class="hero-subtitle">Pick a horse, join the shared track, and race your friends. A winning bet pays 3× its wager.</p>
+    <div class="game-layout">
+      <section class="table-panel">
+        <div class="table-panel-top"><h2>Golden Hour Stakes</h2><small>${race.phase === "racing" ? "Race in progress" : "Open for bets"}</small></div>
+        <div class="race-track ${race.phase === "racing" ? "racing" : ""}">
+          ${horses.map((horse, index) => `<div class="race-lane"><span class="race-lane-name">${horse}</span><div class="track-line"><span class="horse-runner horse-${index}">♞</span><span class="finish-line"></span></div></div>`).join("")}
+        </div>
+        <div class="race-message">${race.phase === "racing" ? "And they’re off!" : race.winner ? `${escapeHtml(race.winner)} won the last race!` : "Choose your horse before the starting bell."}</div>
+        <div class="recent-bets"><h4>On the track</h4>
+          ${race.bets.length ? `<div class="activity-list">${race.bets.map((bet) =>
+            `<div class="activity-row"><span>${escapeHtml(bet.name)} · ${escapeHtml(bet.horse)}</span><small>${bet.amount} chips</small></div>`
+          ).join("")}</div>` : `<div class="activity-empty">No bets have been placed yet.</div>`}
+        </div>
+      </section>
+      <aside class="control-panel">
+        <h3>${myBet ? "Your race bet" : "Back a horse"}</h3>
+        <p class="control-copy">${myBet ? `You backed ${escapeHtml(myBet.horse)} for ${myBet.amount} chips.` : "Place a bet on the shared race. Bets lock as soon as the race starts."}</p>
+        ${!myBet ? `
+          <div class="horse-options">${horses.map((horse) => `<button class="bet-type ${selectedHorse === horse ? "selected" : ""}" data-horse="${horse}" ${race.phase === "racing" ? "disabled" : ""}>${horse}</button>`).join("")}</div>
+          <label class="field-label" for="horse-amount">Your wager</label>
+          <div class="amount-row"><input class="chip-input" id="horse-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
+          <button class="secondary-button full-button" id="bet-horse" ${race.phase === "racing" ? "disabled" : ""}>Place bet on ${selectedHorse}&nbsp; · &nbsp;3×</button>` : ""}
+        <button class="primary-button full-button" id="start-race" ${race.phase === "racing" || !race.bets.length ? "disabled" : ""}>${race.phase === "racing" ? "Race in progress…" : "Start the race"}&nbsp; ↗</button>
+        <div class="table-rules"><div class="rule-row"><span>Winning payout</span><strong>3×</strong></div><div class="rule-row"><span>Horses</span><strong>4</strong></div></div>
+      </aside>
+    </div>`;
+  content.querySelectorAll("[data-horse]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedHorse = button.dataset.horse;
+      renderHorseRace();
+    });
+  });
+  content.querySelectorAll("[data-amount]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedAmount = Number(button.dataset.amount);
+      renderHorseRace();
+    });
+  });
+  content.querySelector("#horse-amount")?.addEventListener("input", (event) => {
+    selectedAmount = Number(event.target.value);
+  });
+  content.querySelector("#bet-horse")?.addEventListener("click", () => {
+    send({ type: "horse-bet", horse: selectedHorse, amount: selectedAmount });
+  });
+  content.querySelector("#start-race").addEventListener("click", () => {
+    send({ type: "horse-start" });
+  });
+}
+
+function renderPoker() {
+  const game = state.poker;
+  const mySeat = game.players.find((seat) => seat.id === playerId);
+  content.innerHTML = `
+    <span class="eyebrow">THE CARD ROOM</span><h1>Poker</h1>
+    <p class="hero-subtitle">Five-card showdown with friends. Everyone buys in, the best poker hand wins the pot, and ties split it evenly.</p>
+    <div class="game-layout">
+      <section class="table-panel">
+        <div class="table-panel-top"><h2>Five-card showdown</h2><small>${game.phase === "playing" ? "Cards dealt" : game.phase === "done" ? "Showdown complete" : "Waiting for players"}</small></div>
+        <div class="blackjack-felt poker-felt">
+          ${game.players.length ? `<div class="hand-area"><div class="hand-label"><span>PLAYERS · ${game.players.length} SEATED</span><small>${game.players.reduce((pot, seat) => pot + seat.bet, 0).toLocaleString()} chip pot</small></div>
+            <div class="cards-row poker-seats">${game.players.map((seat) => `<div class="seat-card"><div class="seat-name">${escapeHtml(seat.name)} · ${seat.bet} chips</div><div class="seat-cards">${seat.hand.map(cardMarkup).join("")}</div><div class="seat-status">${escapeHtml(seat.result || (game.phase === "playing" ? "Showdown…" : "Waiting"))}</div></div>`).join("")}</div></div>`
+            : `<div class="waiting-message">Take a seat to join the next showdown.</div>`}
+          ${game.lastResult ? `<div class="poker-result">${game.lastResult.winners.map(escapeHtml).join(", ")} won with ${escapeHtml(game.lastResult.hand)} · ${game.lastResult.pot.toLocaleString()} chips</div>` : ""}
+        </div>
+      </section>
+      <aside class="control-panel">
+        <h3>${game.phase === "playing" ? "Cards are dealt" : game.phase === "done" ? "Next showdown" : "Join the table"}</h3>
+        <p class="control-copy">${game.phase === "playing" ? "The cards are being revealed. Your best five-card poker hand is ranked by the table." : "This friendly five-card showdown uses play chips only. The best hand takes the pot; ties split it."}</p>
+        ${game.phase === "done" ? `
+          <label class="field-label" for="poker-amount">Next round buy-in</label>
+          <div class="amount-row"><input class="chip-input" id="poker-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
+          <button class="secondary-button full-button" id="join-poker">Join the next round&nbsp; +</button>
+        ` : game.phase === "waiting" ? `
+          ${mySeat ? `<div class="seat-row"><span>You are in</span><small>${mySeat.bet} chips</small></div>` : `
+          <label class="field-label" for="poker-amount">Buy-in</label>
+          <div class="amount-row"><input class="chip-input" id="poker-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
+          <button class="secondary-button full-button" id="join-poker">Take a seat&nbsp; +</button>`}
+          <button class="primary-button full-button" id="start-poker" ${game.players.length < 2 ? "disabled" : ""}>Deal the hands&nbsp; ↗</button>
+          ${game.players.length < 2 ? `<div class="activity-empty">At least two players are needed to start.</div>` : ""}
+        ` : `<div class="seat-row"><span>Round in progress</span><small>${game.players.length} players</small></div>`}
+        <div class="table-rules"><div class="rule-row"><span>Hand size</span><strong>5 cards</strong></div><div class="rule-row"><span>Ties</span><strong>Split pot</strong></div><div class="rule-row"><span>Seats</span><strong>2–8 players</strong></div></div>
+      </aside>
+    </div>`;
+  content.querySelectorAll("[data-amount]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedAmount = Number(button.dataset.amount);
+      renderPoker();
+    });
+  });
+  content.querySelector("#poker-amount")?.addEventListener("input", (event) => {
+    selectedAmount = Number(event.target.value);
+  });
+  content.querySelector("#join-poker")?.addEventListener("click", () => {
+    send({ type: "join-poker", amount: selectedAmount });
+  });
+  content.querySelector("#start-poker")?.addEventListener("click", () => {
+    send({ type: "start-poker" });
   });
 }
 

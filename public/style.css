@@ -92,6 +92,13 @@ h1 { margin: 12px 0 9px; font-size: clamp(32px, 4vw, 45px); letter-spacing: -.8p
 .game-art { height: 158px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .game-art.roulette-art { background: radial-gradient(ellipse at center, #284b3d 0, #203b32 43%, #18241f 100%); }
 .game-art.blackjack-art { background: radial-gradient(ellipse at 50% 70%, #623531 0, #392621 52%, #241c19 100%); }
+.game-art.slots-art { background: radial-gradient(ellipse at center, #614c29, #332b20 62%, #211e19); }
+.game-art.horses-art { background: radial-gradient(ellipse at center, #35543d, #263c2d 62%, #1b251e); }
+.game-art.poker-art { background: radial-gradient(ellipse at center, #633932, #392521 62%, #241c19); }
+.slot-preview, .horse-preview, .poker-preview { position: relative; z-index: 1; font-family: var(--serif); font-size: 34px; color: var(--gold-bright); text-shadow: 0 3px 15px #0008; }
+.slot-preview { padding: 14px 22px; background: #171812; border: 2px solid #c9ab63; border-radius: 8px; box-shadow: 0 7px 22px #0007; }
+.horse-preview { color: #d7c08b; letter-spacing: 3px; }
+.poker-preview { color: #eee3ca; letter-spacing: 4px; }
 .game-art::before { content: ""; position: absolute; width: 230px; height: 230px; border: 1px solid #ffffff0c; border-radius: 50%; }
 .wheel { width: 118px; height: 118px; border: 6px double #c9ab63; border-radius: 50%; display: grid; place-items: center; color: #efdcaa; font-family: var(--serif); font-size: 27px; background: repeating-conic-gradient(#292821 0 10deg, #823e39 10deg 20deg, #292821 20deg 30deg, #b5954c 30deg 32deg); box-shadow: 0 0 30px #0008; }
 .wheel-inner { width: 44px; height: 44px; border: 2px solid #d5bd79; border-radius: 50%; background: #1d3129; display: grid; place-items: center; }
@@ -172,6 +179,28 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .table-chip { background: #252821; color: #d6d7ce; border: 1px solid #3b4038; border-radius: 20px; padding: 6px 9px; font-size: 9px; }
 .table-chip strong { color: var(--gold-bright); font-weight: 600; }
 .blackjack-felt { min-height: 340px; padding: 22px; background: radial-gradient(ellipse at 50% 40%, #315744, #214034 70%, #18251e); display: flex; flex-direction: column; gap: 23px; }
+.poker-felt { min-height: 300px; }
+.poker-seats { flex-wrap: wrap; align-items: flex-start; gap: 10px; }
+.poker-seats .seat-card { max-width: 230px; margin: 0; }
+.poker-seats .seat-cards .mini-card { width: 40px; height: 57px; margin-right: -7px; }
+.poker-result { border-top: 1px solid #ffffff18; padding-top: 13px; color: var(--gold-bright); font-size: 11px; }
+.slot-machine { min-height: 255px; padding: 28px 20px; background: radial-gradient(ellipse at center, #514126, #2b291f 65%, #20211d); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 22px; }
+.slot-reels { display: flex; justify-content: center; gap: 9px; }
+.slot-reels span { width: 75px; height: 90px; border: 2px solid #c8aa60; border-radius: 7px; display: grid; place-items: center; background: #f0ead9; color: #30291c; font-family: var(--serif); font-size: 42px; box-shadow: 0 8px 20px #0007; }
+.slot-machine p { color: #ddd4bb; text-align: center; font-size: 11px; margin: 0; }
+.race-track { padding: 23px 20px 10px; background: repeating-linear-gradient(180deg, #342c22 0, #342c22 42px, #403628 43px, #403628 44px); }
+.race-lane { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; gap: 12px; min-height: 48px; }
+.race-lane-name { color: #e0d7c1; font-size: 10px; }
+.track-line { height: 2px; position: relative; background: #d2c49b44; }
+.track-line::after { content: ""; position: absolute; right: 12px; top: -20px; height: 42px; border-left: 2px dashed #e2d6b7; opacity: .8; }
+.horse-runner { position: absolute; top: -15px; left: 3px; z-index: 1; color: var(--gold-bright); font-size: 21px; }
+.race-track.racing .horse-runner { animation: horseRun 1.15s ease-in-out infinite alternate; }
+.race-lane:nth-child(2) .horse-runner { color: #c6d6c3; }
+.race-lane:nth-child(3) .horse-runner { color: #e3a19b; }
+.race-lane:nth-child(4) .horse-runner { color: #c8b7e0; }
+@keyframes horseRun { to { left: calc(100% - 36px); } }
+.race-message { padding: 13px 20px 2px; color: var(--gold-bright); text-align: center; font-family: var(--serif); font-size: 16px; }
+.horse-options { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .hand-area { border-bottom: 1px solid #ffffff18; padding-bottom: 15px; }
 .hand-area:last-child { border-bottom: 0; padding-bottom: 0; }
 .hand-label { display: flex; justify-content: space-between; align-items: center; color: #d1d8cc; font-size: 10px; margin-bottom: 9px; }
@@ -237,4 +266,7 @@ button:disabled { opacity: .48; cursor: not-allowed; }
   .number-cell { min-height: 34px; }
   .control-panel { padding: 18px; }
   .blackjack-felt { min-height: 290px; padding: 16px; }
+  .slot-reels span { width: 60px; height: 76px; font-size: 34px; }
+  .race-track { padding-left: 12px; padding-right: 12px; }
+  .race-lane { grid-template-columns: 65px minmax(0, 1fr); gap: 8px; }
 }
