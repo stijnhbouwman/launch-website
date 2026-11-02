@@ -8,9 +8,15 @@ A browser-based multiplayer casino lounge with roulette, turn-based blackjack, s
 - **Blackjack:** Join the shared table, take turns, and play against the dealer.
 - **Slots:** Spin three reels; pairs pay 2×, three of a kind 8×, and three sevens 20×.
 - **Horse race:** Back one of four horses in a shared race; a winning bet pays 3×.
-- **Poker:** Join a five-card showdown with 2–8 players. The best hand wins the pot, and ties split it. Each round is a single buy-in and showdown, not a full betting-round version of Texas Hold'em.
+- **Poker:** Join a five-card showdown with friends. The best hand wins the pot, and ties split it. Each round is a single buy-in and showdown, not a full betting-round version of Texas Hold'em.
 
 All game outcomes and chip changes are calculated by the server. Chips are for entertainment only and have no cash value.
+
+## Private and global rooms
+
+The room bar starts in the **Global game**, where anyone online can join. Select **Create private room** to move to a separate room, then copy and share its invite link. Friends who open that link join the private room; they can also enter its 12-character code in the room bar. **Join global game** returns to the public room.
+
+Roulette, blackjack, horse races, and poker show a ready count and cannot start until every currently connected player in that room has placed a bet or joined the round. The private room host starts its games; anyone in the global game can start once everyone is ready. Slots remain individual spins, with results visible only in the current room. Unstarted bets are refunded when a player changes rooms. A room change is blocked while a round is in progress. Private rooms are temporary and close when the server restarts, so share the current invite link with friends.
 
 ## Run locally
 

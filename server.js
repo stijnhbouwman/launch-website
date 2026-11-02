@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { randomInt } = require("node:crypto");
+const { randomBytes, randomInt } = require("node:crypto");
 const WebSocket = require("ws");
 
 const port = Number(process.env.PORT) || 3000;
@@ -15,19 +15,64 @@ const savedPlayers = fs.existsSync(playersFile)
   ? JSON.parse(fs.readFileSync(playersFile, "utf8"))
   : {};
 
-const roulette = { bets: [], lastResult: null, history: [], spinning: false };
 const slotSymbols = ["✦", "♣", "♦", "♠", "7"];
-const slots = { history: [] };
 const horseNames = ["Comet", "Clover", "Sundown", "Goldrush"];
-const horseRace = { phase: "waiting", bets: [], winner: null, history: [] };
-const blackjack = {
-  phase: "waiting",
-  players: [],
-  dealer: [],
-  deck: [],
-  turnIndex: 0,
-};
-const poker = { phase: "waiting", players: [], lastResult: null };
+const rooms = new Map();
+
+function createRoom(code, isPrivate, ownerId = null) {
+  return {
+    code,
+    isPrivate,
+    ownerId,
+    roulette: { bets: [], lastResult: null, history: [], spinning: false },
+    slots: { history: [] },
+    horseRace: { phase: "waiting", bets: [], winner: null, history: [] },
+    blackjack: { phase: "waiting", players: [], dealer: [], deck: [], turnIndex: 0 },
+    poker: { phase: "waiting", players: [], lastResult: null },
+  };
+}
+
+rooms.set("global", createRoom("global", false));
+
+function connectedRoomPlayers(roomCode) {
+  return [...players.values()].filter((player) => player.connected && player.roomCode === roomCode);
+}
+
+function allRoomPlayersReady(roomCode, readyIds) {
+  const members = connectedRoomPlayers(roomCode);
+  return members.length > 0 && members.every((player) => readyIds.has(player.id));
+}
+
+function roomHasRunningGame(room) {
+  return room.roulette.spinning ||
+    room.horseRace.phase === "racing" ||
+    room.blackjack.phase === "playing" ||
+    room.poker.phase === "playing";
+}
+
+function refundRoomEntries(player, room) {
+  const refund = (amount) => {
+    if (Number.isSafeInteger(amount) && amount > 0) player.chips += amount;
+  };
+  for (const bet of room.roulette.bets.filter((item) => item.playerId === player.id)) {
+    refund(bet.amount);
+  }
+  room.roulette.bets = room.roulette.bets.filter((item) => item.playerId !== player.id);
+  for (const bet of room.horseRace.bets.filter((item) => item.playerId === player.id)) {
+    refund(bet.amount);
+  }
+  room.horseRace.bets = room.horseRace.bets.filter((item) => item.playerId !== player.id);
+  const blackjackSeat = room.blackjack.players.find((seat) => seat.id === player.id);
+  if (blackjackSeat && room.blackjack.phase === "waiting") {
+    refund(blackjackSeat.bet);
+    room.blackjack.players = room.blackjack.players.filter((seat) => seat.id !== player.id);
+  }
+  const pokerSeat = room.poker.players.find((seat) => seat.id === player.id);
+  if (pokerSeat && room.poker.phase === "waiting") {
+    refund(pokerSeat.bet);
+    room.poker.players = room.poker.players.filter((seat) => seat.id !== player.id);
+  }
+}
 
 function savePlayers() {
   fs.mkdirSync(dataDirectory, { recursive: true });
@@ -55,15 +100,15 @@ function score(hand) {
   return total;
 }
 
-function makeDeck() {
+function makeDeck(deckCount = 1) {
   const suits = ["♠", "♥", "♦", "♣"];
   const ranks = [
     ["A", 11], ["2", 2], ["3", 3], ["4", 4], ["5", 5], ["6", 6],
     ["7", 7], ["8", 8], ["9", 9], ["10", 10], ["J", 10], ["Q", 10], ["K", 10],
   ];
-  const deck = suits.flatMap((suit) =>
-    ranks.map(([rank, value]) => ({ rank, suit, value }))
-  );
+  const deck = Array.from({ length: deckCount }, () =>
+    suits.flatMap((suit) => ranks.map(([rank, value]) => ({ rank, suit, value })))
+  ).flat();
   for (let index = deck.length - 1; index > 0; index -= 1) {
     const swapIndex = randomInt(index + 1);
     [deck[index], deck[swapIndex]] = [deck[swapIndex], deck[index]];
@@ -120,11 +165,12 @@ function comparePokerHands(first, second) {
   return 0;
 }
 
-function currentTurn() {
-  return blackjack.players[blackjack.turnIndex];
+function currentTurn(room) {
+  return room.blackjack.players[room.blackjack.turnIndex];
 }
 
-function advanceBlackjack() {
+function advanceBlackjack(room) {
+  const blackjack = room.blackjack;
   while (blackjack.turnIndex < blackjack.players.length) {
     const player = players.get(blackjack.players[blackjack.turnIndex].id);
     const seat = blackjack.players[blackjack.turnIndex];
@@ -139,10 +185,11 @@ function advanceBlackjack() {
     seat.status = seat.status === "playing" ? "stood" : seat.status;
     blackjack.turnIndex += 1;
   }
-  finishBlackjack();
+  finishBlackjack(room);
 }
 
-function finishBlackjack() {
+function finishBlackjack(room) {
+  const blackjack = room.blackjack;
   while (score(blackjack.dealer) < 17 && blackjack.deck.length > 0) {
     blackjack.dealer.push(blackjack.deck.pop());
   }
@@ -188,15 +235,24 @@ function finishBlackjack() {
   savePlayers();
 }
 
-function snapshot() {
+function snapshot(roomCode) {
+  const room = rooms.get(roomCode);
+  if (!room) return null;
+  const { roulette, blackjack, slots, horseRace, poker } = room;
   const dealer = blackjack.dealer.map((card, index) => {
     if (blackjack.phase === "playing" && index === 1) return { hidden: true };
     return card;
   });
   return {
     players: [...players.values()]
-      .filter((player) => player.connected)
+      .filter((player) => player.connected && player.roomCode === roomCode)
       .map(({ id, name, chips }) => ({ id, name, chips })),
+    room: {
+      code: room.code,
+      isPrivate: room.isPrivate,
+      ownerId: room.ownerId,
+      members: connectedRoomPlayers(roomCode).map(({ id, name }) => ({ id, name })),
+    },
     roulette: {
       bets: roulette.bets.map(({ playerId, name, selection, amount }) => ({
         playerId, name, selection, amount,
@@ -204,6 +260,7 @@ function snapshot() {
       lastResult: roulette.lastResult,
       history: roulette.history,
       spinning: roulette.spinning,
+      readyIds: roulette.bets.map((bet) => bet.playerId),
     },
     blackjack: {
       phase: blackjack.phase,
@@ -217,7 +274,8 @@ function snapshot() {
       })),
       dealer,
       dealerScore: blackjack.phase === "playing" ? null : score(blackjack.dealer),
-      turnId: blackjack.phase === "playing" ? currentTurn()?.id ?? null : null,
+      turnId: blackjack.phase === "playing" ? currentTurn(room)?.id ?? null : null,
+      readyIds: blackjack.players.map((seat) => seat.id),
     },
     slots: { history: slots.history },
     horseRace: {
@@ -227,6 +285,7 @@ function snapshot() {
       })),
       winner: horseRace.winner,
       history: horseRace.history,
+      readyIds: horseRace.bets.map((bet) => bet.playerId),
     },
     poker: {
       phase: poker.phase,
@@ -238,16 +297,25 @@ function snapshot() {
         result,
       })),
       lastResult: poker.lastResult,
+      readyIds: poker.players.map((seat) => seat.id),
     },
   };
 }
 
 const sockets = new Set();
 function broadcast() {
-  const message = JSON.stringify({ type: "state", state: snapshot() });
+  const states = new Map();
   for (const socket of sockets) {
     if (socket.readyState === WebSocket.OPEN && socket.playerId) {
-      socket.send(message);
+      const player = players.get(socket.playerId);
+      if (!player) continue;
+      if (!states.has(player.roomCode)) {
+        states.set(player.roomCode, JSON.stringify({
+          type: "state",
+          state: snapshot(player.roomCode),
+        }));
+      }
+      socket.send(states.get(player.roomCode));
     }
   }
 }
@@ -262,7 +330,8 @@ function validAmount(amount) {
   return Number.isSafeInteger(amount) && amount >= 1 && amount <= 500;
 }
 
-function resetBlackjack() {
+function resetBlackjack(room) {
+  const blackjack = room.blackjack;
   blackjack.phase = "waiting";
   blackjack.players = [];
   blackjack.dealer = [];
@@ -284,6 +353,14 @@ function handleMessage(socket, message) {
       sendError(socket, "Choose a username with 1–18 letters, numbers, or underscores.");
       return;
     }
+    let requestedRoom = typeof message.roomCode === "string" && message.roomCode
+      ? message.roomCode.toUpperCase()
+      : "global";
+    if (requestedRoom === "GLOBAL") requestedRoom = "global";
+    if (!rooms.has(requestedRoom)) {
+      sendError(socket, "That private room does not exist. Check the invite link or code.");
+      return;
+    }
     const nameTaken = [...players.values()].some(
       (candidate) =>
         candidate.id !== message.id &&
@@ -303,22 +380,86 @@ function handleMessage(socket, message) {
         chips: saved && Number.isSafeInteger(saved.chips) && saved.chips >= 0
           ? saved.chips
           : 1000,
+        roomCode: requestedRoom,
         connected: false,
         sockets: new Set(),
       };
       players.set(message.id, player);
     }
+    const previousRoomCode = player.roomCode;
+    if (previousRoomCode && previousRoomCode !== requestedRoom) {
+      const previousRoom = rooms.get(previousRoomCode);
+      if (previousRoom && roomHasRunningGame(previousRoom)) {
+        sendError(socket, "Finish the current round before changing rooms.");
+        return;
+      }
+      if (previousRoom) refundRoomEntries(player, previousRoom);
+    }
+    player.roomCode = requestedRoom;
     player.name = name;
     player.connected = true;
     player.sockets.add(socket);
     socket.playerId = player.id;
     savePlayers();
+    if (previousRoomCode && previousRoomCode !== requestedRoom) {
+      const previousRoom = rooms.get(previousRoomCode);
+      if (previousRoom) {
+        if (previousRoom.ownerId === player.id) {
+          previousRoom.ownerId = connectedRoomPlayers(previousRoomCode)
+            .find((member) => member.id !== player.id)?.id ?? null;
+        }
+      }
+    }
     broadcast();
     return;
   }
 
   const player = players.get(socket.playerId);
   if (!player || !player.sockets.has(socket)) return;
+
+  if (message.type === "create-room" || message.type === "join-room") {
+    let targetCode;
+    const currentRoom = rooms.get(player.roomCode);
+    if (!currentRoom || roomHasRunningGame(currentRoom)) {
+      return sendError(socket, "Finish the current round before changing rooms.");
+    }
+    if (message.type === "create-room") {
+      do {
+        targetCode = randomBytes(6).toString("hex").toUpperCase();
+      } while (rooms.has(targetCode));
+      rooms.set(targetCode, createRoom(targetCode, true, player.id));
+    } else {
+      targetCode = typeof message.roomCode === "string"
+        ? message.roomCode.trim().toUpperCase()
+        : "";
+      if (targetCode !== "GLOBAL" && !/^[A-F0-9]{12}$/.test(targetCode)) {
+        return sendError(socket, "Enter a valid 12-character private room code.");
+      }
+      if (targetCode === "GLOBAL") targetCode = "global";
+      if (!rooms.has(targetCode)) {
+        return sendError(socket, "That private room does not exist. Check the code.");
+      }
+    }
+    if (currentRoom.code !== targetCode) {
+      refundRoomEntries(player, currentRoom);
+      if (currentRoom.ownerId === player.id) {
+        currentRoom.ownerId = connectedRoomPlayers(currentRoom.code)
+          .find((member) => member.id !== player.id)?.id ?? null;
+      }
+      player.roomCode = targetCode;
+      const targetRoom = rooms.get(targetCode);
+      if (targetRoom.isPrivate && !targetRoom.ownerId) targetRoom.ownerId = player.id;
+      savePlayers();
+    }
+    broadcast();
+    return;
+  }
+
+  const room = rooms.get(player.roomCode);
+  if (!room) {
+    sendError(socket, "Your game room is unavailable. Rejoin the global room.");
+    return;
+  }
 
   if (message.type === "set-name") {
     const name = safeName(message.name);
@@ -337,16 +478,16 @@ function handleMessage(socket, message) {
       return;
     }
     player.name = name;
-    for (const seat of blackjack.players) {
+    for (const seat of room.blackjack.players) {
       if (seat.id === player.id) seat.name = player.name;
     }
-    for (const bet of roulette.bets) {
+    for (const bet of room.roulette.bets) {
       if (bet.playerId === player.id) bet.name = player.name;
     }
-    for (const bet of horseRace.bets) {
+    for (const bet of room.horseRace.bets) {
       if (bet.playerId === player.id) bet.name = player.name;
     }
-    for (const seat of poker.players) {
+    for (const seat of room.poker.players) {
       if (seat.id === player.id) seat.name = player.name;
     }
     savePlayers();
@@ -355,8 +496,12 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "roulette-bet") {
+    const roulette = room.roulette;
     const selection = String(message.selection);
     if (roulette.spinning) return sendError(socket, "The wheel is spinning.");
+    if (roulette.bets.some((bet) => bet.playerId === player.id)) {
+      return sendError(socket, "You have already placed your bet for this spin.");
+    }
     if (!/^(red|black|[0-9]|[12][0-9]|3[0-6])$/.test(selection)) {
       return sendError(socket, "Choose red, black, or a number from 0 to 36.");
     }
@@ -376,15 +521,24 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "roulette-spin") {
+    const roulette = room.roulette;
     if (roulette.spinning) return sendError(socket, "The wheel is already spinning.");
     if (roulette.bets.length === 0) return sendError(socket, "Place a bet before the spin.");
+    const readyIds = new Set(roulette.bets.map((bet) => bet.playerId));
+    if (!allRoomPlayersReady(room.code, readyIds)) {
+      return sendError(socket, "Wait until everyone in the room has placed a roulette bet.");
+    }
+    if (room.isPrivate && room.ownerId !== player.id) {
+      return sendError(socket, "Only the private room host can start the game.");
+    }
     roulette.spinning = true;
     broadcast();
     setTimeout(() => {
+      const currentRoulette = room.roulette;
       const result = randomInt(37);
       const redNumbers = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
       const color = result === 0 ? "green" : redNumbers.has(result) ? "red" : "black";
-      for (const bet of roulette.bets) {
+      for (const bet of currentRoulette.bets) {
         const winner =
           bet.selection === String(result) ||
           (bet.selection === "red" && color === "red") ||
@@ -398,11 +552,11 @@ function handleMessage(socket, message) {
           }
         }
       }
-      roulette.lastResult = { number: result, color };
-      roulette.history.unshift(roulette.lastResult);
-      roulette.history = roulette.history.slice(0, 12);
-      roulette.bets = [];
-      roulette.spinning = false;
+      currentRoulette.lastResult = { number: result, color };
+      currentRoulette.history.unshift(currentRoulette.lastResult);
+      currentRoulette.history = currentRoulette.history.slice(0, 12);
+      currentRoulette.bets = [];
+      currentRoulette.spinning = false;
       savePlayers();
       broadcast();
     }, 2500);
@@ -422,25 +576,29 @@ function handleMessage(socket, message) {
       : pair ? 2 : 0;
     const payout = message.amount * multiplier;
     player.chips += payout;
-    slots.history.unshift({
+    room.slots.history.unshift({
       playerId: player.id,
       name: player.name,
       symbols,
       amount: message.amount,
       payout,
     });
-    slots.history = slots.history.slice(0, 12);
+    room.slots.history = room.slots.history.slice(0, 12);
     savePlayers();
     broadcast();
     return;
   }
 
   if (message.type === "horse-bet") {
+    const horseRace = room.horseRace;
     if (horseRace.phase !== "waiting") {
       return sendError(socket, "Wait until the current horse race is over.");
     }
     if (!horseNames.includes(message.horse)) {
       return sendError(socket, "Choose one of the horses on the track.");
+    }
+    if (horseRace.bets.some((bet) => bet.playerId === player.id)) {
+      return sendError(socket, "You have already placed your bet for this race.");
     }
     if (!validAmount(message.amount) || message.amount > player.chips) {
       return sendError(socket, "Choose a horse bet between 1 and 500 chips within your balance.");
@@ -458,25 +616,34 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "horse-start") {
+    const horseRace = room.horseRace;
     if (horseRace.phase !== "waiting" || horseRace.bets.length === 0) {
       return sendError(socket, "Place a bet before starting the race.");
+    }
+    const readyIds = new Set(horseRace.bets.map((bet) => bet.playerId));
+    if (!allRoomPlayersReady(room.code, readyIds)) {
+      return sendError(socket, "Wait until everyone in the room has placed a horse bet.");
+    }
+    if (room.isPrivate && room.ownerId !== player.id) {
+      return sendError(socket, "Only the private room host can start the game.");
     }
     horseRace.phase = "racing";
     horseRace.winner = null;
     broadcast();
     setTimeout(() => {
+      const currentRace = room.horseRace;
       const winner = horseNames[randomInt(horseNames.length)];
-      for (const bet of horseRace.bets) {
+      for (const bet of currentRace.bets) {
         if (bet.horse === winner) {
           const winnerPlayer = players.get(bet.playerId);
           if (winnerPlayer) winnerPlayer.chips += bet.amount * 3;
         }
       }
-      horseRace.winner = winner;
-      horseRace.history.unshift({ winner, bets: horseRace.bets.length });
-      horseRace.history = horseRace.history.slice(0, 8);
-      horseRace.bets = [];
-      horseRace.phase = "waiting";
+      currentRace.winner = winner;
+      currentRace.history.unshift({ winner, bets: currentRace.bets.length });
+      currentRace.history = currentRace.history.slice(0, 8);
+      currentRace.bets = [];
+      currentRace.phase = "waiting";
       savePlayers();
       broadcast();
     }, 4200);
@@ -484,6 +651,7 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "join-poker") {
+    const poker = room.poker;
     if (poker.phase === "playing") {
       return sendError(socket, "Wait for the current poker showdown to finish.");
     }
@@ -496,9 +664,6 @@ function handleMessage(socket, message) {
     }
     if (poker.players.some((seat) => seat.id === player.id)) {
       return sendError(socket, "You are already at this poker table.");
-    }
-    if (poker.players.length >= 8) {
-      return sendError(socket, "This poker table is full. Join the next round.");
     }
     player.chips -= message.amount;
     poker.players.push({
@@ -514,10 +679,18 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "start-poker") {
+    const poker = room.poker;
     if (poker.phase !== "waiting" || poker.players.length < 2) {
       return sendError(socket, "At least two players must join before the poker showdown.");
     }
-    const deck = makeDeck();
+    const readyIds = new Set(poker.players.map((seat) => seat.id));
+    if (!allRoomPlayersReady(room.code, readyIds)) {
+      return sendError(socket, "Wait until everyone in the room has joined the poker round.");
+    }
+    if (room.isPrivate && room.ownerId !== player.id) {
+      return sendError(socket, "Only the private room host can start the game.");
+    }
+    const deck = makeDeck(Math.ceil(poker.players.length / 10));
     for (const seat of poker.players) {
       seat.hand = Array.from({ length: 5 }, () => deck.pop());
       seat.result = null;
@@ -525,7 +698,8 @@ function handleMessage(socket, message) {
     poker.phase = "playing";
     broadcast();
     setTimeout(() => {
-      const ranked = poker.players.map((seat) => ({
+      const currentPoker = room.poker;
+      const ranked = currentPoker.players.map((seat) => ({
         seat,
         hand: evaluatePokerHand(seat.hand),
       }));
@@ -535,7 +709,7 @@ function handleMessage(socket, message) {
       const winners = ranked.filter((candidate) =>
         comparePokerHands(candidate.hand, best.hand) === 0
       );
-      const pot = poker.players.reduce((total, seat) => total + seat.bet, 0);
+      const pot = currentPoker.players.reduce((total, seat) => total + seat.bet, 0);
       const share = Math.floor(pot / winners.length);
       let remainder = pot % winners.length;
       for (const candidate of ranked) {
@@ -561,13 +735,14 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "join-blackjack") {
+    const blackjack = room.blackjack;
     if (blackjack.phase === "playing") {
       return sendError(socket, "Wait for the current blackjack round to finish.");
     }
     if (!validAmount(message.amount) || message.amount > player.chips) {
       return sendError(socket, "Choose a bet between 1 and 500 chips within your balance.");
     }
-    if (blackjack.phase === "done") resetBlackjack();
+    if (blackjack.phase === "done") resetBlackjack(room);
     if (blackjack.players.some((seat) => seat.id === player.id)) {
       return sendError(socket, "You are already at this blackjack table.");
     }
@@ -586,8 +761,16 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "start-blackjack") {
+    const blackjack = room.blackjack;
     if (blackjack.phase !== "waiting" || blackjack.players.length === 0) {
       return sendError(socket, "Join the table before starting a round.");
+    }
+    const readyIds = new Set(blackjack.players.map((seat) => seat.id));
+    if (!allRoomPlayersReady(room.code, readyIds)) {
+      return sendError(socket, "Wait until everyone in the room has placed a blackjack bet.");
+    }
+    if (room.isPrivate && room.ownerId !== player.id) {
+      return sendError(socket, "Only the private room host can start the game.");
     }
     blackjack.deck = makeDeck();
     blackjack.dealer = [];
@@ -599,13 +782,14 @@ function handleMessage(socket, message) {
     blackjack.dealer = [blackjack.deck.pop(), blackjack.deck.pop()];
     blackjack.phase = "playing";
     blackjack.turnIndex = 0;
-    advanceBlackjack();
+    advanceBlackjack(room);
     broadcast();
     return;
   }
 
   if (message.type === "blackjack-action") {
-    const seat = currentTurn();
+    const blackjack = room.blackjack;
+    const seat = currentTurn(room);
     if (blackjack.phase !== "playing" || !seat || seat.id !== player.id) {
       return sendError(socket, "It is not your turn.");
     }
@@ -614,12 +798,12 @@ function handleMessage(socket, message) {
       if (score(seat.hand) > 21) {
         seat.status = "bust";
         blackjack.turnIndex += 1;
-        advanceBlackjack();
+        advanceBlackjack(room);
       }
     } else if (message.action === "stand") {
       seat.status = "stood";
       blackjack.turnIndex += 1;
-      advanceBlackjack();
+      advanceBlackjack(room);
     } else {
       return sendError(socket, "Choose hit or stand.");
     }
@@ -710,16 +894,21 @@ webSocketServer.on("connection", (socket) => {
     if (player && player.sockets.has(socket)) {
       player.sockets.delete(socket);
       if (player.sockets.size === 0) player.connected = false;
-      const seat = blackjack.players.find((item) => item.id === player.id);
+      const room = rooms.get(player.roomCode);
+      const blackjack = room?.blackjack;
+      const seat = blackjack?.players.find((item) => item.id === player.id);
       if (
         player.sockets.size === 0 &&
-        blackjack.phase === "playing" &&
+        blackjack?.phase === "playing" &&
         seat &&
-        currentTurn()?.id === player.id
+        currentTurn(room)?.id === player.id
       ) {
         seat.status = "stood";
         blackjack.turnIndex += 1;
-        advanceBlackjack();
+        advanceBlackjack(room);
+      }
+      if (player.sockets.size === 0 && room?.ownerId === player.id) {
+        room.ownerId = connectedRoomPlayers(room.code)[0]?.id ?? null;
       }
       broadcast();
     }
