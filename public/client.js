@@ -66,15 +66,11 @@ function connect() {
     if (message.type === "state") {
       const previousRoom = state?.room;
       const previousRoomCode = previousRoom?.code;
-      const previousGame = state?.players.find((player) => player.id === playerId)?.currentGame;
       state = message.state;
-      const currentGame = state.players.find((player) => player.id === playerId)?.currentGame;
-      if (previousGame && !currentGame) view = "lobby";
       if (previousRoomCode && previousRoomCode !== state.room.code) view = "lobby";
       if (previousRoom?.ended && previousRoom.code === state.room.code && !state.room.ended) {
         view = "lobby";
       }
-      if (previousRoom?.selectedGame && previousRoom.code === state.room.code && !state.room.selectedGame) view = "lobby";
       if (
         state.room.isPrivate &&
         state.room.selectedGame &&
@@ -368,13 +364,17 @@ function renderContent() {
   else renderLobby();
   if (view !== "lobby" && !state.room.ended) {
     const stillInGame = !state.room.isPrivate || (state.room.gameParticipants || []).includes(playerId);
-    const quitBar = document.createElement("div");
-    quitBar.className = "game-exit-bar";
-    quitBar.innerHTML = `<button class="quiet-button" id="quit-current-game" type="button" ${stillInGame ? "" : "disabled"}>${stillInGame ? "Quit " + (view === "horses" ? "horse race" : view) : "Quit requested · waiting for room"}</button><span>${state.room.isPrivate ? "Everyone must quit before the room can choose another game." : "Leave this table and return to the game lobby."}</span>`;
-    content.prepend(quitBar);
-    quitBar.querySelector("#quit-current-game").addEventListener("click", () => {
-      if (window.confirm("Quit this game and return to the game lobby?")) send({ type: "quit-game", game: view });
-    });
+    const controlPanel = content.querySelector(".control-panel");
+    if (controlPanel) {
+      const quitButton = document.createElement("button");
+      quitButton.className = "primary-button full-button quit-game-button";
+      quitButton.id = "quit-current-game";
+      quitButton.type = "button";
+      quitButton.disabled = !stillInGame;
+      quitButton.textContent = stillInGame ? "Quit game" : "Quit requested · waiting for room";
+      controlPanel.append(quitButton);
+      quitButton.addEventListener("click", () => send({ type: "quit-game", game: view }));
+    }
   }
 }
 
