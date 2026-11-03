@@ -71,6 +71,7 @@ function connect() {
       if (previousRoom?.ended && previousRoom.code === state.room.code && !state.room.ended) {
         view = "lobby";
       }
+      if (previousRoom?.selectedGame && previousRoom.code === state.room.code && !state.room.selectedGame) view = "lobby";
       if (
         state.room.isPrivate &&
         state.room.selectedGame &&
@@ -354,6 +355,16 @@ function renderContent() {
   else if (view === "horses") renderHorseRace();
   else if (view === "poker") renderPoker();
   else renderLobby();
+  if (view !== "lobby" && !state.room.ended) {
+    const stillInGame = !state.room.isPrivate || (state.room.gameParticipants || []).includes(playerId);
+    const quitBar = document.createElement("div");
+    quitBar.className = "game-exit-bar";
+    quitBar.innerHTML = `<button class="quiet-button" id="quit-current-game" type="button" ${stillInGame ? "" : "disabled"}>${stillInGame ? "Quit " + (view === "horses" ? "horse race" : view) : "Quit requested · waiting for room"}</button><span>${state.room.isPrivate ? "Everyone must quit before the room can choose another game." : "Leave this table and return to the game lobby."}</span>`;
+    content.prepend(quitBar);
+    quitBar.querySelector("#quit-current-game").addEventListener("click", () => {
+      if (window.confirm("Quit this game and return to the game lobby?")) send({ type: "quit-game", game: view });
+    });
+  }
 }
 
 function renderPrivateRoomEnded() {
