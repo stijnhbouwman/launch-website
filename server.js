@@ -99,7 +99,7 @@ function endRoomIfBroke(room) {
     }
   }
   const active = [...room.bankrolls.entries()].filter(([, balance]) => balance > 0);
-  if (room.bankrolls.size >= 2 && active.length === 1) {
+  if (room.bankrolls.size + room.eliminated.length >= 2 && active.length === 1) {
     const [winnerId] = active[0];
     const winner = players.get(winnerId);
     room.rankings = [
