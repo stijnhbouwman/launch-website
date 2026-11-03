@@ -1224,3 +1224,46 @@ server.listen(port, "0.0.0.0", () => {
 });
 
 // Room chat support will be wired into room state.
+
+
+// Add a room-scoped chat channel alongside the existing multiplayer actions.
+const snapshotWithChat = snapshot;
+snapshot = function (roomCode) {
+  const result = snapshotWithChat(roomCode);
+  if (result) result.chat = rooms.get(roomCode)?.chat || [];
+  return result;
+};
+
+webSocketServer.on("connection", (chatSocket) => {
+  chatSocket.on("message", (rawMessage) => {
+    let chatMessage;
+    try {
+      chatMessage = JSON.parse(rawMessage.toString());
+    } catch {
+      return;
+    }
+    if (chatMessage?.type !== "chat-message") return;
+    const chatPlayer = players.get(chatSocket.playerId);
+    if (!chatPlayer || !chatPlayer.sockets.has(chatSocket)) return;
+    const chatRoom = rooms.get(chatPlayer.roomCode);
+    if (!chatRoom || chatRoom.ended) return;
+    const text = typeof chatMessage.text === "string"
+      ? chatMessage.text.replace(/[\\u0000-\\u001f\\u007f]/g, " ").trim().slice(0, 240)
+      : "";
+    if (!text) return;
+    if (Date.now() - (chatSocket.lastChatAt || 0) < 650) {
+      return sendError(chatSocket, "Please wait before sending another message.");
+    }
+    chatSocket.lastChatAt = Date.now();
+    if (!Array.isArray(chatRoom.chat)) chatRoom.chat = [];
+    chatRoom.chat.push({
+      id: randomBytes(8).toString("hex"),
+      playerId: chatPlayer.id,
+      name: chatPlayer.name,
+      text,
+      timestamp: Date.now(),
+    });
+    chatRoom.chat = chatRoom.chat.slice(-80);
+    broadcast();
+  });
+});
