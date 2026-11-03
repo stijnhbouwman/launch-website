@@ -45,8 +45,33 @@
           <div class="topbar-right">
             <div class="online-count"><span class="online-pulse"></span><strong id="online-count">0</strong> online</div>
             <div class="wallet"><span class="chip-icon">✳</span><span id="chip-count">1,000</span><small>CHIPS</small></div>
+            <button class="secondary-button admin-toggle" id="admin-toggle" type="button" hidden>Admin</button>
           </div>
         </header>
+        <section id="admin-panel" class="admin-panel" hidden aria-label="Admin controls">
+          <div class="admin-panel-heading">
+            <div>
+              <span class="eyebrow">PRIVATE ADMIN TOOLS</span>
+              <h2>Online players</h2>
+              <p>Balances shown are for each player's current room.</p>
+            </div>
+            <button class="quiet-button" id="admin-close" type="button">Lock and close</button>
+          </div>
+          <form id="admin-login-form" class="admin-login-form">
+            <label class="field-label" for="admin-player-id">This browser's player ID (set as ADMIN_PLAYER_ID on the server)</label>
+            <div class="admin-login-row">
+              <input class="chip-input" id="admin-player-id" type="text" readonly aria-label="This browser's player ID">
+              <button class="secondary-button" id="copy-admin-player-id" type="button">Copy ID</button>
+            </div>
+            <label class="field-label" for="admin-password">Admin password</label>
+            <div class="admin-login-row">
+              <input class="chip-input" id="admin-password" type="password" autocomplete="current-password" required>
+              <button class="primary-button" type="submit">Unlock</button>
+            </div>
+            <p class="admin-login-error" id="admin-login-error" role="alert"></p>
+          </form>
+          <div id="admin-player-list" class="admin-player-list" hidden></div>
+        </section>
         <section id="room-controls" class="room-controls" hidden aria-label="Game room">
           <div class="room-summary">
             <span class="room-badge" id="room-badge">GLOBAL GAME</span>
