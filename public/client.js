@@ -24,6 +24,7 @@ let kickedFromRoom = false;
 let adminAuthenticated = false;
 let adminPanelOpen = false;
 let adminPlayers = [];
+let chatOpen = true;
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
