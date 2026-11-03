@@ -10,7 +10,7 @@ A browser-based multiplayer casino lounge with roulette, turn-based blackjack, s
 - **Horse race:** Back one of four horses in a shared race; a winning bet pays 3×.
 - **Poker:** Join a five-card showdown with friends. The best hand wins the pot, and ties split it. Each round is a single buy-in and showdown, not a full betting-round version of Texas Hold'em.
 
-All game outcomes and chip changes are calculated by the server. Chips are for entertainment only and have no cash value.
+All game outcomes and chip changes are calculated by the server. Wagers can be any whole-number amount from 1 chip up to your available balance. Chips are for entertainment only and have no cash value.
 
 ## Private and global rooms
 
