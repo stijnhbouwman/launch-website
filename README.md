@@ -47,6 +47,3 @@ The password is verified by the server, never stored in the browser or committed
 4. Wait for the first deploy to finish. Render will show a public `https://…onrender.com` address; share that URL with your friends. Keep this single server instance running for the shared tables.
 
 The included Render configuration uses the free service plan. The site and live multiplayer tables are available over the public internet, but free services can sleep when idle and their local files are not durable. Saved chip balances may be lost after a restart or redeploy. A persistent database or paid storage is needed for durable balances.
-
-
-<!-- room chat and roulette improvements are in progress -->
