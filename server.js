@@ -1222,3 +1222,5 @@ webSocketServer.on("connection", (socket) => {
 server.listen(port, "0.0.0.0", () => {
   console.log(`Golden Hour Casino is listening on http://localhost:${port}`);
 });
+
+// Room chat support will be wired into room state.
