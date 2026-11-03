@@ -95,6 +95,12 @@
           </div>
         </section>
         <section id="content" class="page-content" aria-live="polite"></section>
+        <section id="room-chat" class="room-chat" aria-label="Room chat" hidden>
+          <div class="room-chat-heading"><div><span class="eyebrow">LIVE CONVERSATION</span><h2 id="chat-title">Global game chat</h2></div><span class="chat-online-label">ROOM CHAT</span></div>
+          <div id="chat-messages" class="chat-messages" aria-live="polite" aria-relevant="additions"></div>
+          <form id="chat-form" class="chat-form"><label class="sr-only" for="chat-input">Write a chat message</label><input id="chat-input" class="chip-input" type="text" maxlength="240" autocomplete="off" placeholder="Say something to the room…" required><button class="primary-button" type="submit">Send ↗</button></form>
+          <p class="chat-footnote">Messages are visible only to players in this room. The latest 80 are kept while the room is active.</p>
+        </section>
         <div id="toast" class="toast" role="status" aria-live="polite"></div>
       </main>
     </div>
