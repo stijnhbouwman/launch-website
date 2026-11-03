@@ -58,10 +58,9 @@
             <button class="quiet-button" id="admin-close" type="button">Lock and close</button>
           </div>
           <form id="admin-login-form" class="admin-login-form">
-            <label class="field-label" for="admin-player-id">This browser's player ID (set as ADMIN_PLAYER_ID on the server)</label>
+            <label class="field-label" for="admin-username">Admin username</label>
             <div class="admin-login-row">
-              <input class="chip-input" id="admin-player-id" type="text" readonly aria-label="This browser's player ID">
-              <button class="secondary-button" id="copy-admin-player-id" type="button">Copy ID</button>
+              <input class="chip-input" id="admin-username" name="username" type="text" value="stijn" autocomplete="username" required>
             </div>
             <label class="field-label" for="admin-password">Admin password</label>
             <div class="admin-login-row">

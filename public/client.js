@@ -190,19 +190,16 @@ function updateHeader() {
     (player?.name ?? (playerName || "G")).slice(0, 1).toUpperCase();
   document.querySelector("#crumb-current").textContent =
     view === "lobby" ? "OVERVIEW" : view.toUpperCase();
-  document.querySelector("#admin-toggle").hidden =
-    (player?.name ?? playerName).toLocaleLowerCase() !== "stijn";
+  document.querySelector("#admin-toggle").hidden = false;
   renderAdminPanel();
 }
 
 function renderAdminPanel() {
   const panel = document.querySelector("#admin-panel");
   if (!panel) return;
-  const isStijn = (currentPlayer()?.name ?? playerName).toLocaleLowerCase() === "stijn";
-  panel.hidden = !adminPanelOpen || !isStijn;
+  panel.hidden = !adminPanelOpen;
   document.querySelector("#admin-login-form").hidden = adminAuthenticated;
   document.querySelector("#admin-player-list").hidden = !adminAuthenticated;
-  document.querySelector("#admin-player-id").value = playerId;
   if (!adminAuthenticated) return;
   const playerRows = adminPlayers.map((player) => {
     const roomLabel = player.isPrivate ? "Private · " + escapeHtml(player.roomCode) : "Global";
@@ -727,19 +724,11 @@ document.querySelector("#admin-close").addEventListener("click", () => {
 });
 document.querySelector("#admin-login-form").addEventListener("submit", (event) => {
   event.preventDefault();
+  const usernameInput = document.querySelector("#admin-username");
   const passwordInput = document.querySelector("#admin-password");
   document.querySelector("#admin-login-error").textContent = "";
-  send({ type: "admin-login", password: passwordInput.value });
+  send({ type: "admin-login", username: usernameInput.value.trim(), password: passwordInput.value });
   passwordInput.value = "";
-});
-document.querySelector("#copy-admin-player-id").addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(playerId);
-    showToast("This browser's player ID was copied.");
-  } catch (error) {
-    console.error("Could not copy the admin player ID:", error);
-    showToast("Copy failed. Select and copy the player ID instead.");
-  }
 });
 document.querySelector("#admin-player-list").addEventListener("click", (event) => {
   const button = event.target.closest("[data-admin-action]");
