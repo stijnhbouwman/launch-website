@@ -367,6 +367,7 @@ function renderPrivateRoomEnded() {
       <div class="room-ended-balances">${state.room.members.map((member) =>
         `<div class="activity-row"><span>${escapeHtml(member.name)}</span><strong>${member.chips.toLocaleString()} chips</strong></div>`
       ).join("")}</div>
+      ${state.room.rankings?.length ? `<div class="room-ended-balances">${state.room.rankings.map((entry) => `<div class="activity-row"><span>${entry.place === 1 ? "🥇" : entry.place === 2 ? "🥈" : entry.place === 3 ? "🥉" : "#" + entry.place} · ${escapeHtml(entry.name)} · ${escapeHtml(entry.reason || "")}</span><strong>${entry.place === 1 ? "1st place" : entry.place === 2 ? "2nd place" : entry.place === 3 ? "3rd place" : entry.place + "th place"}</strong></div>`).join("")}</div>` : ""}
       <p class="bet-progress">${votes.length} of ${state.room.members.length} players chose to play again.</p>
       <div class="room-ended-actions">
         <button class="primary-button" id="replay-room" ${voted ? "disabled" : ""}>${voted ? "Play again chosen ✓" : "Play again · 1,000 chips each"}</button>
