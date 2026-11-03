@@ -77,6 +77,7 @@ function connect() {
       }
       updateHeader();
       updateRoomControls();
+      renderRoomChat();
       render();
       if (previousRoomCode && previousRoomCode !== state.room.code) {
         if (kickedFromRoom) {
@@ -442,8 +443,12 @@ function renderRoulette() {
       <section class="table-panel">
         <div class="table-panel-top"><h2>The shared wheel</h2><small>${state.room.isPrivate ? `${readiness.ready} / ${readiness.total} players ready` : `${roulette.bets.length} bets placed`}</small></div>
         <div class="roulette-table">
-          <div class="roulette-result ${roulette.spinning ? "spinning" : result?.color ?? ""}">${roulette.spinning ? "✳" : result?.number ?? "—"}</div>
-          <div class="result-caption">${roulette.spinning ? "The wheel is turning…" : result ? `Last result · ${result.color}` : "Place the first bet"}</div>
+          <div class="roulette-wheel-stage ${roulette.spinning ? "spinning" : ""}">
+            <div class="roulette-wheel"><div class="roulette-wheel-center">GH</div></div>
+            <div class="roulette-ball-orbit"><span class="roulette-ball"></span></div>
+            <div class="roulette-result ${result?.color ?? ""}">${roulette.spinning ? "✳" : result?.number ?? "—"}</div>
+          </div>
+          <div class="result-caption">${roulette.spinning ? "The ball is rolling around the wheel…" : result ? `Last result · ${result.color}` : "Place the first bet"}</div>
           <div class="table-bets">${roulette.bets.length ? roulette.bets.map((bet) => `<span class="bet-pill">${escapeHtml(bet.name)} · ${escapeHtml(bet.selection)} · ${bet.amount}</span>`).join("") : `<span class="bet-pill">The table is open</span>`}</div>
         </div>
         <div class="number-board">${numbers.map((number) => `<button class="number-cell ${number === 0 ? "green-cell" : reds.has(number) ? "red-cell" : ""} ${selectedBet === String(number) ? "selected" : ""}" data-selection="${number}">${number}</button>`).join("")}</div>
@@ -739,6 +744,37 @@ document.querySelector("#admin-player-list").addEventListener("click", (event) =
     return;
   }
   send({ type: "admin-adjust-chips", action: button.dataset.adminAction, targetId: button.dataset.playerId, amount });
+});
+
+function renderRoomChat() {
+  const panel = document.querySelector("#room-chat");
+  if (!panel || !state?.room) return;
+  panel.hidden = false;
+  document.querySelector("#chat-title").textContent =
+    state.room.isPrivate ? `Private room chat · ${state.room.code}` : "Global game chat";
+  const list = document.querySelector("#chat-messages");
+  const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 48;
+  const messages = state.chat || [];
+  list.innerHTML = messages.length
+    ? messages.map((item) => {
+        const time = new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        return `<article class="chat-message ${item.playerId === playerId ? "mine" : ""}">
+          <div class="chat-message-meta"><strong>${escapeHtml(item.name)}</strong><time>${time}</time></div>
+          <p>${escapeHtml(item.text)}</p>
+        </article>`;
+      }).join("")
+    : `<p class="chat-empty">No messages yet. Start the conversation.</p>`;
+  if (nearBottom) list.scrollTop = list.scrollHeight;
+}
+
+document.querySelector("#chat-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = document.querySelector("#chat-input");
+  const text = input.value.trim();
+  if (!text) return;
+  send({ type: "chat-message", text });
+  input.value = "";
+  input.focus();
 });
 
 document.querySelector("#create-room").addEventListener("click", () => {
