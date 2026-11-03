@@ -362,11 +362,12 @@ function renderPrivateRoomEnded() {
   content.innerHTML = `
     <section class="room-ended">
       <span class="eyebrow">PRIVATE ROOM COMPLETE</span>
-      <h1>Everyone is out of chips.</h1>
-      <p class="hero-subtitle">This game is over. Everyone can vote to start another game with 1,000 chips each, or leave the room and return to the global game.</p>
+      <h1>${state.room.rankings?.length ? "Private room finished." : "Everyone is out of chips."}</h1>
+      <p class="hero-subtitle">${state.room.rankings?.length ? "Final standings are below. Everyone can vote to start another game with 1,000 chips each, or leave the room." : "This game is over. Everyone can vote to start another game with 1,000 chips each, or leave the room and return to the global game."}</p>
       <div class="room-ended-balances">${state.room.members.map((member) =>
         `<div class="activity-row"><span>${escapeHtml(member.name)}</span><strong>${member.chips.toLocaleString()} chips</strong></div>`
       ).join("")}</div>
+      ${state.room.rankings?.length ? `<div class="room-ended-balances">${state.room.rankings.map((entry) => `<div class="activity-row"><span>${entry.place === 1 ? "🥇" : entry.place === 2 ? "🥈" : entry.place === 3 ? "🥉" : "#" + entry.place} · ${escapeHtml(entry.name)} · ${escapeHtml(entry.reason || "")}</span><strong>${entry.place === 1 ? "1st place" : entry.place === 2 ? "2nd place" : entry.place === 3 ? "3rd place" : entry.place + "th place"}</strong></div>`).join("")}</div>` : ""}
       <p class="bet-progress">${votes.length} of ${state.room.members.length} players chose to play again.</p>
       <div class="room-ended-actions">
         <button class="primary-button" id="replay-room" ${voted ? "disabled" : ""}>${voted ? "Play again chosen ✓" : "Play again · 1,000 chips each"}</button>
@@ -551,6 +552,7 @@ function renderBlackjack() {
           <label class="field-label" for="blackjack-amount">Your wager</label>
           <div class="amount-row"><input class="chip-input" id="blackjack-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
           <button class="secondary-button full-button" id="join-blackjack">Take a seat&nbsp; +</button>`}
+          ${mySeat ? `<label class="field-label" for="blackjack-amount">Edit your wager</label><div class="amount-row"><input class="chip-input" id="blackjack-amount" type="number" min="1" max="${(currentPlayer()?.chips ?? 0) + mySeat.bet}" step="1" value="${selectedAmount}"></div><button class="secondary-button full-button" id="update-blackjack-bet">Update wager</button>` : ""}
           <div class="recent-bets"><h4>Players ready</h4><div class="seat-list">${game.players.map((seat) => `<div class="seat-row"><span>${escapeHtml(seat.name)}</span><small>${seat.bet} chips</small></div>`).join("") || `<div class="activity-empty">No one has joined yet.</div>`}</div></div>
           ${state.room.isPrivate ? `<p class="bet-progress">${readiness.ready} of ${readiness.total} room players have placed a bet.</p>` : ""}
           <button class="primary-button full-button" id="start-blackjack" ${game.players.length === 0 || !roomReadyToStart(readiness) || !canStartRoomGame() ? "disabled" : ""}>${game.players.length === 0 ? "Take a seat first" : state.room.isPrivate && !readiness.complete ? "Waiting for all room bets…" : !canStartRoomGame() ? "Room host starts the game" : "Deal the cards ↗"}</button>
@@ -576,6 +578,9 @@ function renderBlackjack() {
   });
   content.querySelector("#join-blackjack")?.addEventListener("click", () => {
     send({ type: "join-blackjack", amount: selectedAmount });
+  });
+  content.querySelector("#update-blackjack-bet")?.addEventListener("click", () => {
+    send({ type: "update-blackjack-bet", amount: Number(content.querySelector("#blackjack-amount").value) });
   });
   content.querySelector("#start-blackjack")?.addEventListener("click", () => {
     send({ type: "start-blackjack" });
@@ -718,6 +723,7 @@ function renderPoker() {
           <label class="field-label" for="poker-amount">Buy-in</label>
           <div class="amount-row"><input class="chip-input" id="poker-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
           <button class="secondary-button full-button" id="join-poker">Take a seat&nbsp; +</button>`}
+          ${mySeat ? `<label class="field-label" for="poker-amount">Edit your buy-in</label><div class="amount-row"><input class="chip-input" id="poker-amount" type="number" min="1" max="${(currentPlayer()?.chips ?? 0) + mySeat.bet}" step="1" value="${selectedAmount}"></div><button class="secondary-button full-button" id="update-poker-bet">Update buy-in</button>` : ""}
           ${state.room.isPrivate ? `<p class="bet-progress">${readiness.ready} of ${readiness.total} room players have joined the round.</p>` : ""}
           <button class="primary-button full-button" id="start-poker" ${game.players.length < 2 || !roomReadyToStart(readiness) || !canStartRoomGame() ? "disabled" : ""}>${game.players.length < 2 ? "Waiting for another player…" : state.room.isPrivate && !readiness.complete ? "Waiting for everyone to join…" : !canStartRoomGame() ? "Room host starts the game" : "Deal the hands ↗"}</button>
           ${game.players.length < 2 ? `<div class="activity-empty">At least two players are needed to start.</div>` : ""}
@@ -736,6 +742,9 @@ function renderPoker() {
   });
   content.querySelector("#join-poker")?.addEventListener("click", () => {
     send({ type: "join-poker", amount: selectedAmount });
+  });
+  content.querySelector("#update-poker-bet")?.addEventListener("click", () => {
+    send({ type: "update-poker-bet", amount: Number(content.querySelector("#poker-amount").value) });
   });
   content.querySelector("#start-poker")?.addEventListener("click", () => {
     send({ type: "start-poker" });
@@ -825,7 +834,7 @@ document.querySelector("#join-room-form").addEventListener("submit", (event) => 
   send({ type: "join-room", roomCode });
 });
 document.querySelector("#join-global").addEventListener("click", () => {
-  send({ type: "join-room", roomCode: "global" });
+  if (window.confirm("Quit this private room and return to the global game?")) send({ type: "leave-room" });
 });
 document.querySelector("#copy-invite").addEventListener("click", async () => {
   try {
