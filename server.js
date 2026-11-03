@@ -424,7 +424,7 @@ function sendAdminState(socket) {
     .filter((player) => player.connected)
     .map((player) => {
       const room = rooms.get(player.roomCode);
-      const activeGame = room?.gameParticipants.has(player.id) ? room.selectedGame : (room?.roulette.bets.some((bet) => bet.playerId === player.id) ? "roulette" : room?.blackjack.players.some((seat) => seat.id === player.id) ? "blackjack" : room?.horseRace.bets.some((bet) => bet.playerId === player.id) ? "horses" : room?.poker.players.some((seat) => seat.id === player.id) ? "poker" : "lobby");
+      const activeGame = player.currentGame || (room?.gameParticipants.has(player.id) ? room.selectedGame : (room?.roulette.bets.some((bet) => bet.playerId === player.id) ? "roulette" : room?.blackjack.players.some((seat) => seat.id === player.id) ? "blackjack" : room?.horseRace.bets.some((bet) => bet.playerId === player.id) ? "horses" : room?.poker.players.some((seat) => seat.id === player.id) ? "poker" : "lobby"));
       return { id: player.id, name: player.name, chips: room ? chipsFor(room, player) : player.chips, roomCode: player.roomCode, isPrivate: Boolean(room && room.isPrivate), game: activeGame };
     })
     .sort((first, second) => first.name.localeCompare(second.name));
