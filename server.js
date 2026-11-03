@@ -734,6 +734,7 @@ function handleMessage(socket, message) {
       if (targetRoom.isPrivate && !targetRoom.bankrolls.has(player.id)) {
         targetRoom.bankrolls.set(player.id, 1000);
       }
+      if (targetRoom.isPrivate && targetRoom.selectedGame) { targetRoom.gameParticipants.add(player.id); player.currentGame = targetRoom.selectedGame; }
       const remainingMembers = connectedRoomPlayers(currentRoom.code);
       if (
         currentRoom.ended &&
