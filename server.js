@@ -397,7 +397,8 @@ function sendAdminState(socket) {
     .filter((player) => player.connected)
     .map((player) => {
       const room = rooms.get(player.roomCode);
-      return { id: player.id, name: player.name, chips: room ? chipsFor(room, player) : player.chips, roomCode: player.roomCode, isPrivate: Boolean(room && room.isPrivate) };
+      const activeGame = room?.selectedGame || (room?.roulette.bets.some((bet) => bet.playerId === player.id) ? "roulette" : room?.blackjack.players.some((seat) => seat.id === player.id) ? "blackjack" : room?.horseRace.bets.some((bet) => bet.playerId === player.id) ? "horses" : room?.poker.players.some((seat) => seat.id === player.id) ? "poker" : "lobby");
+      return { id: player.id, name: player.name, chips: room ? chipsFor(room, player) : player.chips, roomCode: player.roomCode, isPrivate: Boolean(room && room.isPrivate), game: activeGame };
     })
     .sort((first, second) => first.name.localeCompare(second.name));
   socket.send(JSON.stringify({ type: "admin-state", players: onlinePlayers }));
@@ -567,6 +568,35 @@ function handleMessage(socket, message) {
     socket.adminAuthorized = true;
     socket.send(JSON.stringify({ type: "admin-auth", success: true }));
     sendAdminState(socket);
+    return;
+  }
+
+  if (message.type === "admin-kick-player") {
+    if (!socket.adminAuthorized) return sendError(socket, "Unlock admin access first.");
+    if (typeof message.targetId !== "string" || message.targetId === player.id) return sendError(socket, "Choose another player.");
+    const target = players.get(message.targetId);
+    const targetRoom = target && rooms.get(target.roomCode);
+    if (!target || !target.connected || !targetRoom) return sendError(socket, "That player is no longer online.");
+    if (roomHasRunningGame(targetRoom)) return sendError(socket, "Wait until the player's current round is over before moving them.");
+    if (targetRoom.isPrivate) {
+      refundRoomEntries(target, targetRoom);
+      targetRoom.bankrolls.delete(target.id);
+      targetRoom.replayVotes.delete(target.id);
+    }
+    target.roomCode = "global";
+    for (const targetSocket of target.sockets) if (targetSocket.readyState === WebSocket.OPEN) targetSocket.send(JSON.stringify({ type: "room-kicked" }));
+    savePlayers();
+    broadcast();
+    return;
+  }
+
+  if (message.type === "admin-announcement") {
+    if (!socket.adminAuthorized) return sendError(socket, "Unlock admin access first.");
+    const announcement = typeof message.text === "string" ? message.text.trim().slice(0, 180) : "";
+    if (!announcement) return sendError(socket, "Write an announcement first.");
+    for (const targetSocket of sockets) {
+      if (targetSocket.readyState === WebSocket.OPEN && targetSocket.playerId) targetSocket.send(JSON.stringify({ type: "announcement", text: announcement }));
+    }
     return;
   }
 

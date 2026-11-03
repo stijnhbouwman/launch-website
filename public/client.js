@@ -24,6 +24,21 @@ let kickedFromRoom = false;
 let adminAuthenticated = false;
 let adminPanelOpen = false;
 let adminPlayers = [];
+function preserveFocusedField(renderCallback) {
+  const active = document.activeElement;
+  if (!active || !active.matches("input, textarea")) return renderCallback();
+  const key = active.id ? { id: active.id } : active.dataset.adminPlayerId ? { adminPlayerId: active.dataset.adminPlayerId } : null;
+  if (!key) return renderCallback();
+  const saved = { value: active.value, start: active.selectionStart, end: active.selectionEnd, direction: active.selectionDirection };
+  renderCallback();
+  const selector = key.id ? "#" + CSS.escape(key.id) : '[data-admin-player-id="' + CSS.escape(key.adminPlayerId) + '"]';
+  const replacement = document.querySelector(selector);
+  if (replacement) {
+    replacement.value = saved.value;
+    replacement.focus({ preventScroll: true });
+    if (saved.start !== null && saved.end !== null) replacement.setSelectionRange(saved.start, saved.end, saved.direction);
+  }
+}
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -106,6 +121,8 @@ function connect() {
       adminPlayers = [];
       renderAdminPanel();
       showToast(message.message);
+    } else if (message.type === "announcement") {
+      showToast("📢 " + message.text);
     } else if (message.type === "daily-global-bonus") {
       showToast(`Daily global bonus: +${message.amount.toLocaleString()} chips!`);
     } else if (message.type === "error") {
@@ -196,23 +213,29 @@ function updateHeader() {
 }
 
 function renderAdminPanel() {
+  preserveFocusedField(renderAdminPanelContent);
+}
+
+function renderAdminPanelContent() {
   const panel = document.querySelector("#admin-panel");
   if (!panel) return;
   panel.hidden = !adminPanelOpen;
   document.querySelector("#admin-login-form").hidden = adminAuthenticated;
   document.querySelector("#admin-player-list").hidden = !adminAuthenticated;
+  document.querySelector("#admin-announcement-form").hidden = !adminAuthenticated;
   if (!adminAuthenticated) return;
   const playerRows = adminPlayers.map((player) => {
     const roomLabel = player.isPrivate ? "Private · " + escapeHtml(player.roomCode) : "Global";
     return "<tr><td>" + escapeHtml(player.name) + "</td><td>" + roomLabel +
-      "</td><td class=\"admin-balance\">" + player.chips.toLocaleString() +
-      "</td><td><div class=\"admin-adjust\"><input class=\"chip-input\" type=\"number\" min=\"1\" max=\"1000000\" step=\"1\" value=\"100\" aria-label=\"Chip amount for " +
+      "</td><td>" + escapeHtml(player.game || "lobby") + "</td><td class=\"admin-balance\">" + player.chips.toLocaleString() +
+      "</td><td><div class=\"admin-adjust\"><input class=\"chip-input\" data-admin-player-id=\"" + escapeHtml(player.id) + "\" type=\"number\" min=\"1\" max=\"1000000\" step=\"1\" value=\"100\" aria-label=\"Chip amount for " +
       escapeHtml(player.name) + "\"><button class=\"secondary-button\" type=\"button\" data-admin-action=\"grant\" data-player-id=\"" +
       escapeHtml(player.id) + "\">Grant</button><button class=\"quiet-button\" type=\"button\" data-admin-action=\"take\" data-player-id=\"" +
-      escapeHtml(player.id) + "\">Take</button></div></td></tr>";
+      escapeHtml(player.id) + "\">Take</button><button class=\"quiet-button\" type=\"button\" data-admin-action=\"kick\" data-player-id=\"" +
+      escapeHtml(player.id) + "\">Move to global</button></div></td></tr>";
   }).join("");
   document.querySelector("#admin-player-list").innerHTML = adminPlayers.length
-    ? "<div class=\"admin-table-wrap\"><table class=\"admin-table\"><thead><tr><th>Player</th><th>Room</th><th>Balance</th><th>Adjust chips</th></tr></thead><tbody>" + playerRows + "</tbody></table></div>"
+    ? "<div class=\"admin-table-wrap\"><table class=\"admin-table\"><thead><tr><th>Player</th><th>Room</th><th>Game</th><th>Balance</th><th>Actions</th></tr></thead><tbody>" + playerRows + "</tbody></table></div>"
     : "<p class=\"activity-empty\">No players are online right now.</p>";
 }
 
@@ -313,6 +336,10 @@ function setView(nextView) {
 }
 
 function render() {
+  preserveFocusedField(renderContent);
+}
+
+function renderContent() {
   if (!state) {
     content.innerHTML = `<div class="hero"><div class="hero-copy"><span class="eyebrow">WELCOME TO GOLDEN HOUR</span><h1>Opening the lounge...</h1><p class="hero-subtitle">Connecting you to the live tables.</p></div></div>`;
     return;
@@ -735,12 +762,24 @@ document.querySelector("#admin-login-form").addEventListener("submit", (event) =
   send({ type: "admin-login", username: usernameInput.value.trim(), password: passwordInput.value });
   passwordInput.value = "";
 });
+document.querySelector("#admin-announcement-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = document.querySelector("#admin-announcement");
+  const text = input.value.trim();
+  if (!text) return;
+  send({ type: "admin-announcement", text });
+  input.value = "";
+});
 document.querySelector("#admin-player-list").addEventListener("click", (event) => {
   const button = event.target.closest("[data-admin-action]");
   if (!button) return;
   const amount = Number(button.closest(".admin-adjust").querySelector("input").value);
   if (!Number.isSafeInteger(amount) || amount < 1 || amount > 1000000) {
     showToast("Choose a chip amount from 1 to 1,000,000.");
+    return;
+  }
+  if (button.dataset.adminAction === "kick") {
+    if (window.confirm("Move this player to the global room?")) send({ type: "admin-kick-player", targetId: button.dataset.playerId });
     return;
   }
   send({ type: "admin-adjust-chips", action: button.dataset.adminAction, targetId: button.dataset.playerId, amount });
