@@ -398,7 +398,7 @@ function sendError(socket, message) {
 }
 
 function validAmount(amount) {
-  return Number.isSafeInteger(amount) && amount >= 1 && amount <= 500;
+  return Number.isSafeInteger(amount) && amount >= 1;
 }
 
 function resetBlackjack(room) {
@@ -678,7 +678,7 @@ function handleMessage(socket, message) {
       return sendError(socket, "Choose red, black, or a number from 0 to 36.");
     }
     if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
-      return sendError(socket, "That bet is not available in your chip balance.");
+      return sendError(socket, "Enter a whole-number wager from 1 chip up to your available balance.");
     }
     setChips(room, player, chipsFor(room, player) - message.amount);
     roulette.bets.push({
@@ -738,7 +738,7 @@ function handleMessage(socket, message) {
 
   if (message.type === "slots-spin") {
     if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
-      return sendError(socket, "Choose a slot wager between 1 and 500 chips within your balance.");
+      return sendError(socket, "Choose a slot wager from 1 chip up to your available balance.");
     }
     setChips(room, player, chipsFor(room, player) - message.amount);
     const symbols = Array.from({ length: 3 }, () => slotSymbols[randomInt(slotSymbols.length)]);
@@ -775,7 +775,7 @@ function handleMessage(socket, message) {
       return sendError(socket, "You have already placed your bet for this race.");
     }
     if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
-      return sendError(socket, "Choose a horse bet between 1 and 500 chips within your balance.");
+      return sendError(socket, "Choose a horse bet from 1 chip up to your available balance.");
     }
     setChips(room, player, chipsFor(room, player) - message.amount);
     horseRace.bets.push({
@@ -831,7 +831,7 @@ function handleMessage(socket, message) {
       return sendError(socket, "Wait for the current poker showdown to finish.");
     }
     if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
-      return sendError(socket, "Choose a poker buy-in between 1 and 500 chips within your balance.");
+      return sendError(socket, "Choose a poker buy-in from 1 chip up to your available balance.");
     }
     if (poker.phase === "done") {
       poker.phase = "waiting";
@@ -916,7 +916,7 @@ function handleMessage(socket, message) {
       return sendError(socket, "Wait for the current blackjack round to finish.");
     }
     if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
-      return sendError(socket, "Choose a bet between 1 and 500 chips within your balance.");
+      return sendError(socket, "Choose a bet from 1 chip up to your available balance.");
     }
     if (blackjack.phase === "done") resetBlackjack(room);
     if (blackjack.players.some((seat) => seat.id === player.id)) {
