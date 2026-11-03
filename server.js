@@ -1223,8 +1223,6 @@ server.listen(port, "0.0.0.0", () => {
   console.log(`Golden Hour Casino is listening on http://localhost:${port}`);
 });
 
-// Room chat support will be wired into room state.
-
 
 // Add a room-scoped chat channel alongside the existing multiplayer actions.
 const snapshotWithChat = snapshot;
@@ -1248,7 +1246,7 @@ webSocketServer.on("connection", (chatSocket) => {
     const chatRoom = rooms.get(chatPlayer.roomCode);
     if (!chatRoom || chatRoom.ended) return;
     const text = typeof chatMessage.text === "string"
-      ? chatMessage.text.replace(/[\\u0000-\\u001f\\u007f]/g, " ").trim().slice(0, 240)
+      ? chatMessage.text.trim().slice(0, 240)
       : "";
     if (!text) return;
     if (Date.now() - (chatSocket.lastChatAt || 0) < 650) {
