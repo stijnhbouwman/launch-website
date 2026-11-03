@@ -28,6 +28,8 @@ function createRoom(code, isPrivate, ownerId = null) {
     bankrolls: new Map(),
     ended: false,
     replayVotes: new Set(),
+    eliminated: [],
+    rankings: [],
     roulette: { bets: [], lastResult: null, history: [], spinning: false },
     slots: { history: [] },
     horseRace: { phase: "waiting", bets: [], winner: null, history: [] },
@@ -89,8 +91,28 @@ function endRoomIfBroke(room) {
     (room.blackjack.phase !== "done" && room.blackjack.players.length > 0) ||
     (room.poker.phase !== "done" && room.poker.players.length > 0)
   ) return false;
+  const rankedIds = new Set(room.eliminated.map((entry) => entry.playerId));
+  for (const [playerId, balance] of room.bankrolls) {
+    if (balance <= 0 && !rankedIds.has(playerId)) {
+      const eliminatedPlayer = players.get(playerId);
+      room.eliminated.push({ playerId, name: eliminatedPlayer?.name || "Player", reason: "Out of chips" });
+    }
+  }
+  const active = [...room.bankrolls.entries()].filter(([, balance]) => balance > 0);
+  if (room.bankrolls.size >= 2 && active.length === 1) {
+    const [winnerId] = active[0];
+    const winner = players.get(winnerId);
+    room.rankings = [
+      { playerId: winnerId, name: winner?.name || "Player", place: 1, reason: "Winner" },
+      ...room.eliminated.slice().reverse().map((entry, index) => ({ ...entry, place: index + 2 })),
+    ];
+    room.ended = true;
+    room.replayVotes.clear();
+    return true;
+  }
   const balances = [...room.bankrolls.values()];
   if (balances.length === 0 || balances.some((balance) => balance > 0)) return false;
+  room.rankings = room.eliminated.slice().reverse().map((entry, index) => ({ ...entry, place: index + 1 }));
   room.ended = true;
   room.replayVotes.clear();
   return true;
@@ -317,6 +339,7 @@ function snapshot(roomCode) {
       selectedGame: room.selectedGame,
       ended: room.ended,
       replayVotes: [...room.replayVotes],
+      rankings: room.rankings,
       members: connectedRoomPlayers(roomCode).map((player) => ({
         id: player.id,
         name: player.name,
@@ -619,6 +642,39 @@ function handleMessage(socket, message) {
     if (!targetRoom.isPrivate) savePlayers();
     else endRoomIfBroke(targetRoom);
     console.info("Admin " + player.name + " " + (message.action === "grant" ? "granted" : "removed") + " " + amount + " chips " + (message.action === "grant" ? "to " : "from ") + target.name + " (" + target.id + ").");
+    broadcast();
+    return;
+  }
+
+  if (message.type === "leave-room") {
+    if (!room.isPrivate) return sendError(socket, "You are already in the global room.");
+    const oldBalance = chipsFor(room, player);
+    if (oldBalance > 0 && room.bankrolls.size > 1) room.eliminated.push({ playerId: player.id, name: player.name, reason: "Left the room" });
+    if (room.ownerId === player.id) room.ownerId = connectedRoomPlayers(room.code).find((member) => member.id !== player.id)?.id ?? null;
+    const blackjack = room.blackjack;
+    const blackjackIndex = blackjack.players.findIndex((seat) => seat.id === player.id);
+    if (blackjackIndex >= 0) {
+      const [seat] = blackjack.players.splice(blackjackIndex, 1);
+      addChips(room, player, seat.bet);
+      if (blackjack.phase === "playing") {
+        if (blackjackIndex < blackjack.turnIndex) blackjack.turnIndex -= 1;
+        else if (blackjackIndex === blackjack.turnIndex) advanceBlackjack(room);
+        if (blackjack.players.length === 0 && blackjack.phase === "playing") finishBlackjack(room);
+      }
+    }
+    const poker = room.poker;
+    const pokerIndex = poker.players.findIndex((seat) => seat.id === player.id);
+    if (pokerIndex >= 0) {
+      const [seat] = poker.players.splice(pokerIndex, 1);
+      addChips(room, player, seat.bet);
+      if (poker.phase === "playing" && poker.players.length === 0) poker.phase = "done";
+    }
+    refundRoomEntries(player, room);
+    room.bankrolls.delete(player.id);
+    room.replayVotes.delete(player.id);
+    player.roomCode = "global";
+    endRoomIfBroke(room);
+    savePlayers();
     broadcast();
     return;
   }
@@ -972,6 +1028,17 @@ function handleMessage(socket, message) {
     return;
   }
 
+  if (message.type === "update-poker-bet") {
+    const seat = room.poker.players.find((item) => item.id === player.id);
+    if (room.poker.phase !== "waiting" || !seat) return sendError(socket, "You can only change your poker buy-in before the round starts.");
+    if (!validAmount(message.amount) || message.amount > chipsFor(room, player) + seat.bet) return sendError(socket, "Choose a poker buy-in within your available balance.");
+    setChips(room, player, chipsFor(room, player) + seat.bet - message.amount);
+    seat.bet = message.amount;
+    savePlayers();
+    broadcast();
+    return;
+  }
+
   if (message.type === "join-poker") {
     const poker = room.poker;
     if (poker.phase === "playing") {
@@ -1021,6 +1088,12 @@ function handleMessage(socket, message) {
     broadcast();
     setTimeout(() => {
       const currentPoker = room.poker;
+      if (currentPoker.players.length === 0) {
+        currentPoker.phase = "done";
+        endRoomIfBroke(room);
+        broadcast();
+        return;
+      }
       const ranked = currentPoker.players.map((seat) => ({
         seat,
         hand: evaluatePokerHand(seat.hand),
@@ -1054,6 +1127,17 @@ function handleMessage(socket, message) {
       savePlayers();
       broadcast();
     }, 2500);
+    return;
+  }
+
+  if (message.type === "update-blackjack-bet") {
+    const seat = room.blackjack.players.find((item) => item.id === player.id);
+    if (room.blackjack.phase !== "waiting" || !seat) return sendError(socket, "You can only change your blackjack wager before the round starts.");
+    if (!validAmount(message.amount) || message.amount > chipsFor(room, player) + seat.bet) return sendError(socket, "Choose a wager within your available balance.");
+    setChips(room, player, chipsFor(room, player) + seat.bet - message.amount);
+    seat.bet = message.amount;
+    savePlayers();
+    broadcast();
     return;
   }
 
