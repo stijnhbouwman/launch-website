@@ -27,6 +27,18 @@ In a private room, the host chooses the game for everyone; other members wait fo
 
 The username and chip balance are saved on the same browser and device. A username must be 1–18 letters, numbers, or underscores and unique among players currently online. It is a display name only, not a verified identity; another player could use it when you are offline. Server-side chip balances are stored in `data/players.json` by default.
 
+## Admin controls
+
+The Admin button is shown only while using the username `stijn`. It lists connected players across rooms, their current-room chip balance, and controls to grant or remove 1–1,000,000 chips. Global balance changes are saved with player data; private-room balances follow the room's normal reset rules.
+
+To link admin access to this browser on Render:
+
+1. Open the site on the intended browser, choose the username `stijn`, and open **Admin**.
+2. Copy the browser's player ID shown in the panel. In the Render service's **Environment** settings, set `ADMIN_PLAYER_ID` to that exact ID and set `ADMIN_PASSWORD` to a strong, private password.
+3. Redeploy or restart the service. Reload the site, open **Admin**, and enter the password to unlock controls.
+
+The password is verified by the server, never stored in the browser or committed to the repository, and the admin session ends when its WebSocket disconnects or the player changes their name. Keep the password private. The player ID links this browser profile; it is not hardware attestation, and someone who copies both the ID and password could use them elsewhere. Clearing this browser's saved site data changes its player ID, so update `ADMIN_PLAYER_ID` if that happens. Admin settings are declared in `render.yaml` with `sync: false` and must be configured privately in Render.
+
 ## Publish a public website on Render
 
 1. Push this project to a GitHub repository. Keep `node_modules`, `.env` files, and `data` out of Git; `.gitignore` already excludes them.
