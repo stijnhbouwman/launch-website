@@ -393,3 +393,15 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 @media (max-width: 640px) {
   .game-exit-bar { align-items: flex-start; flex-direction: column; }
 }
+
+
+.quit-game-button {
+  margin-top: 18px;
+  background: #f0c94f;
+  border-color: #f0c94f;
+  color: #28210d;
+}
+.quit-game-button:hover:not(:disabled) {
+  background: #ffdc70;
+  border-color: #ffdc70;
+}
