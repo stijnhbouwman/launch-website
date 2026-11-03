@@ -123,6 +123,7 @@ function replayPrivateRoom(room) {
   const nextRoom = createRoom(room.code, true, room.ownerId);
   for (const player of connectedRoomPlayers(room.code)) {
     nextRoom.bankrolls.set(player.id, 1000);
+    player.currentGame = null;
   }
   rooms.set(room.code, nextRoom);
 }
