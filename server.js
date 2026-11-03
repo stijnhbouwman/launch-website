@@ -542,6 +542,12 @@ function handleMessage(socket, message) {
   const player = players.get(socket.playerId);
   if (!player || !player.sockets.has(socket)) return;
 
+  if (message.type === "admin-logout") {
+    socket.adminAuthorized = false;
+    socket.send(JSON.stringify({ type: "admin-logged-out", message: "Admin access locked." }));
+    return;
+  }
+
   if (message.type === "admin-login") {
     if (!isAdminPlayer(player)) {
       socket.adminAuthorized = false;
