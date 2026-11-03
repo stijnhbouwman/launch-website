@@ -66,6 +66,25 @@ body.joined .join-screen { display: none; }
 .breadcrumb strong { color: #d4d1c5; font-weight: 600; }
 .crumb-slash { color: #484c45; }
 .topbar-right { display: flex; align-items: center; gap: 26px; }
+.admin-toggle { padding: 8px 11px; }
+.admin-panel { padding: 18px clamp(22px, 5.2vw, 72px); border-bottom: 1px solid var(--line); background: #191c19; }
+.admin-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+.admin-panel-heading h2 { font-size: 22px; margin: 6px 0 3px; }
+.admin-panel-heading p, .admin-login-error { color: var(--muted); font-size: 10px; margin: 0; }
+.admin-login-form { max-width: 430px; margin-top: 15px; }
+.admin-login-row { display: flex; gap: 8px; }
+.admin-login-row .chip-input { flex: 1; }
+.admin-login-error { min-height: 15px; margin-top: 8px; color: #e3a19b; }
+.admin-player-list { margin-top: 18px; }
+.admin-table-wrap { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 10px; }
+.admin-table th, .admin-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.admin-table th { color: var(--muted); font-weight: 600; }
+.admin-balance { color: var(--gold-bright); font-weight: 700; }
+.admin-adjust { display: flex; align-items: center; gap: 6px; }
+.admin-adjust .chip-input { width: 92px; padding: 7px; }
+.admin-adjust button { padding: 7px 9px; }
+
 .online-count { color: var(--muted); font-size: 11px; display: flex; align-items: center; gap: 7px; }
 .online-count strong { color: #d8ddd2; font-weight: 600; margin-right: -4px; }
 .online-pulse { width: 7px; height: 7px; background: #6fae8a; border-radius: 50%; box-shadow: 0 0 8px #6fae8a66; }
@@ -273,6 +292,9 @@ button:disabled { opacity: .48; cursor: not-allowed; }
   .mobile-brand .brand-mark { width: 30px; height: 30px; font-size: 12px; }
   .breadcrumb { display: none; }
   .topbar-right { gap: 9px; }
+  .admin-panel { padding: 15px; }
+  .admin-table th, .admin-table td { padding: 8px; }
+  .admin-adjust .chip-input { width: 72px; }
   .room-controls { padding: 10px 13px; align-items: flex-start; flex-direction: column; }
   .room-actions { justify-content: flex-start; width: 100%; }
   .room-invite { width: 100%; }
