@@ -20,6 +20,7 @@ let socket;
 let reconnectTimer;
 let toastTimer;
 let joined = false;
+let kickedFromRoom = false;
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -45,9 +46,13 @@ function connect() {
   connection.addEventListener("message", (event) => {
     const message = JSON.parse(event.data);
     if (message.type === "state") {
-      const previousRoomCode = state?.room.code;
+      const previousRoom = state?.room;
+      const previousRoomCode = previousRoom?.code;
       state = message.state;
       if (previousRoomCode && previousRoomCode !== state.room.code) view = "lobby";
+      if (previousRoom?.ended && previousRoom.code === state.room.code && !state.room.ended) {
+        view = "lobby";
+      }
       if (
         state.room.isPrivate &&
         state.room.selectedGame &&
@@ -71,10 +76,17 @@ function connect() {
       updateRoomControls();
       render();
       if (previousRoomCode && previousRoomCode !== state.room.code) {
-        showToast(state.room.isPrivate
-          ? `Joined private room ${state.room.code}. Share the invite link with friends.`
-          : "You joined the global game.");
+        if (kickedFromRoom) {
+          kickedFromRoom = false;
+          showToast("The host moved you to the global game.");
+        } else {
+          showToast(state.room.isPrivate
+            ? `Joined private room ${state.room.code}. Share the invite link with friends.`
+            : "You joined the global game.");
+        }
       }
+    } else if (message.type === "room-kicked") {
+      kickedFromRoom = true;
     } else if (message.type === "daily-global-bonus") {
       showToast(`Daily global bonus: +${message.amount.toLocaleString()} chips!`);
     } else if (message.type === "error") {
@@ -174,9 +186,16 @@ function updateRoomControls() {
   const scoreboard = document.querySelector("#room-scoreboard");
   scoreboard.hidden = !room.isPrivate;
   if (room.isPrivate) {
-    document.querySelector("#room-scoreboard-list").innerHTML = room.members
-      .map((member) => `<span class="room-balance"><strong>${escapeHtml(member.name)}</strong><small>${member.chips.toLocaleString()} chips</small></span>`)
-      .join("");
+    const isHost = room.ownerId === playerId;
+    const list = document.querySelector("#room-scoreboard-list");
+    list.innerHTML = room.members.map((member) => `<span class="room-balance"><strong>${escapeHtml(member.name)}${member.id === room.ownerId ? " · HOST" : ""}</strong><small>${member.chips.toLocaleString()} chips</small>${isHost && member.id !== playerId ? `<button class="quiet-button room-kick" type="button" data-kick="${escapeHtml(member.id)}" aria-label="Kick ${escapeHtml(member.name)} from the room">Kick</button>` : ""}</span>`).join("");
+    list.querySelectorAll("[data-kick]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (window.confirm("Kick this player from the private room?")) {
+          send({ type: "kick-player", playerId: button.dataset.kick });
+        }
+      });
+    });
   }
   document.querySelector("#create-room").hidden = room.isPrivate;
   document.querySelector("#join-room-form").hidden = room.isPrivate;
@@ -184,19 +203,20 @@ function updateRoomControls() {
   document.querySelector("#room-invite").hidden = !room.isPrivate;
   document.querySelectorAll(".nav-link").forEach((button) => {
     const lockedGame = room.isPrivate && room.selectedGame;
+    const waitingForHost = room.isPrivate && !lockedGame && room.ownerId !== playerId;
     button.disabled = Boolean(
-      lockedGame &&
-      button.dataset.view !== "lobby" &&
-      button.dataset.view !== lockedGame
+      (lockedGame && button.dataset.view !== "lobby" && button.dataset.view !== lockedGame) ||
+      (waitingForHost && button.dataset.view !== "lobby")
     );
-    button.title = button.disabled ? `This room is locked to ${lockedGame}.` : "";
+    button.title = waitingForHost && button.dataset.view !== "lobby"
+      ? "Waiting for the host to choose a game."
+      : lockedGame && button.disabled ? `This room is locked to ${lockedGame}.` : "";
   });
   if (room.isPrivate) {
     document.querySelector("#room-invite-link").value =
       `${location.origin}/?room=${encodeURIComponent(room.code)}`;
   }
 }
-
 function roomReadiness(readyIds) {
   const members = state.room.members.filter((member) =>
     member.chips > 0 || readyIds.includes(member.id)
@@ -218,6 +238,15 @@ function roomReadyToStart(readiness) {
 }
 
 function setView(nextView) {
+  if (
+    state?.room.isPrivate &&
+    !state.room.selectedGame &&
+    state.room.ownerId !== playerId &&
+    nextView !== "lobby"
+  ) {
+    showToast("Waiting for the host to choose a game for this room.");
+    return;
+  }
   if (
     state?.room.isPrivate &&
     state.room.selectedGame &&
@@ -292,7 +321,7 @@ function renderLobby() {
         <div class="hero-meta"><span><b>✳</b> ${(currentPlayer()?.chips ?? 1000).toLocaleString()} chips</span><span><b>♧</b> ${activePlayers.length} at the lounge</span></div>
       </div>
     </section>
-    <div class="section-heading"><h2>${state.room.isPrivate && state.room.selectedGame ? "Room game" : "Choose your table"}</h2><p>${state.room.isPrivate ? state.room.selectedGame ? `This private room is locked to ${state.room.selectedGame}.` : "Choose one game for everyone in this private room. The choice cannot be changed." : "Live with players around the world"}</p></div>
+    <div class="section-heading"><h2>${state.room.isPrivate && state.room.selectedGame ? "Room game" : "Choose your table"}</h2><p>${state.room.isPrivate ? state.room.selectedGame ? `This private room is locked to ${state.room.selectedGame}.` : state.room.ownerId === playerId ? "Choose one game for everyone in this private room." : "Waiting for the host to choose a game." : "Live with players around the world"}</p></div>
     <div class="games-grid">
       <article class="game-card">
         <div class="game-art roulette-art"><div class="wheel"><div class="wheel-inner">✳</div></div></div>
@@ -338,8 +367,11 @@ function renderLobby() {
     </div>`;
   content.querySelectorAll("[data-go]").forEach((button) => {
     const lockedGame = state.room.isPrivate && state.room.selectedGame;
-    button.disabled = Boolean(lockedGame && button.dataset.go !== lockedGame);
-    button.title = button.disabled ? `This room is locked to ${lockedGame}.` : "";
+    const waitingForHost = state.room.isPrivate && !lockedGame && state.room.ownerId !== playerId;
+    button.disabled = Boolean(waitingForHost || (lockedGame && button.dataset.go !== lockedGame));
+    button.title = waitingForHost
+      ? "Waiting for the host to choose a game."
+      : button.disabled ? `This room is locked to ${lockedGame}.` : "";
     button.addEventListener("click", () => setView(button.dataset.go));
   });
 }
