@@ -521,6 +521,7 @@ function handleMessage(socket, message) {
     }
     const previousRoomCode = player.roomCode;
     if (previousRoomCode && previousRoomCode !== requestedRoom) {
+      player.currentGame = null;
       const previousRoom = rooms.get(previousRoomCode);
       if (previousRoom && roomHasRunningGame(previousRoom)) {
         sendError(socket, "Finish the current round before changing rooms.");
