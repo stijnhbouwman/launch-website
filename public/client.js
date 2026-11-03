@@ -66,11 +66,15 @@ function connect() {
     if (message.type === "state") {
       const previousRoom = state?.room;
       const previousRoomCode = previousRoom?.code;
+      const previousGame = state?.players.find((player) => player.id === playerId)?.currentGame;
       state = message.state;
+      const currentGame = state.players.find((player) => player.id === playerId)?.currentGame;
+      if (previousGame && !currentGame) view = "lobby";
       if (previousRoomCode && previousRoomCode !== state.room.code) view = "lobby";
       if (previousRoom?.ended && previousRoom.code === state.room.code && !state.room.ended) {
         view = "lobby";
       }
+      if (previousRoom?.selectedGame && previousRoom.code === state.room.code && !state.room.selectedGame) view = "lobby";
       if (
         state.room.isPrivate &&
         state.room.selectedGame &&
@@ -270,14 +274,17 @@ function updateRoomControls() {
   document.querySelector("#join-global").hidden = !room.isPrivate;
   document.querySelector("#room-invite").hidden = !room.isPrivate;
   document.querySelectorAll(".nav-link").forEach((button) => {
+    const activeGame = currentPlayer()?.currentGame;
     const lockedGame = room.isPrivate && room.selectedGame;
     const waitingForHost = room.isPrivate && !lockedGame && room.ownerId !== playerId;
     button.disabled = Boolean(
+      (activeGame && button.dataset.view !== "lobby" && button.dataset.view !== activeGame) ||
       (lockedGame && button.dataset.view !== "lobby" && button.dataset.view !== lockedGame) ||
       (waitingForHost && button.dataset.view !== "lobby")
     );
     button.title = waitingForHost && button.dataset.view !== "lobby"
       ? "Waiting for the host to choose a game."
+      : activeGame && button.disabled ? "Press Quit game before switching games."
       : lockedGame && button.disabled ? `This room is locked to ${lockedGame}.` : "";
   });
   if (room.isPrivate) {
@@ -306,6 +313,11 @@ function roomReadyToStart(readiness) {
 }
 
 function setView(nextView) {
+  const activeGame = currentPlayer()?.currentGame;
+  if (activeGame && nextView !== "lobby" && nextView !== activeGame) {
+    showToast("Press Quit game before switching to another game.");
+    return;
+  }
   if (
     state?.room.isPrivate &&
     !state.room.selectedGame &&
@@ -354,6 +366,16 @@ function renderContent() {
   else if (view === "horses") renderHorseRace();
   else if (view === "poker") renderPoker();
   else renderLobby();
+  if (view !== "lobby" && !state.room.ended) {
+    const stillInGame = !state.room.isPrivate || (state.room.gameParticipants || []).includes(playerId);
+    const quitBar = document.createElement("div");
+    quitBar.className = "game-exit-bar";
+    quitBar.innerHTML = `<button class="quiet-button" id="quit-current-game" type="button" ${stillInGame ? "" : "disabled"}>${stillInGame ? "Quit " + (view === "horses" ? "horse race" : view) : "Quit requested · waiting for room"}</button><span>${state.room.isPrivate ? "Everyone must quit before the room can choose another game." : "Leave this table and return to the game lobby."}</span>`;
+    content.prepend(quitBar);
+    quitBar.querySelector("#quit-current-game").addEventListener("click", () => {
+      if (window.confirm("Quit this game and return to the game lobby?")) send({ type: "quit-game", game: view });
+    });
+  }
 }
 
 function renderPrivateRoomEnded() {
@@ -439,11 +461,13 @@ function renderLobby() {
       <section class="info-panel"><h3>Your chips, your pace</h3><p class="chip-note">Everyone starts with 1,000 complimentary chips. Your balance is saved on this browser, and all games are for entertainment only—no real money is used.</p></section>
     </div>`;
   content.querySelectorAll("[data-go]").forEach((button) => {
+    const activeGame = currentPlayer()?.currentGame;
     const lockedGame = state.room.isPrivate && state.room.selectedGame;
     const waitingForHost = state.room.isPrivate && !lockedGame && state.room.ownerId !== playerId;
-    button.disabled = Boolean(waitingForHost || (lockedGame && button.dataset.go !== lockedGame));
+    button.disabled = Boolean(waitingForHost || (activeGame && button.dataset.go !== activeGame) || (lockedGame && button.dataset.go !== lockedGame));
     button.title = waitingForHost
       ? "Waiting for the host to choose a game."
+      : activeGame && button.disabled ? "Press Quit game before switching games."
       : button.disabled ? `This room is locked to ${lockedGame}.` : "";
     button.addEventListener("click", () => setView(button.dataset.go));
   });

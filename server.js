@@ -25,6 +25,7 @@ function createRoom(code, isPrivate, ownerId = null) {
     isPrivate,
     ownerId,
     selectedGame: null,
+    gameParticipants: new Set(),
     bankrolls: new Map(),
     ended: false,
     replayVotes: new Set(),
@@ -122,6 +123,7 @@ function replayPrivateRoom(room) {
   const nextRoom = createRoom(room.code, true, room.ownerId);
   for (const player of connectedRoomPlayers(room.code)) {
     nextRoom.bankrolls.set(player.id, 1000);
+    player.currentGame = null;
   }
   rooms.set(room.code, nextRoom);
 }
@@ -331,12 +333,14 @@ function snapshot(roomCode) {
         id: player.id,
         name: player.name,
         chips: chipsFor(room, player),
+        currentGame: player.currentGame || null,
       })),
     room: {
       code: room.code,
       isPrivate: room.isPrivate,
       ownerId: room.ownerId,
       selectedGame: room.selectedGame,
+      gameParticipants: [...room.gameParticipants],
       ended: room.ended,
       replayVotes: [...room.replayVotes],
       rankings: room.rankings,
@@ -420,7 +424,7 @@ function sendAdminState(socket) {
     .filter((player) => player.connected)
     .map((player) => {
       const room = rooms.get(player.roomCode);
-      const activeGame = room?.selectedGame || (room?.roulette.bets.some((bet) => bet.playerId === player.id) ? "roulette" : room?.blackjack.players.some((seat) => seat.id === player.id) ? "blackjack" : room?.horseRace.bets.some((bet) => bet.playerId === player.id) ? "horses" : room?.poker.players.some((seat) => seat.id === player.id) ? "poker" : "lobby");
+      const activeGame = player.currentGame || (room?.gameParticipants.has(player.id) ? room.selectedGame : (room?.roulette.bets.some((bet) => bet.playerId === player.id) ? "roulette" : room?.blackjack.players.some((seat) => seat.id === player.id) ? "blackjack" : room?.horseRace.bets.some((bet) => bet.playerId === player.id) ? "horses" : room?.poker.players.some((seat) => seat.id === player.id) ? "poker" : "lobby"));
       return { id: player.id, name: player.name, chips: room ? chipsFor(room, player) : player.chips, roomCode: player.roomCode, isPrivate: Boolean(room && room.isPrivate), game: activeGame };
     })
     .sort((first, second) => first.name.localeCompare(second.name));
@@ -509,6 +513,7 @@ function handleMessage(socket, message) {
           ? saved.lastGlobalRewardDate
           : null,
         roomCode: requestedRoom,
+        currentGame: null,
         connected: false,
         sockets: new Set(),
       };
@@ -523,9 +528,10 @@ function handleMessage(socket, message) {
       }
       if (previousRoom) {
         refundRoomEntries(player, previousRoom);
-        if (previousRoom.isPrivate) previousRoom.bankrolls.delete(player.id);
+        if (previousRoom.isPrivate) { previousRoom.bankrolls.delete(player.id); previousRoom.gameParticipants.delete(player.id); }
       }
     }
+    if (previousRoomCode && previousRoomCode !== requestedRoom) player.currentGame = null;
     player.roomCode = requestedRoom;
     player.name = name;
     player.connected = true;
@@ -536,6 +542,7 @@ function handleMessage(socket, message) {
     if (registeredRoom.isPrivate && !registeredRoom.bankrolls.has(player.id)) {
       registeredRoom.bankrolls.set(player.id, 1000);
     }
+    if (registeredRoom.isPrivate && registeredRoom.selectedGame) { registeredRoom.gameParticipants.add(player.id); player.currentGame = registeredRoom.selectedGame; }
     socket.playerId = player.id;
     savePlayers();
     if (previousRoomCode && previousRoomCode !== requestedRoom) {
@@ -605,6 +612,8 @@ function handleMessage(socket, message) {
       refundRoomEntries(target, targetRoom);
       targetRoom.bankrolls.delete(target.id);
       targetRoom.replayVotes.delete(target.id);
+      targetRoom.gameParticipants.delete(target.id);
+      target.currentGame = null;
     }
     target.roomCode = "global";
     for (const targetSocket of target.sockets) if (targetSocket.readyState === WebSocket.OPEN) targetSocket.send(JSON.stringify({ type: "room-kicked" }));
@@ -672,6 +681,8 @@ function handleMessage(socket, message) {
     refundRoomEntries(player, room);
     room.bankrolls.delete(player.id);
     room.replayVotes.delete(player.id);
+    room.gameParticipants.delete(player.id);
+    player.currentGame = null;
     player.roomCode = "global";
     endRoomIfBroke(room);
     savePlayers();
@@ -708,13 +719,14 @@ function handleMessage(socket, message) {
     let earnedDailyBonus = false;
     if (currentRoom.code !== targetCode) {
       refundRoomEntries(player, currentRoom);
-      if (currentRoom.isPrivate) currentRoom.bankrolls.delete(player.id);
+      if (currentRoom.isPrivate) { currentRoom.bankrolls.delete(player.id); currentRoom.gameParticipants.delete(player.id); }
       if (currentRoom.ownerId === player.id) {
         currentRoom.ownerId = connectedRoomPlayers(currentRoom.code)
           .find((member) => member.id !== player.id)?.id ?? null;
       }
       currentRoom.replayVotes.delete(player.id);
       player.roomCode = targetCode;
+      player.currentGame = null;
       const targetRoom = rooms.get(targetCode);
       earnedDailyBonus =
         !targetRoom.isPrivate && claimDailyGlobalBonus(player);
@@ -722,6 +734,7 @@ function handleMessage(socket, message) {
       if (targetRoom.isPrivate && !targetRoom.bankrolls.has(player.id)) {
         targetRoom.bankrolls.set(player.id, 1000);
       }
+      if (targetRoom.isPrivate && targetRoom.selectedGame) { targetRoom.gameParticipants.add(player.id); player.currentGame = targetRoom.selectedGame; }
       const remainingMembers = connectedRoomPlayers(currentRoom.code);
       if (
         currentRoom.ended &&
@@ -765,6 +778,8 @@ function handleMessage(socket, message) {
     refundRoomEntries(target, room);
     room.bankrolls.delete(target.id);
     room.replayVotes.delete(target.id);
+    room.gameParticipants.delete(target.id);
+    target.currentGame = null;
     target.roomCode = "global";
     for (const targetSocket of target.sockets) {
       if (targetSocket.readyState === WebSocket.OPEN) {
@@ -801,6 +816,55 @@ function handleMessage(socket, message) {
     return sendError(socket, "This private room has ended. Choose play again or leave the room.");
   }
 
+  if (message.type === "quit-game") {
+    const game = room.selectedGame || message.game;
+    const validGames = ["roulette", "blackjack", "slots", "horses", "poker"];
+    if (!validGames.includes(game)) return sendError(socket, "There is no active game to quit.");
+    if (
+      (game === "roulette" && room.roulette.spinning) ||
+      (game === "horses" && room.horseRace.phase === "racing") ||
+      (game === "blackjack" && room.blackjack.phase === "playing") ||
+      (game === "poker" && room.poker.phase === "playing")
+    ) return sendError(socket, "Finish the current round before quitting this game.");
+    const refund = (amount) => {
+      if (Number.isSafeInteger(amount) && amount > 0) addChips(room, player, amount);
+    };
+    if (game === "roulette") {
+      for (const bet of room.roulette.bets.filter((item) => item.playerId === player.id)) refund(bet.amount);
+      room.roulette.bets = room.roulette.bets.filter((item) => item.playerId !== player.id);
+    } else if (game === "horses") {
+      for (const bet of room.horseRace.bets.filter((item) => item.playerId === player.id)) refund(bet.amount);
+      room.horseRace.bets = room.horseRace.bets.filter((item) => item.playerId !== player.id);
+    } else if (game === "blackjack") {
+      const seat = room.blackjack.players.find((item) => item.id === player.id);
+      if (seat && room.blackjack.phase === "waiting") refund(seat.bet);
+      room.blackjack.players = room.blackjack.players.filter((item) => item.id !== player.id);
+      if (room.blackjack.players.length === 0) resetBlackjack(room);
+    } else if (game === "poker") {
+      const seat = room.poker.players.find((item) => item.id === player.id);
+      if (seat && room.poker.phase === "waiting") refund(seat.bet);
+      room.poker.players = room.poker.players.filter((item) => item.id !== player.id);
+      if (room.poker.players.length === 0) room.poker = { phase: "waiting", players: [], lastResult: null };
+    }
+    player.currentGame = null;
+    if (room.isPrivate) {
+      room.gameParticipants.delete(player.id);
+      const remaining = connectedRoomPlayers(room.code).filter((member) => room.gameParticipants.has(member.id));
+      if (remaining.length === 0) {
+        room.selectedGame = null;
+        room.gameParticipants.clear();
+        if (game === "roulette") room.roulette.bets = [];
+        if (game === "horses") room.horseRace = { phase: "waiting", bets: [], winner: null, history: room.horseRace.history };
+        if (game === "blackjack") resetBlackjack(room);
+        if (game === "poker") room.poker = { phase: "waiting", players: [], lastResult: null };
+      }
+    }
+    savePlayers();
+    endRoomIfBroke(room);
+    broadcast();
+    return;
+  }
+
   if (message.type === "select-game") {
     const availableGames = ["roulette", "blackjack", "slots", "horses", "poker"];
     if (!room.isPrivate || !availableGames.includes(message.game)) {
@@ -813,6 +877,8 @@ function handleMessage(socket, message) {
       return sendError(socket, `This room is locked to ${room.selectedGame}.`);
     }
     room.selectedGame = message.game;
+    room.gameParticipants = new Set(connectedRoomPlayers(room.code).map((member) => member.id));
+    for (const member of connectedRoomPlayers(room.code)) member.currentGame = message.game;
     broadcast();
     return;
   }
@@ -830,11 +896,13 @@ function handleMessage(socket, message) {
     "blackjack-action": "blackjack",
   };
   const requestedGame = gameByMessageType[message.type];
+  if (requestedGame && player.currentGame && player.currentGame !== requestedGame) return sendError(socket, 'Quit your current game before switching to another one.');
   if (room.isPrivate && requestedGame && room.selectedGame !== requestedGame) {
     return sendError(socket, room.selectedGame
       ? `This room is locked to ${room.selectedGame}.`
       : "Choose the room's game before playing.");
   }
+  if (requestedGame) player.currentGame = requestedGame;
 
   if (message.type === "set-name") {
     const name = safeName(message.name);
