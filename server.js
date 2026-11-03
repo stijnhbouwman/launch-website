@@ -403,8 +403,8 @@ function sendAdminState(socket) {
   socket.send(JSON.stringify({ type: "admin-state", players: onlinePlayers }));
 }
 
-function isAdminPlayer(player) {
-  return player.name.toLocaleLowerCase() === "stijn";
+function checkAdminUsername(username) {
+  return typeof username === "string" && username.trim().toLocaleLowerCase() === "stijn";
 }
 
 function checkAdminPassword(password) {
@@ -549,14 +549,9 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "admin-login") {
-    if (!isAdminPlayer(player)) {
+    if (!checkAdminUsername(message.username)) {
       socket.adminAuthorized = false;
-      socket.send(JSON.stringify({ type: "admin-auth", success: false, message: "Admin access is only available to the player named stijn." }));
-      return;
-    }
-    if (!process.env.ADMIN_PLAYER_ID || player.id !== process.env.ADMIN_PLAYER_ID) {
-      socket.adminAuthorized = false;
-      socket.send(JSON.stringify({ type: "admin-auth", success: false, message: "This browser is not linked as the admin device. Configure its player ID on the server." }));
+      socket.send(JSON.stringify({ type: "admin-auth", success: false, message: "The admin username is incorrect." }));
       return;
     }
     if (!process.env.ADMIN_PASSWORD) {
@@ -576,9 +571,8 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "admin-adjust-chips") {
-    if (!socket.adminAuthorized || !isAdminPlayer(player) || player.id !== process.env.ADMIN_PLAYER_ID) {
-      socket.adminAuthorized = false;
-      return sendError(socket, "Unlock admin access with the linked stijn player first.");
+    if (!socket.adminAuthorized) {
+      return sendError(socket, "Unlock admin access with your username and password first.");
     }
     const amount = message.amount;
     if (typeof message.targetId !== "string" || !["grant", "take"].includes(message.action) || !Number.isSafeInteger(amount) || amount < 1 || amount > 1000000) {
@@ -773,14 +767,6 @@ function handleMessage(socket, message) {
       return;
     }
     player.name = name;
-    if (!isAdminPlayer(player)) {
-      for (const playerSocket of player.sockets) {
-        if (playerSocket.adminAuthorized) {
-          playerSocket.adminAuthorized = false;
-          playerSocket.send(JSON.stringify({ type: "admin-logged-out", message: "Admin access ended because the player name changed." }));
-        }
-      }
-    }
     for (const seat of room.blackjack.players) {
       if (seat.id === player.id) seat.name = player.name;
     }
