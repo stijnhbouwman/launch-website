@@ -332,6 +332,7 @@ function snapshot(roomCode) {
         id: player.id,
         name: player.name,
         chips: chipsFor(room, player),
+        currentGame: player.currentGame || null,
       })),
     room: {
       code: room.code,
@@ -511,6 +512,7 @@ function handleMessage(socket, message) {
           ? saved.lastGlobalRewardDate
           : null,
         roomCode: requestedRoom,
+        currentGame: null,
         connected: false,
         sockets: new Set(),
       };
@@ -538,7 +540,7 @@ function handleMessage(socket, message) {
     if (registeredRoom.isPrivate && !registeredRoom.bankrolls.has(player.id)) {
       registeredRoom.bankrolls.set(player.id, 1000);
     }
-    if (registeredRoom.isPrivate && registeredRoom.selectedGame) registeredRoom.gameParticipants.add(player.id);
+    if (registeredRoom.isPrivate && registeredRoom.selectedGame) { registeredRoom.gameParticipants.add(player.id); player.currentGame = registeredRoom.selectedGame; }
     socket.playerId = player.id;
     savePlayers();
     if (previousRoomCode && previousRoomCode !== requestedRoom) {
@@ -609,6 +611,7 @@ function handleMessage(socket, message) {
       targetRoom.bankrolls.delete(target.id);
       targetRoom.replayVotes.delete(target.id);
       targetRoom.gameParticipants.delete(target.id);
+      target.currentGame = null;
     }
     target.roomCode = "global";
     for (const targetSocket of target.sockets) if (targetSocket.readyState === WebSocket.OPEN) targetSocket.send(JSON.stringify({ type: "room-kicked" }));
@@ -677,6 +680,7 @@ function handleMessage(socket, message) {
     room.bankrolls.delete(player.id);
     room.replayVotes.delete(player.id);
     room.gameParticipants.delete(player.id);
+    player.currentGame = null;
     player.roomCode = "global";
     endRoomIfBroke(room);
     savePlayers();
@@ -720,6 +724,7 @@ function handleMessage(socket, message) {
       }
       currentRoom.replayVotes.delete(player.id);
       player.roomCode = targetCode;
+      player.currentGame = null;
       const targetRoom = rooms.get(targetCode);
       earnedDailyBonus =
         !targetRoom.isPrivate && claimDailyGlobalBonus(player);
@@ -771,6 +776,7 @@ function handleMessage(socket, message) {
     room.bankrolls.delete(target.id);
     room.replayVotes.delete(target.id);
     room.gameParticipants.delete(target.id);
+    target.currentGame = null;
     target.roomCode = "global";
     for (const targetSocket of target.sockets) {
       if (targetSocket.readyState === WebSocket.OPEN) {
@@ -837,6 +843,7 @@ function handleMessage(socket, message) {
       room.poker.players = room.poker.players.filter((item) => item.id !== player.id);
       if (room.poker.players.length === 0) room.poker = { phase: "waiting", players: [], lastResult: null };
     }
+    player.currentGame = null;
     if (room.isPrivate) {
       room.gameParticipants.delete(player.id);
       const remaining = connectedRoomPlayers(room.code).filter((member) => room.gameParticipants.has(member.id));
@@ -868,6 +875,7 @@ function handleMessage(socket, message) {
     }
     room.selectedGame = message.game;
     room.gameParticipants = new Set(connectedRoomPlayers(room.code).map((member) => member.id));
+    for (const member of connectedRoomPlayers(room.code)) member.currentGame = message.game;
     broadcast();
     return;
   }
@@ -885,11 +893,13 @@ function handleMessage(socket, message) {
     "blackjack-action": "blackjack",
   };
   const requestedGame = gameByMessageType[message.type];
+  if (requestedGame && player.currentGame && player.currentGame !== requestedGame) return sendError(socket, 'Quit your current game before switching to another one.');
   if (room.isPrivate && requestedGame && room.selectedGame !== requestedGame) {
     return sendError(socket, room.selectedGame
       ? `This room is locked to ${room.selectedGame}.`
       : "Choose the room's game before playing.");
   }
+  if (requestedGame) player.currentGame = requestedGame;
 
   if (message.type === "set-name") {
     const name = safeName(message.name);
