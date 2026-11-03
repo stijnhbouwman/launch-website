@@ -377,7 +377,7 @@ function renderRoulette() {
         <h3>Place your bet</h3><p class="control-copy">Choose a color or select a number on the wheel.</p>
         <div class="bet-type-row"><button class="bet-type ${selectedBet === "red" ? "selected" : ""}" data-selection="red">Red · 2×</button><button class="bet-type ${selectedBet === "black" ? "selected" : ""}" data-selection="black">Black · 2×</button></div>
         <label class="field-label" for="roulette-amount">Your wager</label>
-        <div class="amount-row"><input class="chip-input" id="roulette-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
+        <div class="amount-row"><input class="chip-input" id="roulette-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
         <button class="primary-button full-button" id="place-bet" ${roulette.spinning || alreadyBet ? "disabled" : ""}>${alreadyBet ? "Bet placed ✓" : `Place bet · ${selectedBet}`}</button>
         <button class="secondary-button full-button" id="spin-wheel" ${roulette.spinning || roulette.bets.length === 0 || !roomReadyToStart(readiness) || !canStartRoomGame() ? "disabled" : ""}>${roulette.spinning ? "Wheel spinning…" : roulette.bets.length === 0 ? "Place a bet to spin" : state.room.isPrivate && !readiness.complete ? "Waiting for all room bets…" : !canStartRoomGame() ? "Room host starts the game" : "Spin the wheel ↗"}</button>
         ${state.room.isPrivate ? `<p class="bet-progress">${readiness.ready} of ${readiness.total} room players have placed a bet.</p>` : ""}
@@ -441,7 +441,7 @@ function renderBlackjack() {
         ${game.phase === "waiting" ? `
           ${mySeat ? `<div class="seat-row"><span>You are seated</span><small>${mySeat.bet} chips</small></div>` : `
           <label class="field-label" for="blackjack-amount">Your wager</label>
-          <div class="amount-row"><input class="chip-input" id="blackjack-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
+          <div class="amount-row"><input class="chip-input" id="blackjack-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
           <button class="secondary-button full-button" id="join-blackjack">Take a seat&nbsp; +</button>`}
           <div class="recent-bets"><h4>Players ready</h4><div class="seat-list">${game.players.map((seat) => `<div class="seat-row"><span>${escapeHtml(seat.name)}</span><small>${seat.bet} chips</small></div>`).join("") || `<div class="activity-empty">No one has joined yet.</div>`}</div></div>
           ${state.room.isPrivate ? `<p class="bet-progress">${readiness.ready} of ${readiness.total} room players have placed a bet.</p>` : ""}
@@ -505,7 +505,7 @@ function renderSlots() {
       <aside class="control-panel">
         <h3>Try your luck</h3><p class="control-copy">The wager is taken before the reels spin. All prizes are paid in complimentary chips.</p>
         <label class="field-label" for="slots-amount">Your wager</label>
-        <div class="amount-row"><input class="chip-input" id="slots-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
+        <div class="amount-row"><input class="chip-input" id="slots-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
         <button class="primary-button full-button" id="spin-slots">Spin the reels&nbsp; ↗</button>
         <div class="table-rules"><div class="rule-row"><span>Any pair</span><strong>2×</strong></div><div class="rule-row"><span>Three of a kind</span><strong>8×</strong></div><div class="rule-row"><span>Three sevens</span><strong>20×</strong></div></div>
       </aside>
@@ -552,7 +552,7 @@ function renderHorseRace() {
         ${!myBet ? `
           <div class="horse-options">${horses.map((horse) => `<button class="bet-type ${selectedHorse === horse ? "selected" : ""}" data-horse="${horse}" ${race.phase === "racing" ? "disabled" : ""}>${horse}</button>`).join("")}</div>
           <label class="field-label" for="horse-amount">Your wager</label>
-          <div class="amount-row"><input class="chip-input" id="horse-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
+          <div class="amount-row"><input class="chip-input" id="horse-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
           <button class="secondary-button full-button" id="bet-horse" ${race.phase === "racing" ? "disabled" : ""}>Place bet on ${selectedHorse}&nbsp; · &nbsp;3×</button>` : ""}
         <button class="primary-button full-button" id="start-race" ${race.phase === "racing" || race.bets.length === 0 || !roomReadyToStart(readiness) || !canStartRoomGame() ? "disabled" : ""}>${race.phase === "racing" ? "Race in progress…" : race.bets.length === 0 ? "Place a bet to start" : state.room.isPrivate && !readiness.complete ? "Waiting for all room bets…" : !canStartRoomGame() ? "Room host starts the game" : "Start the race ↗"}</button>
         <div class="table-rules"><div class="rule-row"><span>Winning payout</span><strong>3×</strong></div><div class="rule-row"><span>Horses</span><strong>4</strong></div></div>
@@ -603,12 +603,12 @@ function renderPoker() {
         <p class="control-copy">${game.phase === "playing" ? "The cards are being revealed. Your best five-card poker hand is ranked by the table." : "This friendly five-card showdown uses play chips only. The best hand takes the pot; ties split it."}</p>
         ${game.phase === "done" ? `
           <label class="field-label" for="poker-amount">Next round buy-in</label>
-          <div class="amount-row"><input class="chip-input" id="poker-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
+          <div class="amount-row"><input class="chip-input" id="poker-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
           <button class="secondary-button full-button" id="join-poker">Join the next round&nbsp; +</button>
         ` : game.phase === "waiting" ? `
           ${mySeat ? `<div class="seat-row"><span>You are in</span><small>${mySeat.bet} chips</small></div>` : `
           <label class="field-label" for="poker-amount">Buy-in</label>
-          <div class="amount-row"><input class="chip-input" id="poker-amount" type="number" min="1" max="500" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
+          <div class="amount-row"><input class="chip-input" id="poker-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
           <button class="secondary-button full-button" id="join-poker">Take a seat&nbsp; +</button>`}
           ${state.room.isPrivate ? `<p class="bet-progress">${readiness.ready} of ${readiness.total} room players have joined the round.</p>` : ""}
           <button class="primary-button full-button" id="start-poker" ${game.players.length < 2 || !roomReadyToStart(readiness) || !canStartRoomGame() ? "disabled" : ""}>${game.players.length < 2 ? "Waiting for another player…" : state.room.isPrivate && !readiness.complete ? "Waiting for everyone to join…" : !canStartRoomGame() ? "Room host starts the game" : "Deal the hands ↗"}</button>
