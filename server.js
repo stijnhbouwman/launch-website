@@ -98,7 +98,6 @@ function endRoomIfBroke(room) {
 
 function replayPrivateRoom(room) {
   const nextRoom = createRoom(room.code, true, room.ownerId);
-  nextRoom.selectedGame = room.selectedGame;
   for (const player of connectedRoomPlayers(room.code)) {
     nextRoom.bankrolls.set(player.id, 1000);
   }
@@ -584,6 +583,45 @@ function handleMessage(socket, message) {
     return;
   }
 
+  if (message.type === "kick-player") {
+    if (!room.isPrivate) {
+      return sendError(socket, "Players can only be kicked from a private room.");
+    }
+    if (room.ownerId !== player.id) {
+      return sendError(socket, "Only the private room host can kick players.");
+    }
+    if (typeof message.playerId !== "string" || message.playerId === player.id) {
+      return sendError(socket, "Choose another player in the room to kick.");
+    }
+    const target = players.get(message.playerId);
+    if (!target || !target.connected || target.roomCode !== room.code) {
+      return sendError(socket, "That player is no longer in this room.");
+    }
+    if (roomHasRunningGame(room)) {
+      return sendError(socket, "Wait until the current round is over before kicking a player.");
+    }
+    refundRoomEntries(target, room);
+    room.bankrolls.delete(target.id);
+    room.replayVotes.delete(target.id);
+    target.roomCode = "global";
+    for (const targetSocket of target.sockets) {
+      if (targetSocket.readyState === WebSocket.OPEN) {
+        targetSocket.send(JSON.stringify({ type: "room-kicked" }));
+      }
+    }
+    savePlayers();
+    const remainingMembers = connectedRoomPlayers(room.code);
+    if (
+      room.ended &&
+      remainingMembers.length > 0 &&
+      remainingMembers.every((member) => room.replayVotes.has(member.id))
+    ) {
+      replayPrivateRoom(room);
+    }
+    broadcast();
+    return;
+  }
+
   if (message.type === "replay-room") {
     if (!room.isPrivate || !room.ended) {
       return sendError(socket, "This private room has not ended.");
@@ -605,6 +643,9 @@ function handleMessage(socket, message) {
     const availableGames = ["roulette", "blackjack", "slots", "horses", "poker"];
     if (!room.isPrivate || !availableGames.includes(message.game)) {
       return sendError(socket, "Choose a valid game for a private room.");
+    }
+    if (room.ownerId !== player.id) {
+      return sendError(socket, "Only the private room host can choose the game.");
     }
     if (room.selectedGame && room.selectedGame !== message.game) {
       return sendError(socket, `This room is locked to ${room.selectedGame}.`);
