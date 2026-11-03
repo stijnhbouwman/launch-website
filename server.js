@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { randomBytes, randomInt } = require("node:crypto");
+const { randomBytes, randomInt, timingSafeEqual } = require("node:crypto");
 const WebSocket = require("ws");
 
 const port = Number(process.env.PORT) || 3000;
@@ -386,8 +386,33 @@ function broadcast() {
         }));
       }
       socket.send(states.get(player.roomCode));
+      if (socket.adminAuthorized) sendAdminState(socket);
     }
   }
+}
+
+function sendAdminState(socket) {
+  if (!socket.adminAuthorized || socket.readyState !== WebSocket.OPEN) return;
+  const onlinePlayers = [...players.values()]
+    .filter((player) => player.connected)
+    .map((player) => {
+      const room = rooms.get(player.roomCode);
+      return { id: player.id, name: player.name, chips: room ? chipsFor(room, player) : player.chips, roomCode: player.roomCode, isPrivate: Boolean(room && room.isPrivate) };
+    })
+    .sort((first, second) => first.name.localeCompare(second.name));
+  socket.send(JSON.stringify({ type: "admin-state", players: onlinePlayers }));
+}
+
+function isAdminPlayer(player) {
+  return player.name.toLocaleLowerCase() === "stijn";
+}
+
+function checkAdminPassword(password) {
+  const configuredPassword = process.env.ADMIN_PASSWORD;
+  if (typeof password !== "string" || !configuredPassword) return false;
+  const provided = Buffer.from(password);
+  const expected = Buffer.from(configuredPassword);
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
 }
 
 function sendError(socket, message) {
@@ -516,6 +541,57 @@ function handleMessage(socket, message) {
 
   const player = players.get(socket.playerId);
   if (!player || !player.sockets.has(socket)) return;
+
+  if (message.type === "admin-login") {
+    if (!isAdminPlayer(player)) {
+      socket.adminAuthorized = false;
+      socket.send(JSON.stringify({ type: "admin-auth", success: false, message: "Admin access is only available to the player named stijn." }));
+      return;
+    }
+    if (!process.env.ADMIN_PLAYER_ID || player.id !== process.env.ADMIN_PLAYER_ID) {
+      socket.adminAuthorized = false;
+      socket.send(JSON.stringify({ type: "admin-auth", success: false, message: "This browser is not linked as the admin device. Configure its player ID on the server." }));
+      return;
+    }
+    if (!process.env.ADMIN_PASSWORD) {
+      socket.adminAuthorized = false;
+      socket.send(JSON.stringify({ type: "admin-auth", success: false, message: "Admin access is not configured on the server." }));
+      return;
+    }
+    if (!checkAdminPassword(message.password)) {
+      socket.adminAuthorized = false;
+      socket.send(JSON.stringify({ type: "admin-auth", success: false, message: "The admin password is incorrect." }));
+      return;
+    }
+    socket.adminAuthorized = true;
+    socket.send(JSON.stringify({ type: "admin-auth", success: true }));
+    sendAdminState(socket);
+    return;
+  }
+
+  if (message.type === "admin-adjust-chips") {
+    if (!socket.adminAuthorized || !isAdminPlayer(player) || player.id !== process.env.ADMIN_PLAYER_ID) {
+      socket.adminAuthorized = false;
+      return sendError(socket, "Unlock admin access with the linked stijn player first.");
+    }
+    const amount = message.amount;
+    if (typeof message.targetId !== "string" || !["grant", "take"].includes(message.action) || !Number.isSafeInteger(amount) || amount < 1 || amount > 1000000) {
+      return sendError(socket, "Choose a chip amount from 1 to 1,000,000.");
+    }
+    const target = players.get(message.targetId);
+    if (!target || !target.connected) return sendError(socket, "That player is no longer online. Refresh the list and try again.");
+    const targetRoom = rooms.get(target.roomCode);
+    if (!targetRoom) return sendError(socket, "That player's room is unavailable. Try again.");
+    const balance = chipsFor(targetRoom, target);
+    if (message.action === "take" && amount > balance) return sendError(socket, "You cannot take more chips than that player has.");
+    if (message.action === "grant" && !Number.isSafeInteger(balance + amount)) return sendError(socket, "That grant would exceed the maximum chip balance.");
+    setChips(targetRoom, target, message.action === "grant" ? balance + amount : balance - amount);
+    if (!targetRoom.isPrivate) savePlayers();
+    else endRoomIfBroke(targetRoom);
+    console.info("Admin " + player.name + " " + (message.action === "grant" ? "granted" : "removed") + " " + amount + " chips " + (message.action === "grant" ? "to " : "from ") + target.name + " (" + target.id + ").");
+    broadcast();
+    return;
+  }
 
   if (message.type === "create-room" || message.type === "join-room") {
     let targetCode;
@@ -691,6 +767,14 @@ function handleMessage(socket, message) {
       return;
     }
     player.name = name;
+    if (!isAdminPlayer(player)) {
+      for (const playerSocket of player.sockets) {
+        if (playerSocket.adminAuthorized) {
+          playerSocket.adminAuthorized = false;
+          playerSocket.send(JSON.stringify({ type: "admin-logged-out", message: "Admin access ended because the player name changed." }));
+        }
+      }
+    }
     for (const seat of room.blackjack.players) {
       if (seat.id === player.id) seat.name = player.name;
     }
