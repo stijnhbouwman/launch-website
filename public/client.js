@@ -24,7 +24,6 @@ let kickedFromRoom = false;
 let adminAuthenticated = false;
 let adminPanelOpen = false;
 let adminPlayers = [];
-let chatOpen = true;
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -78,6 +77,7 @@ function connect() {
       }
       updateHeader();
       updateRoomControls();
+      renderRoomChat();
       render();
       if (previousRoomCode && previousRoomCode !== state.room.code) {
         if (kickedFromRoom) {
@@ -740,6 +740,37 @@ document.querySelector("#admin-player-list").addEventListener("click", (event) =
     return;
   }
   send({ type: "admin-adjust-chips", action: button.dataset.adminAction, targetId: button.dataset.playerId, amount });
+});
+
+function renderRoomChat() {
+  const panel = document.querySelector("#room-chat");
+  if (!panel || !state?.room) return;
+  panel.hidden = false;
+  document.querySelector("#chat-title").textContent =
+    state.room.isPrivate ? `Private room chat · ${state.room.code}` : "Global game chat";
+  const list = document.querySelector("#chat-messages");
+  const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 48;
+  const messages = state.chat || [];
+  list.innerHTML = messages.length
+    ? messages.map((item) => {
+        const time = new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        return `<article class="chat-message ${item.playerId === playerId ? "mine" : ""}">
+          <div class="chat-message-meta"><strong>${escapeHtml(item.name)}</strong><time>${time}</time></div>
+          <p>${escapeHtml(item.text)}</p>
+        </article>`;
+      }).join("")
+    : `<p class="chat-empty">No messages yet. Start the conversation.</p>`;
+  if (nearBottom) list.scrollTop = list.scrollHeight;
+}
+
+document.querySelector("#chat-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = document.querySelector("#chat-input");
+  const text = input.value.trim();
+  if (!text) return;
+  send({ type: "chat-message", text });
+  input.value = "";
+  input.focus();
 });
 
 document.querySelector("#create-room").addEventListener("click", () => {
