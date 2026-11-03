@@ -21,6 +21,9 @@ let reconnectTimer;
 let toastTimer;
 let joined = false;
 let kickedFromRoom = false;
+let adminAuthenticated = false;
+let adminPanelOpen = false;
+let adminPlayers = [];
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -87,6 +90,21 @@ function connect() {
       }
     } else if (message.type === "room-kicked") {
       kickedFromRoom = true;
+    } else if (message.type === "admin-auth") {
+      adminAuthenticated = Boolean(message.success);
+      adminPlayers = [];
+      document.querySelector("#admin-login-error").textContent = message.success ? "" : message.message;
+      if (!message.success) showToast(message.message);
+      renderAdminPanel();
+    } else if (message.type === "admin-state") {
+      adminAuthenticated = true;
+      adminPlayers = message.players;
+      renderAdminPanel();
+    } else if (message.type === "admin-logged-out") {
+      adminAuthenticated = false;
+      adminPlayers = [];
+      renderAdminPanel();
+      showToast(message.message);
     } else if (message.type === "daily-global-bonus") {
       showToast(`Daily global bonus: +${message.amount.toLocaleString()} chips!`);
     } else if (message.type === "error") {
@@ -102,6 +120,9 @@ function connect() {
   });
   connection.addEventListener("close", () => {
     if (socket !== connection) return;
+    adminAuthenticated = false;
+    adminPlayers = [];
+    renderAdminPanel();
     document.querySelector(".online-pulse")?.classList.add("offline");
     clearTimeout(reconnectTimer);
     if (joined) {
@@ -169,6 +190,32 @@ function updateHeader() {
     (player?.name ?? (playerName || "G")).slice(0, 1).toUpperCase();
   document.querySelector("#crumb-current").textContent =
     view === "lobby" ? "OVERVIEW" : view.toUpperCase();
+  document.querySelector("#admin-toggle").hidden =
+    (player?.name ?? playerName).toLocaleLowerCase() !== "stijn";
+  renderAdminPanel();
+}
+
+function renderAdminPanel() {
+  const panel = document.querySelector("#admin-panel");
+  if (!panel) return;
+  const isStijn = (currentPlayer()?.name ?? playerName).toLocaleLowerCase() === "stijn";
+  panel.hidden = !adminPanelOpen || !isStijn;
+  document.querySelector("#admin-login-form").hidden = adminAuthenticated;
+  document.querySelector("#admin-player-list").hidden = !adminAuthenticated;
+  document.querySelector("#admin-player-id").value = playerId;
+  if (!adminAuthenticated) return;
+  const playerRows = adminPlayers.map((player) => {
+    const roomLabel = player.isPrivate ? "Private · " + escapeHtml(player.roomCode) : "Global";
+    return "<tr><td>" + escapeHtml(player.name) + "</td><td>" + roomLabel +
+      "</td><td class=\"admin-balance\">" + player.chips.toLocaleString() +
+      "</td><td><div class=\"admin-adjust\"><input class=\"chip-input\" type=\"number\" min=\"1\" max=\"1000000\" step=\"1\" value=\"100\" aria-label=\"Chip amount for " +
+      escapeHtml(player.name) + "\"><button class=\"secondary-button\" type=\"button\" data-admin-action=\"grant\" data-player-id=\"" +
+      escapeHtml(player.id) + "\">Grant</button><button class=\"quiet-button\" type=\"button\" data-admin-action=\"take\" data-player-id=\"" +
+      escapeHtml(player.id) + "\">Take</button></div></td></tr>";
+  }).join("");
+  document.querySelector("#admin-player-list").innerHTML = adminPlayers.length
+    ? "<div class=\"admin-table-wrap\"><table class=\"admin-table\"><thead><tr><th>Player</th><th>Room</th><th>Balance</th><th>Adjust chips</th></tr></thead><tbody>" + playerRows + "</tbody></table></div>"
+    : "<p class=\"activity-empty\">No players are online right now.</p>";
 }
 
 function updateRoomControls() {
@@ -669,6 +716,42 @@ function renderPoker() {
 document.querySelectorAll(".nav-link").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
+document.querySelector("#admin-toggle").addEventListener("click", () => {
+  adminPanelOpen = !adminPanelOpen;
+  renderAdminPanel();
+});
+document.querySelector("#admin-close").addEventListener("click", () => {
+  adminPanelOpen = false;
+  send({ type: "admin-logout" });
+  renderAdminPanel();
+});
+document.querySelector("#admin-login-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const passwordInput = document.querySelector("#admin-password");
+  document.querySelector("#admin-login-error").textContent = "";
+  send({ type: "admin-login", password: passwordInput.value });
+  passwordInput.value = "";
+});
+document.querySelector("#copy-admin-player-id").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(playerId);
+    showToast("This browser's player ID was copied.");
+  } catch (error) {
+    console.error("Could not copy the admin player ID:", error);
+    showToast("Copy failed. Select and copy the player ID instead.");
+  }
+});
+document.querySelector("#admin-player-list").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-admin-action]");
+  if (!button) return;
+  const amount = Number(button.closest(".admin-adjust").querySelector("input").value);
+  if (!Number.isSafeInteger(amount) || amount < 1 || amount > 1000000) {
+    showToast("Choose a chip amount from 1 to 1,000,000.");
+    return;
+  }
+  send({ type: "admin-adjust-chips", action: button.dataset.adminAction, targetId: button.dataset.playerId, amount });
+});
+
 document.querySelector("#create-room").addEventListener("click", () => {
   send({ type: "create-room" });
 });
