@@ -529,7 +529,7 @@ function handleMessage(socket, message) {
       }
       if (previousRoom) {
         refundRoomEntries(player, previousRoom);
-        if (previousRoom.isPrivate) previousRoom.bankrolls.delete(player.id);
+        if (previousRoom.isPrivate) { previousRoom.bankrolls.delete(player.id); previousRoom.gameParticipants.delete(player.id); }
       }
     }
     player.roomCode = requestedRoom;
