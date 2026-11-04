@@ -419,7 +419,8 @@ function broadcast() {
 }
 
 function sendAdminState(socket) {
-  if (!socket.adminAuthorized || socket.readyState !== WebSocket.OPEN) return;
+  const adminPlayer = players.get(socket.playerId);
+  if (!socket.adminAuthorized || !isAdminDisplayName(adminPlayer) || socket.readyState !== WebSocket.OPEN) return;
   const onlinePlayers = [...players.values()]
     .filter((player) => player.connected)
     .map((player) => {
@@ -429,6 +430,10 @@ function sendAdminState(socket) {
     })
     .sort((first, second) => first.name.localeCompare(second.name));
   socket.send(JSON.stringify({ type: "admin-state", players: onlinePlayers }));
+}
+
+function isAdminDisplayName(player) {
+  return typeof player?.name === "string" && player.name.trim().toLocaleLowerCase() === "stijn";
 }
 
 function checkAdminUsername(username) {
@@ -580,6 +585,11 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "admin-login") {
+    if (!isAdminDisplayName(player)) {
+      socket.adminAuthorized = false;
+      socket.send(JSON.stringify({ type: "admin-auth", success: false, message: "Admin access is only available when your display name is stijn." }));
+      return;
+    }
     if (!checkAdminUsername(message.username)) {
       socket.adminAuthorized = false;
       socket.send(JSON.stringify({ type: "admin-auth", success: false, message: "The admin username is incorrect." }));
@@ -602,7 +612,7 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "admin-kick-player") {
-    if (!socket.adminAuthorized) return sendError(socket, "Unlock admin access first.");
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin access is only available to the stijn display name.");
     if (typeof message.targetId !== "string" || message.targetId === player.id) return sendError(socket, "Choose another player.");
     const target = players.get(message.targetId);
     const targetRoom = target && rooms.get(target.roomCode);
@@ -623,7 +633,7 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "admin-announcement") {
-    if (!socket.adminAuthorized) return sendError(socket, "Unlock admin access first.");
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin access is only available to the stijn display name.");
     const announcement = typeof message.text === "string" ? message.text.trim().slice(0, 180) : "";
     if (!announcement) return sendError(socket, "Write an announcement first.");
     for (const targetSocket of sockets) {
@@ -633,8 +643,8 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "admin-adjust-chips") {
-    if (!socket.adminAuthorized) {
-      return sendError(socket, "Unlock admin access with your username and password first.");
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) {
+      return sendError(socket, "Admin access is only available to the stijn display name.");
     }
     const amount = message.amount;
     if (typeof message.targetId !== "string" || !["grant", "take"].includes(message.action) || !Number.isSafeInteger(amount) || amount < 1 || amount > 1000000) {
