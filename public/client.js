@@ -197,6 +197,10 @@ function currentPlayer() {
   return state?.players.find((player) => player.id === playerId);
 }
 
+function isAdminDisplayName() {
+  return (currentPlayer()?.name ?? playerName).trim().toLocaleLowerCase() === "stijn";
+}
+
 function updateHeader() {
   const player = currentPlayer();
   const count = state?.players.length ?? 0;
@@ -208,7 +212,12 @@ function updateHeader() {
     (player?.name ?? (playerName || "G")).slice(0, 1).toUpperCase();
   document.querySelector("#crumb-current").textContent =
     view === "lobby" ? "OVERVIEW" : view.toUpperCase();
-  document.querySelector("#admin-toggle").hidden = false;
+  document.querySelector("#admin-toggle").hidden = !isAdminDisplayName();
+  if (!isAdminDisplayName()) {
+    adminPanelOpen = false;
+    adminAuthenticated = false;
+    adminPlayers = [];
+  }
   renderAdminPanel();
 }
 
@@ -219,7 +228,7 @@ function renderAdminPanel() {
 function renderAdminPanelContent() {
   const panel = document.querySelector("#admin-panel");
   if (!panel) return;
-  panel.hidden = !adminPanelOpen;
+  panel.hidden = !isAdminDisplayName() || !adminPanelOpen;
   document.querySelector("#admin-login-form").hidden = adminAuthenticated;
   document.querySelector("#admin-player-list").hidden = !adminAuthenticated;
   document.querySelector("#admin-announcement-form").hidden = !adminAuthenticated;
@@ -779,6 +788,7 @@ document.querySelectorAll(".nav-link").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 document.querySelector("#admin-toggle").addEventListener("click", () => {
+  if (!isAdminDisplayName()) return;
   adminPanelOpen = !adminPanelOpen;
   renderAdminPanel();
 });
@@ -789,6 +799,7 @@ document.querySelector("#admin-close").addEventListener("click", () => {
 });
 document.querySelector("#admin-login-form").addEventListener("submit", (event) => {
   event.preventDefault();
+  if (!isAdminDisplayName()) return;
   const usernameInput = document.querySelector("#admin-username");
   const passwordInput = document.querySelector("#admin-password");
   document.querySelector("#admin-login-error").textContent = "";
@@ -797,6 +808,7 @@ document.querySelector("#admin-login-form").addEventListener("submit", (event) =
 });
 document.querySelector("#admin-announcement-form").addEventListener("submit", (event) => {
   event.preventDefault();
+  if (!isAdminDisplayName() || !adminAuthenticated) return;
   const input = document.querySelector("#admin-announcement");
   const text = input.value.trim();
   if (!text) return;
@@ -804,6 +816,7 @@ document.querySelector("#admin-announcement-form").addEventListener("submit", (e
   input.value = "";
 });
 document.querySelector("#admin-player-list").addEventListener("click", (event) => {
+  if (!isAdminDisplayName() || !adminAuthenticated) return;
   const button = event.target.closest("[data-admin-action]");
   if (!button) return;
   const amount = Number(button.closest(".admin-adjust").querySelector("input").value);
