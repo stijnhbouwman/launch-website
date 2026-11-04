@@ -19,6 +19,7 @@ let selectedHorse = "Comet";
 let socket;
 let reconnectTimer;
 let toastTimer;
+let announcementTimer;
 let joined = false;
 let kickedFromRoom = false;
 let adminAuthenticated = false;
@@ -122,7 +123,7 @@ function connect() {
       renderAdminPanel();
       showToast(message.message);
     } else if (message.type === "announcement") {
-      showToast("📢 " + message.text);
+      showAnnouncement(message.text);
     } else if (message.type === "daily-global-bonus") {
       showToast(`Daily global bonus: +${message.amount.toLocaleString()} chips!`);
     } else if (message.type === "error") {
@@ -191,6 +192,15 @@ function showToast(message) {
   toast.classList.add("visible");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove("visible"), 2800);
+}
+
+function showAnnouncement(message) {
+  const banner = document.querySelector("#announcement-banner");
+  if (!banner) return showToast("📢 " + message);
+  banner.textContent = "📢  " + message;
+  banner.classList.add("visible");
+  clearTimeout(announcementTimer);
+  announcementTimer = setTimeout(() => banner.classList.remove("visible"), 7000);
 }
 
 function currentPlayer() {
