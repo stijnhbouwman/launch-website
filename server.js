@@ -31,6 +31,7 @@ function createRoom(code, isPrivate, ownerId = null) {
     replayVotes: new Set(),
     eliminated: [],
     rankings: [],
+    chat: [],
     roulette: { bets: [], lastResult: null, history: [], spinning: false },
     slots: { history: [] },
     horseRace: { phase: "waiting", bets: [], winner: null, history: [] },
@@ -344,6 +345,7 @@ function snapshot(roomCode) {
       ended: room.ended,
       replayVotes: [...room.replayVotes],
       rankings: room.rankings,
+      chat: room.chat,
       members: connectedRoomPlayers(roomCode).map((player) => ({
         id: player.id,
         name: player.name,
@@ -577,6 +579,27 @@ function handleMessage(socket, message) {
 
   const player = players.get(socket.playerId);
   if (!player || !player.sockets.has(socket)) return;
+
+  if (message.type === "chat-message") {
+    const room = rooms.get(player.roomCode);
+    if (!room || room.ended) return sendError(socket, "Chat is unavailable in this room.");
+    const text = typeof message.text === "string" ? message.text.trim().slice(0, 240) : "";
+    if (!text) return;
+    if (Date.now() - (socket.lastChatAt || 0) < 650) {
+      return sendError(socket, "Please wait before sending another message.");
+    }
+    socket.lastChatAt = Date.now();
+    room.chat.push({
+      id: randomBytes(8).toString("hex"),
+      playerId: player.id,
+      name: player.name,
+      text,
+      timestamp: Date.now(),
+    });
+    room.chat = room.chat.slice(-80);
+    broadcast();
+    return;
+  }
 
   if (message.type === "admin-logout") {
     socket.adminAuthorized = false;
@@ -1413,47 +1436,4 @@ webSocketServer.on("connection", (socket) => {
 
 server.listen(port, "0.0.0.0", () => {
   console.log(`Golden Hour Casino is listening on http://localhost:${port}`);
-});
-
-
-// Add a room-scoped chat channel alongside the existing multiplayer actions.
-const snapshotWithChat = snapshot;
-snapshot = function (roomCode) {
-  const result = snapshotWithChat(roomCode);
-  if (result) result.chat = rooms.get(roomCode)?.chat || [];
-  return result;
-};
-
-webSocketServer.on("connection", (chatSocket) => {
-  chatSocket.on("message", (rawMessage) => {
-    let chatMessage;
-    try {
-      chatMessage = JSON.parse(rawMessage.toString());
-    } catch {
-      return;
-    }
-    if (chatMessage?.type !== "chat-message") return;
-    const chatPlayer = players.get(chatSocket.playerId);
-    if (!chatPlayer || !chatPlayer.sockets.has(chatSocket)) return;
-    const chatRoom = rooms.get(chatPlayer.roomCode);
-    if (!chatRoom || chatRoom.ended) return;
-    const text = typeof chatMessage.text === "string"
-      ? chatMessage.text.trim().slice(0, 240)
-      : "";
-    if (!text) return;
-    if (Date.now() - (chatSocket.lastChatAt || 0) < 650) {
-      return sendError(chatSocket, "Please wait before sending another message.");
-    }
-    chatSocket.lastChatAt = Date.now();
-    if (!Array.isArray(chatRoom.chat)) chatRoom.chat = [];
-    chatRoom.chat.push({
-      id: randomBytes(8).toString("hex"),
-      playerId: chatPlayer.id,
-      name: chatPlayer.name,
-      text,
-      timestamp: Date.now(),
-    });
-    chatRoom.chat = chatRoom.chat.slice(-80);
-    broadcast();
-  });
 });
