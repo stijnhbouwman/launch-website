@@ -849,7 +849,7 @@ function renderRoomChat() {
     state.room.isPrivate ? `Private room chat · ${state.room.code}` : "Global game chat";
   const list = document.querySelector("#chat-messages");
   const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 48;
-  const messages = state.chat || [];
+  const messages = state.room.chat || [];
   list.innerHTML = messages.length
     ? messages.map((item) => {
         const time = new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
