@@ -42,6 +42,13 @@
           <div class="admin-metric"><span>Private rooms</span><strong id="metric-rooms">0</strong></div>
           <div class="admin-metric"><span>Active bans</span><strong id="metric-bans">0</strong></div>
         </div>
+        <section class="admin-card admin-game-viewer">
+          <h2>Live game viewer</h2>
+          <p class="admin-muted">Choose a game to inspect its live tables, players, wagers and round status across all rooms.</p>
+          <label class="field-label" for="game-view-select">Select game</label>
+          <select class="chip-input" id="game-view-select"><option value="roulette">Roulette</option><option value="slots">Slots</option><option value="horses">Horse racing</option><option value="blackjack">Blackjack</option><option value="poker">Poker</option></select>
+          <div id="game-view-results" class="admin-game-view-results"><p class="admin-muted">Waiting for live game data…</p></div>
+        </section>
         <div class="admin-grid">
           <div>
             <section class="admin-card">
