@@ -11,6 +11,9 @@ const dataDirectory = process.env.DATA_DIR
   : path.join(__dirname, "data");
 const playersFile = path.join(dataDirectory, "players.json");
 const bansFile = path.join(dataDirectory, "bans.json");
+const adminLogFile = path.join(dataDirectory, "admin-log.json");
+let adminLog = fs.existsSync(adminLogFile) ? JSON.parse(fs.readFileSync(adminLogFile, "utf8")) : [];
+let gamesPaused = false;
 const bannedPlayers = new Map(Object.entries(fs.existsSync(bansFile) ? JSON.parse(fs.readFileSync(bansFile, "utf8")) : {}));
 const players = new Map();
 const savedPlayers = fs.existsSync(playersFile)
@@ -153,6 +156,21 @@ function refundRoomEntries(player, room) {
     refund(pokerSeat.bet);
     room.poker.players = room.poker.players.filter((seat) => seat.id !== player.id);
   }
+}
+
+function saveAdminLog() {
+  fs.mkdirSync(dataDirectory, { recursive: true });
+  const temporaryFile = `${adminLogFile}.tmp`;
+  fs.writeFileSync(temporaryFile, JSON.stringify(adminLog.slice(-500), null, 2));
+  fs.renameSync(temporaryFile, adminLogFile);
+}
+
+function recordAdminAction(admin, action, target = null, details = "", undo = null) {
+  const entry = { id: randomBytes(8).toString("hex"), timestamp: Date.now(), admin: admin.name, action, targetId: target?.id || null, targetName: target?.name || null, details, undone: false, undo };
+  adminLog.push(entry);
+  adminLog = adminLog.slice(-500);
+  saveAdminLog();
+  return entry;
 }
 
 function saveBans() {
@@ -458,6 +476,9 @@ function sendAdminState(socket) {
       return activeGames.map((game) => ({ code: room.code, game, isPrivate: room.isPrivate, state: snapshot(room.code) }));
     }),
     onlineCount: onlinePlayers.length,
+    chats: [...rooms.values()].map((room) => ({ code: room.code, isPrivate: room.isPrivate, messages: room.chat })),
+    adminLog: adminLog.slice(-100).reverse(),
+    gamesPaused,
   }));
 }
 
@@ -667,6 +688,47 @@ function handleMessage(socket, message) {
     return;
   }
 
+  if (message.type === "admin-undo-action") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    const entry = adminLog.find((item) => item.id === message.logId);
+    if (!entry || entry.undone || !entry.undo) return sendError(socket, "This action cannot be undone or was already reversed.");
+    const undo = entry.undo;
+    if (undo.type === "chips") {
+      const target = players.get(undo.targetId); const targetRoom = rooms.get(undo.roomCode);
+      if (!target || !targetRoom) return sendError(socket, "The player or original room is no longer available; this change cannot be reversed.");
+      setChips(targetRoom, target, undo.balance);
+      if (!targetRoom.isPrivate) savePlayers();
+    } else if (undo.type === "mute") {
+      const target = players.get(undo.targetId); if (!target) return sendError(socket, "Player record unavailable."); target.muted = undo.muted;
+    } else if (undo.type === "ban") {
+      if (undo.wasBanned) bannedPlayers.set(undo.targetId, undo.previousBan); else bannedPlayers.delete(undo.targetId); saveBans();
+    } else if (undo.type === "pause") { gamesPaused = undo.wasPaused; }
+    else if (undo.type === "chat-delete") {
+      const targetRoom = rooms.get(undo.roomCode); if (!targetRoom) return sendError(socket, "Original chat room no longer exists.");
+      targetRoom.chat.push(undo.message); targetRoom.chat = targetRoom.chat.slice(-80);
+    }
+    entry.undone = true; entry.undoneAt = Date.now(); entry.undo = null; saveAdminLog();
+    recordAdminAction(player, "Reversed: " + entry.action, null, "Reversed admin action " + entry.id);
+    broadcast(); return;
+  }
+
+  if (message.type === "admin-delete-chat-message") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    const targetRoom = rooms.get(message.roomCode); if (!targetRoom || typeof message.messageId !== "string") return sendError(socket, "Choose a valid chat message.");
+    const index = targetRoom.chat.findIndex((item) => item.id === message.messageId); if (index < 0) return sendError(socket, "That message is no longer available.");
+    const [removed] = targetRoom.chat.splice(index, 1);
+    recordAdminAction(player, "Deleted chat message", {id: removed.playerId, name: removed.name}, "Room " + targetRoom.code + ": " + removed.text, {type:"chat-delete",roomCode:targetRoom.code,message:removed});
+    broadcast(); return;
+  }
+
+  if (message.type === "admin-set-games-paused") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    if (typeof message.paused !== "boolean") return sendError(socket, "Choose pause or resume.");
+    const previous = gamesPaused; gamesPaused = message.paused;
+    recordAdminAction(player, gamesPaused ? "Paused new game rounds" : "Resumed new game rounds", null, "", {type:"pause",wasPaused:previous});
+    broadcast(); return;
+  }
+
   if (message.type === "admin-kick-player") {
     if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin access is only available to the stijn display name.");
     if (typeof message.targetId !== "string" || message.targetId === player.id) return sendError(socket, "Choose another player.");
@@ -693,7 +755,9 @@ function handleMessage(socket, message) {
     if (typeof message.targetId !== "string" || message.targetId === player.id) return sendError(socket, "You cannot ban your own admin account.");
     const target = players.get(message.targetId);
     if (!target) return sendError(socket, "Player not found.");
+    const previousBan = bannedPlayers.get(target.id) || null;
     bannedPlayers.set(target.id, { id: target.id, name: target.name, bannedAt: Date.now() });
+    recordAdminAction(player, "Banned player", target, "", {type:"ban",targetId:target.id,wasBanned:Boolean(previousBan),previousBan});
     saveBans();
     for (const targetSocket of target.sockets) {
       if (targetSocket.readyState === WebSocket.OPEN) targetSocket.close(4003, "Banned by administrator");
@@ -709,6 +773,7 @@ function handleMessage(socket, message) {
     if (typeof message.targetId !== "string" || !bannedPlayers.has(message.targetId)) return sendError(socket, "That ban was not found.");
     const banned = bannedPlayers.get(message.targetId);
     bannedPlayers.delete(message.targetId);
+    recordAdminAction(player, "Unbanned player", banned, "", {type:"ban",targetId:message.targetId,wasBanned:true,previousBan:banned});
     saveBans();
     console.info("Admin " + player.name + " unbanned " + banned.name + " (" + banned.id + ").");
     sendAdminState(socket);
@@ -720,6 +785,7 @@ function handleMessage(socket, message) {
     if (typeof message.targetId !== "string" || message.targetId === player.id) return sendError(socket, "Choose another player.");
     const target = players.get(message.targetId);
     if (!target || !target.connected) return sendError(socket, "That player is no longer online.");
+    const oldBalance = chipsFor(rooms.get(target.roomCode), target);
     target.chips = 1000;
     const targetRoom = rooms.get(target.roomCode);
     if (targetRoom?.isPrivate) targetRoom.bankrolls.set(target.id, 1000);
@@ -727,6 +793,7 @@ function handleMessage(socket, message) {
       if (room.isPrivate && room.bankrolls.has(target.id)) room.bankrolls.set(target.id, 1000);
     }
     savePlayers();
+    recordAdminAction(player, "Reset player balance", target, "1000 chips", {type:"chips",targetId:target.id,roomCode:target.roomCode,balance:oldBalance});
     console.info("Admin " + player.name + " reset " + target.name + "'s balance.");
     broadcast();
     return;
@@ -773,7 +840,9 @@ function handleMessage(socket, message) {
     if (typeof message.targetId !== "string" || typeof message.muted !== "boolean" || message.targetId === player.id) return sendError(socket, "Choose another player.");
     const target = players.get(message.targetId);
     if (!target || !target.connected) return sendError(socket, "That player is no longer online.");
+    const previousMuted = Boolean(target.muted);
     target.muted = message.muted;
+    recordAdminAction(player, target.muted ? "Muted player" : "Unmuted player", target, "", {type:"mute",targetId:target.id,muted:previousMuted});
     console.info("Admin " + player.name + (target.muted ? " muted " : " unmuted ") + target.name + " (" + target.id + ").");
     broadcast();
     return;
@@ -813,12 +882,15 @@ function handleMessage(socket, message) {
     if (message.action === "take" && amount > balance) return sendError(socket, "You cannot take more chips than that player has.");
     if (message.action === "grant" && !Number.isSafeInteger(balance + amount)) return sendError(socket, "That grant would exceed the maximum chip balance.");
     setChips(targetRoom, target, message.action === "grant" ? balance + amount : balance - amount);
+    recordAdminAction(player, message.action === "grant" ? "Granted chips" : "Took chips", target, amount.toLocaleString() + " chips", {type:"chips",targetId:target.id,roomCode:targetRoom.code,balance});
     if (!targetRoom.isPrivate) savePlayers();
     else endRoomIfBroke(targetRoom);
     console.info("Admin " + player.name + " " + (message.action === "grant" ? "granted" : "removed") + " " + amount + " chips " + (message.action === "grant" ? "to " : "from ") + target.name + " (" + target.id + ").");
     broadcast();
     return;
   }
+
+  if (gamesPaused && ["roulette-bet","roulette-spin","slots-spin","horse-bet","horse-start","update-poker-bet","join-poker","start-poker","update-blackjack-bet","join-blackjack","start-blackjack","blackjack-action"].includes(message.type)) return sendError(socket, "Casino games are paused by the administrator. Existing rounds can finish, but no new game actions are allowed.");
 
   if (message.type === "leave-room") {
     if (!room.isPrivate) return sendError(socket, "You are already in the global room.");
