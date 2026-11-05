@@ -481,6 +481,7 @@ function sendAdminState(socket) {
     code: room.code,
     players: connectedRoomPlayers(room.code).length,
     game: room.selectedGame || "lobby",
+    owner: players.get(room.ownerId)?.name || "Unknown",
     running: roomHasRunningGame(room),
   })).sort((a, b) => a.code.localeCompare(b.code));
   socket.send(JSON.stringify({
@@ -836,6 +837,36 @@ function handleMessage(socket, message) {
       if (targetSocket.readyState === WebSocket.OPEN) targetSocket.close(4002, "Disconnected by administrator");
     }
     console.info("Admin " + player.name + " disconnected " + target.name + " (" + target.id + ").");
+    return;
+  }
+
+  if (message.type === "admin-room-announcement") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    const targetRoom = rooms.get(message.roomCode);
+    const announcement = typeof message.text === "string" ? message.text.trim().slice(0, 180) : "";
+    if (!targetRoom?.isPrivate) return sendError(socket, "Choose an existing private room.");
+    if (!announcement) return sendError(socket, "Write a room message first.");
+    const recipients = connectedRoomPlayers(targetRoom.code);
+    for (const member of recipients) {
+      for (const targetSocket of member.sockets) {
+        if (targetSocket.readyState === WebSocket.OPEN) targetSocket.send(JSON.stringify({ type: "announcement", text: announcement }));
+      }
+    }
+    recordAdminAction(player, "Sent private room announcement", null, targetRoom.code + ": " + announcement);
+    broadcast();
+    return;
+  }
+
+  if (message.type === "admin-close-empty-rooms") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    const emptyRooms = [...rooms.values()].filter((room) => room.isPrivate && connectedRoomPlayers(room.code).length === 0 && !roomHasRunningGame(room));
+    for (const targetRoom of emptyRooms) rooms.delete(targetRoom.code);
+    if (emptyRooms.length) {
+      recordAdminAction(player, "Closed empty private rooms", null, emptyRooms.length + " room(s): " + emptyRooms.map((room) => room.code).join(", "));
+      savePlayers();
+    }
+    broadcast();
+    socket.send(JSON.stringify({ type: "admin-room-cleanup-result", count: emptyRooms.length }));
     return;
   }
 
