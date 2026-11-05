@@ -529,10 +529,10 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 /* Keep the Plinko ball path compatible with standard CSS calc support. */
 @keyframes plinkoBallDrop {
   0% { transform: translate(0,0) scale(1); }
-  15% { transform: translate(calc(var(--plinko-shift) * .08),calc(var(--plinko-drop-y) * .15)) scale(.95); }
-  30% { transform: translate(calc(var(--plinko-shift) * -.12),calc(var(--plinko-drop-y) * .3)) scale(1); }
-  45% { transform: translate(calc(var(--plinko-shift) * .18),calc(var(--plinko-drop-y) * .48)) scale(.92); }
-  60% { transform: translate(calc(var(--plinko-shift) * -.1),calc(var(--plinko-drop-y) * .65)) scale(1); }
-  78% { transform: translate(calc(var(--plinko-shift) * .35),calc(var(--plinko-drop-y) * .84)) scale(.9); }
+  15% { transform: translate(var(--plinko-x-15),var(--plinko-y-15)) scale(.95); }
+  30% { transform: translate(var(--plinko-x-30),var(--plinko-y-30)) scale(1); }
+  45% { transform: translate(var(--plinko-x-45),var(--plinko-y-45)) scale(.92); }
+  60% { transform: translate(var(--plinko-x-60),var(--plinko-y-60)) scale(1); }
+  78% { transform: translate(var(--plinko-x-78),var(--plinko-y-78)) scale(.9); }
   100% { transform: translate(var(--plinko-shift),var(--plinko-drop-y)) scale(.82); opacity: 1; }
 }
