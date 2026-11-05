@@ -523,7 +523,7 @@ function renderLobby() {
         </div>
       </article>
       <article class="game-card">
-        <div class="game-art wheel-fortune-art"><div class="fortune-preview">✦ 2× · 5× · 10× ✦</div></div>
+        <div class="game-art wheel-fortune-art"><div class="fortune-preview">✦ 0.5× · 1× · 2× ✦</div></div>
         <div class="game-card-content"><div class="game-card-head"><h3>Wheel of Fortune</h3><span class="table-live"><span></span> PLAY ANYTIME</span></div><p>Spin for a modest prize of up to 2× your wager.</p><div class="game-card-footer"><span class="players-label"><strong>${state.wheelFortune.history.length}</strong> recent spins</span><button class="primary-button" data-go="wheel">Spin the wheel&nbsp; ↗</button></div></div>
       </article>
       <article class="game-card">
