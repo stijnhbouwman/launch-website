@@ -454,3 +454,11 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .admin-dashboard[hidden],.admin-login-card[hidden] { display:none; }
 @media(max-width:900px){.admin-grid{grid-template-columns:1fr}.admin-metrics{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.admin-shell{padding:18px 12px 40px}.admin-top{align-items:flex-start}.admin-title-row{align-items:flex-start;flex-direction:column}.admin-metrics{gap:7px}.admin-metric{padding:12px}.admin-metric strong{font-size:23px}.admin-card{padding:14px}.admin-room-row,.admin-ban-row{align-items:flex-start;flex-direction:column}.admin-dashboard-table th,.admin-dashboard-table td{padding:9px 7px}}
+
+.admin-game-viewer { margin-bottom: 1.25rem; }
+.admin-game-viewer select { max-width: 320px; }
+.admin-game-view-results { display: grid; gap: .75rem; margin-top: 1rem; }
+.admin-game-room { border: 1px solid rgba(220,190,130,.22); border-radius: 12px; padding: 1rem; background: rgba(255,255,255,.025); }
+.admin-game-room-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+.admin-game-room-heading span { color: var(--muted, #aaa); font-size: .85rem; }
+.admin-game-room pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: .75rem 0 0; color: inherit; font: inherit; font-size: .9rem; line-height: 1.55; }
