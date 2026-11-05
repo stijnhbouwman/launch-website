@@ -837,8 +837,14 @@ function renderPlinko() {
       const targetRect = target.getBoundingClientRect();
       const startX = boardRect.left + board.clientLeft + board.clientWidth / 2;
       const startY = boardRect.top + board.clientTop + 12 + 7;
-      board.style.setProperty("--plinko-shift", (targetRect.left + targetRect.width / 2 - startX) + "px");
-      board.style.setProperty("--plinko-drop-y", (targetRect.top + targetRect.height / 2 - startY) + "px");
+      const shift = targetRect.left + targetRect.width / 2 - startX;
+      const dropY = targetRect.top + targetRect.height / 2 - startY;
+      board.style.setProperty("--plinko-shift", shift + "px");
+      board.style.setProperty("--plinko-drop-y", dropY + "px");
+      [[.08,.15,"15"],[-.12,.3,"30"],[.18,.48,"45"],[-.1,.65,"60"],[.35,.84,"78"]].forEach(([x,y,label]) => {
+        board.style.setProperty("--plinko-x-" + label, (shift * x) + "px");
+        board.style.setProperty("--plinko-y-" + label, (dropY * y) + "px");
+      });
     }
   }
   content.querySelectorAll("[data-amount]").forEach(button=>button.addEventListener("click",()=>{selectedAmount=Number(button.dataset.amount);renderPlinko();}));
