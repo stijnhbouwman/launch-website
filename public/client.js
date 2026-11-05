@@ -570,8 +570,17 @@ function renderRoulette() {
   const readiness = roomReadiness(roulette.readyIds);
   const alreadyBet = roulette.readyIds.includes(playerId);
   const result = roulette.lastResult;
+  const wheelOrder = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
   const numbers = Array.from({ length: 37 }, (_, number) => number);
   const reds = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+  const targetNumber = roulette.spinningResult?.number ?? result?.number;
+  const targetPocket = targetNumber == null ? 0 : wheelOrder.indexOf(targetNumber);
+  const rouletteRotation = 1440 - targetPocket * (360 / 37);
+  const roulettePockets = wheelOrder.map((number, index) => {
+    const angle = index * (360 / 37);
+    const color = number === 0 ? "green" : reds.has(number) ? "red" : "black";
+    return `<span class="roulette-pocket ${color}" style="--pocket-angle:${angle}deg">${number}</span>`;
+  }).join("");
   content.innerHTML = `
     <span class="eyebrow">THE WHEEL ROOM</span><h1>Roulette</h1>
     <p class="hero-subtitle">One table, one wheel, and every player at the edge of their seat.</p>
@@ -579,8 +588,8 @@ function renderRoulette() {
       <section class="table-panel">
         <div class="table-panel-top"><h2>The shared wheel</h2><small>${state.room.isPrivate ? `${readiness.ready} / ${readiness.total} players ready` : `${roulette.bets.length} bets placed`}</small></div>
         <div class="roulette-table">
-          <div class="roulette-wheel-stage ${roulette.spinning ? "spinning" : ""}" style="--roulette-rotation:${roulette.spinningResult ? 1440 - roulette.spinningResult.number * (360 / 37) : 1260}deg;--roulette-ball-rotation:${roulette.spinningResult ? -1620 + roulette.spinningResult.number * (360 / 37) : -1620}deg">
-            <div class="roulette-wheel"><div class="roulette-wheel-center">GH</div></div>
+          <div class="roulette-wheel-stage ${roulette.spinning ? "spinning" : ""}" style="--roulette-rotation:${rouletteRotation}deg;--roulette-ball-rotation:-1620deg">
+            <div class="roulette-wheel" style="transform:rotate(${rouletteRotation}deg)"><div class="roulette-pocket-ring">${roulettePockets}</div><div class="roulette-wheel-center">GH</div></div>
             <div class="roulette-ball-orbit"><span class="roulette-ball"></span></div>
             <div class="roulette-result ${result?.color ?? ""}">${roulette.spinning ? "✳" : result?.number ?? "—"}</div>
           </div>
@@ -815,7 +824,7 @@ function renderWheelFortune() {
   const cooldown = gameCooldownActive("wheel");
   const wheelRotation = latest ? 1800 + (360 - latest.segment * 40) : 0;
   const segments = [0, 0, 0.5, 0.75, 1, 1, 1.5, 2, 5];
-  content.innerHTML = `<span class="eyebrow">THE PRIZE HALL</span><h1>Wheel of Fortune</h1><p class="hero-subtitle">One spin can turn your wager into up to 5 times the chips.</p><div class="game-layout"><section class="table-panel"><div class="table-panel-top"><h2>The golden prize wheel</h2><small>Server-drawn result · shared history</small></div><div class="fortune-stage"><div class="fortune-wheel ${animateSpin ? "spinning" : ""}" style="--wheel-rotation:${wheelRotation}deg">${segments.map((m,i)=>`<span class="fortune-segment segment-${i}">${m}×</span>`).join("")}</div><div class="fortune-pointer">▼</div></div><div class="fortune-result">${latest ? `${escapeHtml(latest.name)} · ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid` : "The wheel is ready for its first spin."}</div><div class="recent-bets"><h4>Recent spins</h4>${history.length ? `<div class="activity-list">${history.slice(0,10).map(item=>`<div class="activity-row"><span>${escapeHtml(item.name)} · ${item.multiplier}×</span><small>${item.payout ? `+${item.payout}` : `−${item.amount}`} chips</small></div>`).join("")}</div>` : `<div class="activity-empty">No spins yet.</div>`}</div></section><aside class="control-panel"><h3>Spin for a prize</h3><p class="control-copy">The wager is deducted before each spin. All prizes are complimentary chips.</p><label class="field-label" for="wheel-amount">Your wager</label><div class="amount-row"><input class="chip-input" id="wheel-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10,25,50].map(a=>`<button class="preset ${selectedAmount===a?"selected":""}" data-amount="${a}">${a}</button>`).join("")}</div></div><button class="primary-button full-button" id="spin-fortune" ${cooldown ? "disabled" : ""}>${cooldown ? "Wheel spinning…" : "Spin the wheel ↗"}</button><div class="table-rules">${[0,0.5,0.75,1,1.5,2,5].map(m=>`<div class="rule-row"><span>${m}× prize</span><strong>${m===0?"No payout":`${m}× wager`}</strong></div>`).join("")}</div></aside></div>`;
+  content.innerHTML = `<span class="eyebrow">THE PRIZE HALL</span><h1>Wheel of Fortune</h1><p class="hero-subtitle">One spin can turn your wager into up to 5 times the chips.</p><div class="game-layout"><section class="table-panel"><div class="table-panel-top"><h2>The golden prize wheel</h2><small>Server-drawn result · shared history</small></div><div class="fortune-stage"><div class="fortune-wheel ${animateSpin ? "spinning" : ""}" style="--wheel-rotation:${wheelRotation}deg;transform:rotate(${wheelRotation}deg)">${segments.map((m,i)=>{const angle=i*40;return `<span class="fortune-segment" style="transform:rotate(${angle}deg) translateY(-102px) rotate(-${angle}deg)">${m}×</span>`;}).join("")}</div><div class="fortune-pointer">▼</div></div><div class="fortune-result">${latest ? `${escapeHtml(latest.name)} · ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid` : "The wheel is ready for its first spin."}</div><div class="recent-bets"><h4>Recent spins</h4>${history.length ? `<div class="activity-list">${history.slice(0,10).map(item=>`<div class="activity-row"><span>${escapeHtml(item.name)} · ${item.multiplier}×</span><small>${item.payout ? `+${item.payout}` : `−${item.amount}`} chips</small></div>`).join("")}</div>` : `<div class="activity-empty">No spins yet.</div>`}</div></section><aside class="control-panel"><h3>Spin for a prize</h3><p class="control-copy">The wager is deducted before each spin. All prizes are complimentary chips.</p><label class="field-label" for="wheel-amount">Your wager</label><div class="amount-row"><input class="chip-input" id="wheel-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10,25,50].map(a=>`<button class="preset ${selectedAmount===a?"selected":""}" data-amount="${a}">${a}</button>`).join("")}</div></div><button class="primary-button full-button" id="spin-fortune" ${cooldown ? "disabled" : ""}>${cooldown ? "Wheel spinning…" : "Spin the wheel ↗"}</button><div class="table-rules">${[0,0.5,0.75,1,1.5,2,5].map(m=>`<div class="rule-row"><span>${m}× prize</span><strong>${m===0?"No payout":`${m}× wager`}</strong></div>`).join("")}</div></aside></div>`;
   content.querySelectorAll("[data-amount]").forEach(button=>button.addEventListener("click",()=>{selectedAmount=Number(button.dataset.amount);renderWheelFortune();}));
   content.querySelector("#wheel-amount").addEventListener("input",event=>selectedAmount=Number(event.target.value));
   content.querySelector("#spin-fortune").addEventListener("click",()=>triggerTimedGameAction("wheel",{type:"wheel-fortune-spin",amount:selectedAmount}));
