@@ -1259,9 +1259,9 @@ function handleMessage(socket, message) {
         if (winner) {
           const winnerPlayer = players.get(bet.playerId);
           if (winnerPlayer) {
-            addChips(room, winnerPlayer, /^\d+$/.test(bet.selection)
-              ? bet.amount * 36
-              : bet.amount * 2);
+            const payout = /^\d+$/.test(bet.selection) ? bet.amount * 36 : bet.amount * 2;
+            addChips(room, winnerPlayer, payout);
+            recordPlayerGame(winnerPlayer, "roulette", room, bet.amount, payout, "Win", "Bet " + bet.selection + " · result " + result + " " + color);
           }
         } else {
           const losingPlayer = players.get(bet.playerId);
