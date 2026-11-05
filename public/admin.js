@@ -64,6 +64,7 @@
     ).join("");
     document.querySelector("#bans-empty").hidden = bans.length > 0;
     renderPlayerLeaderboard();
+    renderGameBans();
     renderGameViewer();
     renderAdminTools();
   }
@@ -73,6 +74,18 @@
     document.querySelector("#player-leaderboard").innerHTML = top.length
       ? top.map((player, index) => '<div><span>' + (index + 1) + '. ' + escapeHtml(player.name) + '</span><strong>' + Number(player.chips || 0).toLocaleString() + ' chips</strong></div>').join("")
       : '<p class="admin-muted">No players are online.</p>';
+  }
+
+  function renderGameBans() {
+    const players = adminData.players || [];
+    const playerSelect = document.querySelector("#game-ban-player");
+    const selected = playerSelect.value;
+    playerSelect.innerHTML = '<option value="">Select player…</option>' + players.map((p) => '<option value="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + ' · ' + escapeHtml(p.game || "lobby") + '</option>').join("");
+    if (players.some((p) => p.id === selected)) playerSelect.value = selected;
+    const bans = adminData.gameBans || [];
+    document.querySelector("#game-bans-list").innerHTML = bans.length ? bans.map((ban) =>
+      '<div><span><strong>' + escapeHtml(ban.name) + '</strong><small> · ' + escapeHtml(ban.game) + ' · expires ' + new Date(ban.expiresAt).toLocaleString() + '</small></span><button class="quiet-button" data-remove-game-ban="' + escapeHtml(ban.id) + '">Revoke</button></div>'
+    ).join("") : '<p class="admin-muted">No active game bans.</p>';
   }
 
   function downloadPlayerReport() {
@@ -197,6 +210,20 @@
   document.querySelector("#player-search").addEventListener("input", () => render());
   document.querySelector("#player-game-filter").addEventListener("change", () => render());
   document.querySelector("#export-players").addEventListener("click", () => { if (authenticated) downloadPlayerReport(); });
+  document.querySelector("#apply-game-ban").addEventListener("click", () => {
+    if (!authenticated) return;
+    const targetId = document.querySelector("#game-ban-player").value;
+    if (!targetId) return showToast("Select a player first.");
+    const game = document.querySelector("#game-ban-game").value;
+    const durationMinutes = Number(document.querySelector("#game-ban-duration").value);
+    const target = adminData.players.find((p) => p.id === targetId);
+    if (!target || !confirm("Temporarily block " + target.name + " from " + game + " for " + durationMinutes + " minutes?")) return;
+    send({ type: "admin-game-ban", targetId, game, durationMinutes });
+  });
+  document.querySelector("#game-bans-list").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-remove-game-ban]");
+    if (button && authenticated && confirm("Revoke this game ban now?")) send({ type: "admin-remove-game-ban", banId: button.dataset.removeGameBan });
+  });
   document.querySelector("#copy-player-ids").addEventListener("click", async () => {
     if (!authenticated) return;
     const ids = (adminData.players || []).map((player) => player.id).filter(Boolean).join("\\n");
