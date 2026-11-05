@@ -246,10 +246,12 @@
     if (button.dataset.action === "grant" || button.dataset.action === "take") {
       const action = button.dataset.action;
       const targetName = adminData.players.find((item) => item.id === id)?.name || "this player";
-      const amountText = prompt((action === "grant" ? "Grant how many chips to " : "Take how many chips from ") + targetName + "? (1–1,000,000)");
+      const target = adminData.players.find((item) => item.id === id);
+      const amountHint = action === "take" ? " (up to " + Number(target?.chips || 0).toLocaleString() + " chips)" : " (no preset cap)";
+      const amountText = prompt((action === "grant" ? "Grant how many chips to " : "Take how many chips from ") + targetName + "?" + amountHint);
       if (amountText === null) return;
       const amount = Number(amountText.trim());
-      if (!Number.isSafeInteger(amount) || amount < 1 || amount > 1000000) { showToast("Enter a whole number from 1 to 1,000,000."); return; }
+      if (!Number.isSafeInteger(amount) || amount < 1 || (action === "take" && amount > Number(target?.chips || 0))) { showToast(action === "take" ? "Enter a whole number up to the player’s current balance." : "Enter a valid whole-chip amount."); return; }
       send({ type: "admin-adjust-chips", targetId: id, action, amount });
     }
     if (button.dataset.action === "reset" && confirm("Reset this player's chip balance to 1,000?")) send({ type: "admin-reset-balance", targetId: id });
