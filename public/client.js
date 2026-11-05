@@ -184,13 +184,17 @@ function renderUsernamePicker(message = "") {
       <p class="join-footnote">Everyone starts with 1,000 complimentary chips. Play for fun—chips have no cash value.</p>
     </section>`;
   screen.querySelectorAll("[data-avatar]").forEach((button) => button.addEventListener("click", () => {
+    playerName = screen.querySelector("#join-username")?.value || playerName;
     playerAvatar = button.dataset.avatar;
+    localStorage.setItem(nameKey, playerName);
     localStorage.setItem(avatarKey, playerAvatar);
     renderUsernamePicker(message);
     screen.querySelector("#join-username")?.focus();
   }));
   screen.querySelectorAll("[data-avatar-color]").forEach((button) => button.addEventListener("click", () => {
+    playerName = screen.querySelector("#join-username")?.value || playerName;
     playerAvatarColor = button.dataset.avatarColor;
+    localStorage.setItem(nameKey, playerName);
     localStorage.setItem(avatarColorKey, playerAvatarColor);
     renderUsernamePicker(message);
     screen.querySelector("#join-username")?.focus();
@@ -232,6 +236,11 @@ function showAnnouncement(message) {
 
 function currentPlayer() {
   return state?.players.find((player) => player.id === playerId);
+}
+
+function playerLabel(id, name) {
+  const player = state?.players.find((item) => item.id === id);
+  return `${escapeHtml(player?.avatar || "🎭")} ${escapeHtml(name)}`;
 }
 
 function isAdminDisplayName() {
@@ -601,7 +610,7 @@ function playerHandMarkup(seat, turnId) {
   let aces = seat.hand.filter((card) => card.rank === "A").length;
   while (handTotal > 21 && aces > 0) { handTotal -= 10; aces -= 1; }
   const totalReadout = seat.id === playerId ? `<div class="blackjack-hand-total">YOUR TOTAL <strong>${handTotal}</strong></div>` : "";
-  return `<div class="seat-card ${seat.id === turnId ? "current-turn" : ""}"><div class="seat-name">${escapeHtml(seat.name)} · ${seat.bet} chips</div><div class="seat-cards">${seat.hand.map(cardMarkup).join("")}</div>${totalReadout}<div class="seat-status">${escapeHtml(status || "Waiting")}</div></div>`;
+  return `<div class="seat-card ${seat.id === turnId ? "current-turn" : ""}"><div class="seat-name">${playerLabel(seat.id, seat.name)} · ${seat.bet} chips</div><div class="seat-cards">${seat.hand.map(cardMarkup).join("")}</div>${totalReadout}<div class="seat-status">${escapeHtml(status || "Waiting")}</div></div>`;
 }
 
 function renderBlackjack() {
@@ -783,7 +792,7 @@ function renderPoker() {
         <div class="table-panel-top"><h2>Five-card showdown</h2><small>${game.phase === "playing" ? "Cards dealt" : game.phase === "done" ? "Showdown complete" : "Waiting for players"}</small></div>
         <div class="blackjack-felt poker-felt">
           ${game.players.length ? `<div class="hand-area"><div class="hand-label"><span>PLAYERS · ${game.players.length} SEATED</span><small>${game.players.reduce((pot, seat) => pot + seat.bet, 0).toLocaleString()} chip pot</small></div>
-            <div class="cards-row poker-seats">${game.players.map((seat) => `<div class="seat-card"><div class="seat-name">${escapeHtml(seat.name)} · ${seat.bet} chips</div><div class="seat-cards">${seat.hand.map(cardMarkup).join("")}</div><div class="seat-status">${escapeHtml(seat.result || (game.phase === "playing" ? "Showdown…" : "Waiting"))}</div></div>`).join("")}</div></div>`
+            <div class="cards-row poker-seats">${game.players.map((seat) => `<div class="seat-card"><div class="seat-name">${playerLabel(seat.id, seat.name)} · ${seat.bet} chips</div><div class="seat-cards">${seat.hand.map(cardMarkup).join("")}</div><div class="seat-status">${escapeHtml(seat.result || (game.phase === "playing" ? "Showdown…" : "Waiting"))}</div></div>`).join("")}</div></div>`
             : `<div class="waiting-message">Take a seat to join the next showdown.</div>`}
           ${game.lastResult ? `<div class="poker-result">${game.lastResult.winners.map(escapeHtml).join(", ")} won with ${escapeHtml(game.lastResult.hand)} · ${game.lastResult.pot.toLocaleString()} chips</div>` : ""}
         </div>
@@ -899,7 +908,7 @@ function renderRoomChat() {
     ? messages.map((item) => {
         const time = new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
         return `<article class="chat-message ${item.playerId === playerId ? "mine" : ""}">
-          <div class="chat-message-meta"><strong>${escapeHtml(item.name)}</strong><time>${time}</time></div>
+          <div class="chat-message-meta"><strong>${playerLabel(item.playerId, item.name)}</strong><time>${time}</time></div>
           <p>${escapeHtml(item.text)}</p>
         </article>`;
       }).join("")
