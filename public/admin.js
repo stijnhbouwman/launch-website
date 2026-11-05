@@ -15,6 +15,7 @@
   let selectedGame = "roulette";
   let selectedHistoryPlayer = null;
   let selectedChatRoom = "global";
+  let selectedRoomTool = "";
   const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[ch]));
   const send = (message) => {
     if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
@@ -48,14 +49,28 @@
     }).join("");
     document.querySelector("#players-empty").hidden = players.length > 0;
     document.querySelector("#rooms-list").innerHTML = rooms.length ? rooms.map((r) =>
-      '<div class="admin-room-row"><div><strong>' + escapeHtml(r.code) + '</strong><small>' + r.players + ' online · ' + escapeHtml(r.game) + (r.running ? ' · round running' : '') + '</small></div><button class="quiet-button admin-danger" data-room-close="' + escapeHtml(r.code) + '"' + (r.running ? " disabled" : "") + '>Close room</button></div>'
+      '<div class="admin-room-row"><div><strong>' + escapeHtml(r.code) + '</strong><small>' + r.players + ' online · Host: ' + escapeHtml(r.owner || "Unknown") + ' · ' + escapeHtml(r.game) + (r.running ? ' · round running' : '') + '</small></div><button class="quiet-button admin-danger" data-room-close="' + escapeHtml(r.code) + '"' + (r.running ? " disabled" : "") + '>Close room</button></div>'
     ).join("") : '<p class="admin-muted">No private rooms are currently open.</p>';
     document.querySelector("#bans-list").innerHTML = bans.map((b) =>
       '<div class="admin-ban-row"><div><strong>' + escapeHtml(b.name) + '</strong><small>Banned ' + new Date(b.bannedAt).toLocaleString() + '</small></div><button class="quiet-button" data-unban="' + escapeHtml(b.id) + '">Unban</button></div>'
     ).join("");
     document.querySelector("#bans-empty").hidden = bans.length > 0;
+    renderRoomToolkit();
     renderGameViewer();
     renderAdminTools();
+  }
+
+  function renderRoomToolkit() {
+    const rooms = adminData.rooms || [];
+    const active = rooms.filter((room) => room.players > 0).length;
+    const empty = rooms.filter((room) => room.players === 0 && !room.running).length;
+    const busy = rooms.slice().sort((a, b) => b.players - a.players)[0];
+    document.querySelector("#room-insights").innerHTML = '<div><strong>' + rooms.length + '</strong><span>Rooms open</span></div><div><strong>' + active + '</strong><span>Occupied</span></div><div><strong>' + empty + '</strong><span>Safe to clean</span></div><p>' + (busy && busy.players ? "Busiest room: " + escapeHtml(busy.code) + " (" + busy.players + " online)" : "No private rooms currently have players.") + '</p>';
+    const select = document.querySelector("#room-tool-select");
+    if (!rooms.some((room) => room.code === selectedRoomTool)) selectedRoomTool = rooms[0]?.code || "";
+    select.innerHTML = '<option value="">Select a private room</option>' + rooms.map((room) => '<option value="' + escapeHtml(room.code) + '">' + escapeHtml(room.code) + ' · ' + room.players + ' online</option>').join("");
+    select.value = selectedRoomTool;
+    document.querySelector("#close-empty-rooms").disabled = empty === 0;
   }
 
   function renderAdminTools() {
@@ -135,6 +150,8 @@
         render();
       } else if (message.type === "admin-logged-out") {
         lockDashboard(message.message);
+      } else if (message.type === "admin-room-cleanup-result") {
+        showToast(message.count ? "Closed " + message.count + " empty private room(s)." : "No empty private rooms needed cleanup.");
       } else if (message.type === "room-kicked") {
         showToast("A player was moved out of a closed room.");
       } else if (message.type === "error") {
@@ -177,6 +194,18 @@
     }
     if (button.dataset.action === "disconnect" && confirm("Disconnect this player? They can reconnect unless banned.")) send({ type: "admin-disconnect-player", targetId: id });
     if (button.dataset.action === "ban" && confirm("Permanently ban this player account? You can unban them later.")) send({ type: "admin-ban-player", targetId: id });
+  });
+  document.querySelector("#room-tool-select").addEventListener("change", (event) => { selectedRoomTool = event.target.value; });
+  document.querySelector("#room-announcement-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const text = document.querySelector("#room-announcement-text").value.trim();
+    if (!authenticated || !selectedRoomTool || !text) { showToast("Choose a private room and enter a message."); return; }
+    send({ type: "admin-room-announcement", roomCode: selectedRoomTool, text });
+    document.querySelector("#room-announcement-text").value = "";
+    showToast("Room announcement sent.");
+  });
+  document.querySelector("#close-empty-rooms").addEventListener("click", () => {
+    if (authenticated && confirm("Close every private room with no connected players and no active round?")) send({ type: "admin-close-empty-rooms" });
   });
   document.querySelector("#rooms-list").addEventListener("click", (event) => {
     const button = event.target.closest("[data-room-close]");
