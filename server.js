@@ -748,6 +748,7 @@ function handleMessage(socket, message) {
       targetRoom.gameParticipants.delete(target.id);
       target.currentGame = null;
     }
+    recordAdminAction(player, "Moved player to global room", target, "From " + targetRoom.code);
     target.roomCode = "global";
     for (const targetSocket of target.sockets) if (targetSocket.readyState === WebSocket.OPEN) targetSocket.send(JSON.stringify({ type: "room-kicked" }));
     savePlayers();
