@@ -462,3 +462,7 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .admin-game-room-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
 .admin-game-room-heading span { color: var(--muted, #aaa); font-size: .85rem; }
 .admin-game-room pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: .75rem 0 0; color: inherit; font: inherit; font-size: .9rem; line-height: 1.55; }
+
+
+/* Admin chat, audit and history tools */
+.admin-chat-messages,.admin-log-list{display:grid;gap:9px;max-height:430px;overflow:auto}.admin-chat-message,.admin-log-row{padding:11px;border:1px solid var(--line);border-radius:6px;background:#171b17}.admin-chat-message>div,.admin-log-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.admin-chat-message strong,.admin-log-row strong{display:block;color:var(--text);font-size:11px}.admin-chat-message time,.admin-log-row small{display:block;margin-top:4px;color:var(--muted);font-size:9px}.admin-chat-message p,.admin-log-row p{margin:7px 0;color:#d5d8ce;font-size:10px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap}.admin-chat-message button,.admin-log-row button{flex-shrink:0;padding:7px 9px;font-size:9px}.admin-chat-message>div{display:flex;justify-content:space-between;align-items:center;gap:8px}.admin-chat-message>div strong{margin-right:auto}.admin-chat-message>div time{white-space:nowrap}.admin-form-row{align-items:center}.admin-form-row strong{color:var(--gold-bright);font-size:11px}
