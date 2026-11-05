@@ -48,6 +48,8 @@ function createRoom(code, isPrivate, ownerId = null) {
     horseRace: { phase: "waiting", bets: [], winner: null, history: [] },
     blackjack: { phase: "waiting", players: [], dealer: [], deck: [], turnIndex: 0 },
     poker: { phase: "waiting", players: [], lastResult: null },
+    wheelFortune: { history: [] },
+    plinko: { history: [] },
   };
 }
 
@@ -465,6 +467,8 @@ function snapshot(roomCode) {
       history: horseRace.history,
       readyIds: horseRace.bets.map((bet) => bet.playerId),
     },
+    wheelFortune: { history: room.wheelFortune.history },
+    plinko: { history: room.plinko.history },
     poker: {
       phase: poker.phase,
       players: poker.players.map(({ id, name, bet, hand, result }) => ({
@@ -851,7 +855,7 @@ function handleMessage(socket, message) {
   if (message.type === "admin-game-ban") {
     if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
     const target = players.get(message.targetId);
-    const allowedGames = ["roulette", "slots", "horses", "blackjack", "poker"];
+    const allowedGames = ["roulette", "slots", "horses", "blackjack", "poker", "wheel", "plinko"];
     const durationMinutes = Number(message.durationMinutes);
     if (!target || !target.connected || target.id === player.id) return sendError(socket, "Choose another online player.");
     if (!allowedGames.includes(message.game)) return sendError(socket, "Choose a valid game.");
@@ -1026,7 +1030,7 @@ function handleMessage(socket, message) {
     return;
   }
 
-  if (gamesPaused && ["roulette-bet","roulette-spin","slots-spin","horse-bet","horse-start","update-poker-bet","join-poker","start-poker","update-blackjack-bet","join-blackjack","start-blackjack"].includes(message.type)) return sendError(socket, "Casino games are paused by the administrator. Existing rounds can finish, but no new game actions are allowed.");
+  if (gamesPaused && ["roulette-bet","roulette-spin","slots-spin","horse-bet","horse-start","update-poker-bet","join-poker","start-poker","update-blackjack-bet","join-blackjack","start-blackjack","wheel-fortune-spin","plinko-drop"].includes(message.type)) return sendError(socket, "Casino games are paused by the administrator. Existing rounds can finish, but no new game actions are allowed.");
 
   if (message.type === "leave-room") {
     if (!room.isPrivate) return sendError(socket, "You are already in the global room.");
@@ -1191,7 +1195,7 @@ function handleMessage(socket, message) {
 
   if (message.type === "quit-game") {
     const game = room.selectedGame || message.game;
-    const validGames = ["roulette", "blackjack", "slots", "horses", "poker"];
+    const validGames = ["roulette", "blackjack", "slots", "horses", "poker", "wheel", "plinko"];
     if (!validGames.includes(game)) return sendError(socket, "There is no active game to quit.");
     if (
       (game === "roulette" && room.roulette.spinning) ||
@@ -1239,7 +1243,7 @@ function handleMessage(socket, message) {
   }
 
   if (message.type === "select-game") {
-    const availableGames = ["roulette", "blackjack", "slots", "horses", "poker"];
+    const availableGames = ["roulette", "blackjack", "slots", "horses", "poker", "wheel", "plinko"];
     if (!room.isPrivate || !availableGames.includes(message.game)) {
       return sendError(socket, "Choose a valid game for a private room.");
     }
@@ -1260,6 +1264,8 @@ function handleMessage(socket, message) {
     "roulette-bet": "roulette",
     "roulette-spin": "roulette",
     "slots-spin": "slots",
+    "wheel-fortune-spin": "wheel",
+    "plinko-drop": "plinko",
     "horse-bet": "horses",
     "horse-start": "horses",
     "join-poker": "poker",
@@ -1269,7 +1275,7 @@ function handleMessage(socket, message) {
     "blackjack-action": "blackjack",
   };
   const requestedGame = gameByMessageType[message.type];
-  const gameEntryActions = new Set(["roulette-bet", "slots-spin", "horse-bet", "join-poker", "join-blackjack"]);
+  const gameEntryActions = new Set(["roulette-bet", "slots-spin", "horse-bet", "join-poker", "join-blackjack", "wheel-fortune-spin", "plinko-drop"]);
   if (requestedGame && gameEntryActions.has(message.type)) {
     const ban = activeGameBan(player.id, requestedGame);
     if (ban) return sendError(socket, "You are temporarily blocked from " + requestedGame + " until " + new Date(ban.expiresAt).toLocaleString() + ".");
@@ -1386,6 +1392,36 @@ function handleMessage(socket, message) {
       broadcast();
     }, 2500);
     return;
+  }
+
+  if (message.type === "wheel-fortune-spin") {
+    const amount = message.amount;
+    if (!validAmount(amount) || amount > chipsFor(room, player)) return sendError(socket, "Choose a wager from 1 chip up to your available balance.");
+    const segments = [0, 0, 0.5, 1, 1.5, 2, 3, 5, 10];
+    const segment = randomInt(segments.length);
+    const multiplier = segments[segment];
+    setChips(room, player, chipsFor(room, player) - amount);
+    const payout = Math.floor(amount * multiplier);
+    if (payout) addChips(room, player, payout);
+    room.wheelFortune.history.unshift({ playerId: player.id, name: player.name, amount, payout, multiplier, segment, timestamp: Date.now() });
+    room.wheelFortune.history = room.wheelFortune.history.slice(0, 20);
+    recordPlayerGame(player, "wheel of fortune", room, amount, payout, payout > amount ? "Win" : payout === amount ? "Push" : "Loss", multiplier + "× multiplier");
+    endRoomIfBroke(room); savePlayers(); broadcast(); return;
+  }
+
+  if (message.type === "plinko-drop") {
+    const amount = message.amount;
+    if (!validAmount(amount) || amount > chipsFor(room, player)) return sendError(socket, "Choose a wager from 1 chip up to your available balance.");
+    const multipliers = [0, 0.5, 1, 2, 5, 10, 5, 2, 1, 0.5, 0];
+    const slot = randomInt(multipliers.length);
+    const multiplier = multipliers[slot];
+    setChips(room, player, chipsFor(room, player) - amount);
+    const payout = Math.floor(amount * multiplier);
+    if (payout) addChips(room, player, payout);
+    room.plinko.history.unshift({ playerId: player.id, name: player.name, amount, payout, multiplier, slot, timestamp: Date.now() });
+    room.plinko.history = room.plinko.history.slice(0, 20);
+    recordPlayerGame(player, "plinko", room, amount, payout, payout > amount ? "Win" : payout === amount ? "Push" : "Loss", multiplier + "× slot");
+    endRoomIfBroke(room); savePlayers(); broadcast(); return;
   }
 
   if (message.type === "slots-spin") {
