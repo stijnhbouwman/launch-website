@@ -693,7 +693,12 @@ function handleMessage(socket, message) {
     const entry = adminLog.find((item) => item.id === message.logId);
     if (!entry || entry.undone || !entry.undo) return sendError(socket, "This action cannot be undone or was already reversed.");
     const undo = entry.undo;
-    if (undo.type === "chips") {
+    if (undo.type === "balance-reset") {
+      const target = players.get(undo.targetId); if (!target) return sendError(socket, "Player record unavailable.");
+      target.chips = undo.playerChips;
+      for (const item of undo.bankrolls) { const room = rooms.get(item.roomCode); if (room) room.bankrolls.set(undo.targetId, item.balance); }
+      savePlayers();
+    } else if (undo.type === "chips") {
       const target = players.get(undo.targetId); const targetRoom = rooms.get(undo.roomCode);
       if (!target || !targetRoom) return sendError(socket, "The player or original room is no longer available; this change cannot be reversed.");
       setChips(targetRoom, target, undo.balance);
@@ -785,7 +790,8 @@ function handleMessage(socket, message) {
     if (typeof message.targetId !== "string" || message.targetId === player.id) return sendError(socket, "Choose another player.");
     const target = players.get(message.targetId);
     if (!target || !target.connected) return sendError(socket, "That player is no longer online.");
-    const oldBalance = chipsFor(rooms.get(target.roomCode), target);
+    const oldBalance = target.chips;
+    const oldBankrolls = [...rooms.values()].filter((room) => room.isPrivate && room.bankrolls.has(target.id)).map((room) => ({roomCode:room.code,balance:room.bankrolls.get(target.id)}));
     target.chips = 1000;
     const targetRoom = rooms.get(target.roomCode);
     if (targetRoom?.isPrivate) targetRoom.bankrolls.set(target.id, 1000);
@@ -793,7 +799,7 @@ function handleMessage(socket, message) {
       if (room.isPrivate && room.bankrolls.has(target.id)) room.bankrolls.set(target.id, 1000);
     }
     savePlayers();
-    recordAdminAction(player, "Reset player balance", target, "1000 chips", {type:"chips",targetId:target.id,roomCode:target.roomCode,balance:oldBalance});
+    recordAdminAction(player, "Reset player balance", target, "1000 chips", {type:"balance-reset",targetId:target.id,playerChips:oldBalance,bankrolls:oldBankrolls});
     console.info("Admin " + player.name + " reset " + target.name + "'s balance.");
     broadcast();
     return;
@@ -804,6 +810,7 @@ function handleMessage(socket, message) {
     if (typeof message.targetId !== "string" || message.targetId === player.id) return sendError(socket, "You cannot disconnect your admin account.");
     const target = players.get(message.targetId);
     if (!target || !target.connected) return sendError(socket, "That player is no longer online.");
+    recordAdminAction(player, "Disconnected player", target, "Player may reconnect.");
     for (const targetSocket of target.sockets) {
       if (targetSocket.readyState === WebSocket.OPEN) targetSocket.close(4002, "Disconnected by administrator");
     }
@@ -829,6 +836,7 @@ function handleMessage(socket, message) {
       }
     }
     rooms.delete(targetRoom.code);
+    recordAdminAction(player, "Closed private room", null, targetRoom.code);
     console.info("Admin " + player.name + " closed private room " + targetRoom.code + ".");
     savePlayers();
     broadcast();
@@ -850,7 +858,9 @@ function handleMessage(socket, message) {
 
   if (message.type === "admin-clear-chat") {
     if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin access is only available to the stijn display name.");
+    const previousChats = [...rooms.values()].map((room) => ({roomCode:room.code,messages:room.chat.slice()}));
     for (const room of rooms.values()) room.chat = [];
+    recordAdminAction(player, "Cleared all room chats", null, "", {type:"chat-restore-all",rooms:previousChats});
     console.info("Admin " + player.name + " cleared chat history in all rooms.");
     broadcast();
     return;
@@ -860,9 +870,11 @@ function handleMessage(socket, message) {
     if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin access is only available to the stijn display name.");
     const announcement = typeof message.text === "string" ? message.text.trim().slice(0, 180) : "";
     if (!announcement) return sendError(socket, "Write an announcement first.");
+    recordAdminAction(player, "Sent announcement", null, announcement);
     for (const targetSocket of sockets) {
       if (targetSocket.readyState === WebSocket.OPEN && targetSocket.playerId) targetSocket.send(JSON.stringify({ type: "announcement", text: announcement }));
     }
+    broadcast();
     return;
   }
 
@@ -890,7 +902,7 @@ function handleMessage(socket, message) {
     return;
   }
 
-  if (gamesPaused && ["roulette-bet","roulette-spin","slots-spin","horse-bet","horse-start","update-poker-bet","join-poker","start-poker","update-blackjack-bet","join-blackjack","start-blackjack","blackjack-action"].includes(message.type)) return sendError(socket, "Casino games are paused by the administrator. Existing rounds can finish, but no new game actions are allowed.");
+  if (gamesPaused && ["roulette-bet","roulette-spin","slots-spin","horse-bet","horse-start","update-poker-bet","join-poker","start-poker","update-blackjack-bet","join-blackjack","start-blackjack"].includes(message.type)) return sendError(socket, "Casino games are paused by the administrator. Existing rounds can finish, but no new game actions are allowed.");
 
   if (message.type === "leave-room") {
     if (!room.isPrivate) return sendError(socket, "You are already in the global room.");
