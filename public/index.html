@@ -48,6 +48,34 @@
             <button class="secondary-button admin-toggle" id="admin-toggle" type="button" hidden>Admin dashboard</button>
           </div>
         </header>
+        <section id="admin-panel" class="admin-panel" hidden aria-label="Admin controls">
+          <div class="admin-panel-heading">
+            <div>
+              <span class="eyebrow">PRIVATE ADMIN TOOLS</span>
+              <h2>Online players</h2>
+              <p>Balances shown are for each player's current room.</p>
+            </div>
+            <button class="quiet-button" id="admin-close" type="button">Lock and close</button>
+          </div>
+          <form id="admin-login-form" class="admin-login-form">
+            <label class="field-label" for="admin-username">Admin username</label>
+            <div class="admin-login-row">
+              <input class="chip-input" id="admin-username" name="username" type="text" value="stijn" autocomplete="username" required>
+            </div>
+            <label class="field-label" for="admin-password">Admin password</label>
+            <div class="admin-login-row">
+              <input class="chip-input" id="admin-password" type="password" autocomplete="current-password" required>
+              <button class="primary-button" type="submit">Unlock</button>
+            </div>
+            <p class="admin-login-error" id="admin-login-error" role="alert"></p>
+          </form>
+          <form id="admin-announcement-form" class="admin-login-row" hidden>
+            <input class="chip-input" id="admin-announcement" maxlength="180" placeholder="Announcement to everyone online…">
+            <button class="secondary-button" type="submit">Broadcast</button>
+          </form>
+          <div id="admin-tools" class="admin-login-row" hidden><button class="quiet-button" id="admin-clear-chat" type="button">Clear chat in all rooms</button></div>
+          <div id="admin-player-list" class="admin-player-list" hidden></div>
+        </section>
         <section id="room-controls" class="room-controls" hidden aria-label="Game room">
           <div class="room-summary">
             <span class="room-badge" id="room-badge">GLOBAL GAME</span>

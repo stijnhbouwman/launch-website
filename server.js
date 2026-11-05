@@ -1454,7 +1454,7 @@ const server = http.createServer((request, response) => {
   }
   let relativePath;
   try {
-    relativePath = pathname === "/" ? "index.html" : decodeURIComponent(pathname.slice(1));
+    relativePath = pathname === "/" ? "index.html" : pathname === "/admin" || pathname === "/admin/" ? "admin.html" : decodeURIComponent(pathname.slice(1));
   } catch {
     response.writeHead(400);
     response.end("Invalid path");
