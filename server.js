@@ -451,6 +451,7 @@ function sendAdminState(socket) {
     players: onlinePlayers,
     bans: [...bannedPlayers.values()],
     rooms: privateRooms,
+    gameRooms: [...rooms.values()].filter((room) => room.selectedGame).map((room) => ({ code: room.code, game: room.selectedGame, isPrivate: room.isPrivate, state: snapshot(room.code) })),
     onlineCount: onlinePlayers.length,
   }));
 }
