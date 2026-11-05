@@ -215,9 +215,14 @@
     const targetId = document.querySelector("#game-ban-player").value;
     if (!targetId) return showToast("Select a player first.");
     const game = document.querySelector("#game-ban-game").value;
-    const durationMinutes = Number(document.querySelector("#game-ban-duration").value);
+    const durationAmount = Number(document.querySelector("#game-ban-duration").value);
+    const durationUnit = document.querySelector("#game-ban-unit").value;
+    const unitMinutes = { minutes: 1, hours: 60, days: 1440 }[durationUnit] || 1;
+    const durationMinutes = durationAmount * unitMinutes;
     const target = adminData.players.find((p) => p.id === targetId);
-    if (!target || !confirm("Temporarily block " + target.name + " from " + game + " for " + durationMinutes + " minutes?")) return;
+    if (!Number.isSafeInteger(durationAmount) || durationAmount < 1 || durationAmount > 30 || durationMinutes > 43200) return showToast("Choose 1–30 minutes, hours or days.");
+    const durationLabel = durationAmount + " " + durationUnit;
+    if (!target || !confirm("Temporarily block " + target.name + " from " + game + " for " + durationLabel + "?")) return;
     send({ type: "admin-game-ban", targetId, game, durationMinutes });
   });
   document.querySelector("#game-bans-list").addEventListener("click", (event) => {
