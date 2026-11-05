@@ -36,6 +36,8 @@
     table.innerHTML = players.map((p) => {
       const room = p.isPrivate ? "Private · " + escapeHtml(p.roomCode) : "Global";
       return '<tr><td><strong>' + escapeHtml(p.name) + '</strong><small>' + escapeHtml(p.id) + '</small></td><td>' + room + '</td><td>' + escapeHtml(p.game || "lobby") + '</td><td>' + Number(p.chips).toLocaleString() + '</td><td><div class="admin-actions">' +
+        '<button class="quiet-button" data-action="grant" data-id="' + escapeHtml(p.id) + '">Grant chips</button>' +
+        '<button class="quiet-button" data-action="take" data-id="' + escapeHtml(p.id) + '">Take chips</button>' +
         '<button class="quiet-button" data-action="reset" data-id="' + escapeHtml(p.id) + '">Reset chips</button>' +
         '<button class="quiet-button" data-action="mute" data-id="' + escapeHtml(p.id) + '">' + (p.muted ? "Unmute" : "Mute") + '</button>' +
         '<button class="quiet-button" data-action="disconnect" data-id="' + escapeHtml(p.id) + '">Disconnect</button>' +
@@ -130,6 +132,15 @@
     const button = event.target.closest("[data-action]");
     if (!button || !authenticated) return;
     const id = button.dataset.id;
+    if (button.dataset.action === "grant" || button.dataset.action === "take") {
+      const action = button.dataset.action;
+      const targetName = adminData.players.find((item) => item.id === id)?.name || "this player";
+      const amountText = prompt((action === "grant" ? "Grant how many chips to " : "Take how many chips from ") + targetName + "? (1–1,000,000)");
+      if (amountText === null) return;
+      const amount = Number(amountText.trim());
+      if (!Number.isSafeInteger(amount) || amount < 1 || amount > 1000000) { showToast("Enter a whole number from 1 to 1,000,000."); return; }
+      send({ type: "admin-adjust-chips", targetId: id, action, amount });
+    }
     if (button.dataset.action === "reset" && confirm("Reset this player's chip balance to 1,000?")) send({ type: "admin-reset-balance", targetId: id });
     if (button.dataset.action === "mute") {
       const p = adminData.players.find((item) => item.id === id);
