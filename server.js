@@ -12,6 +12,8 @@ const dataDirectory = process.env.DATA_DIR
 const playersFile = path.join(dataDirectory, "players.json");
 const bansFile = path.join(dataDirectory, "bans.json");
 const adminLogFile = path.join(dataDirectory, "admin-log.json");
+const playerHistoryFile = path.join(dataDirectory, "player-history.json");
+const playerHistory = new Map(Object.entries(fs.existsSync(playerHistoryFile) ? JSON.parse(fs.readFileSync(playerHistoryFile, "utf8")) : {}));
 let adminLog = fs.existsSync(adminLogFile) ? JSON.parse(fs.readFileSync(adminLogFile, "utf8")) : [];
 let gamesPaused = false;
 const bannedPlayers = new Map(Object.entries(fs.existsSync(bansFile) ? JSON.parse(fs.readFileSync(bansFile, "utf8")) : {}));
@@ -156,6 +158,20 @@ function refundRoomEntries(player, room) {
     refund(pokerSeat.bet);
     room.poker.players = room.poker.players.filter((seat) => seat.id !== player.id);
   }
+}
+
+function savePlayerHistory() {
+  fs.mkdirSync(dataDirectory, { recursive: true });
+  const temporaryFile = `${playerHistoryFile}.tmp`;
+  fs.writeFileSync(temporaryFile, JSON.stringify(Object.fromEntries(playerHistory), null, 2));
+  fs.renameSync(temporaryFile, playerHistoryFile);
+}
+
+function recordPlayerGame(player, game, room, wager, payout, outcome, details = "") {
+  const entries = playerHistory.get(player.id) || [];
+  entries.push({ id: randomBytes(8).toString("hex"), timestamp: Date.now(), game, roomCode: room.code, wager, payout, net: payout - wager, outcome, details });
+  playerHistory.set(player.id, entries.slice(-100));
+  savePlayerHistory();
 }
 
 function saveAdminLog() {
@@ -311,6 +327,7 @@ function finishBlackjack(room) {
   for (const seat of blackjack.players) {
     const player = players.get(seat.id);
     if (!player) continue;
+    const balanceBeforePayout = chipsFor(room, player);
     const playerScore = score(seat.hand);
     const natural = seat.hand.length === 2 && playerScore === 21;
     if (playerScore > 21) {
@@ -339,6 +356,8 @@ function finishBlackjack(room) {
       seat.result = "Dealer wins";
       seat.status = "done";
     }
+    const payout = chipsFor(room, player) - balanceBeforePayout;
+    recordPlayerGame(player, "blackjack", room, seat.bet, payout, seat.result || "Loss", "Player " + playerScore + " · dealer " + dealerScore);
   }
   blackjack.phase = "done";
   blackjack.turnIndex = -1;
@@ -478,6 +497,7 @@ function sendAdminState(socket) {
     onlineCount: onlinePlayers.length,
     chats: [...rooms.values()].map((room) => ({ code: room.code, isPrivate: room.isPrivate, messages: room.chat })),
     adminLog: adminLog.slice(-100).reverse(),
+    playerHistory: [...playerHistory.entries()].map(([id, entries]) => ({ id, entries: entries.slice(-50).reverse() })),
     gamesPaused,
   }));
 }
@@ -1243,6 +1263,9 @@ function handleMessage(socket, message) {
               ? bet.amount * 36
               : bet.amount * 2);
           }
+        } else {
+          const losingPlayer = players.get(bet.playerId);
+          if (losingPlayer) recordPlayerGame(losingPlayer, "roulette", room, bet.amount, 0, "Loss", "Bet " + bet.selection + " · result " + result + " " + color);
         }
       }
       currentRoulette.lastResult = { number: result, color };
@@ -1270,6 +1293,7 @@ function handleMessage(socket, message) {
       : pair ? 2 : 0;
     const payout = message.amount * multiplier;
     addChips(room, player, payout);
+    recordPlayerGame(player, "slots", room, message.amount, payout, payout > message.amount ? "Win" : payout === message.amount ? "Push" : "Loss", symbols.join(" "));
     room.slots.history.unshift({
       playerId: player.id,
       name: player.name,
@@ -1331,7 +1355,10 @@ function handleMessage(socket, message) {
       for (const bet of currentRace.bets) {
         if (bet.horse === winner) {
           const winnerPlayer = players.get(bet.playerId);
-          if (winnerPlayer) addChips(room, winnerPlayer, bet.amount * 3);
+          if (winnerPlayer) { addChips(room, winnerPlayer, bet.amount * 3); recordPlayerGame(winnerPlayer, "horse racing", room, bet.amount, bet.amount * 3, "Win", "Picked " + bet.horse + " · winner " + winner); }
+        } else {
+          const losingPlayer = players.get(bet.playerId);
+          if (losingPlayer) recordPlayerGame(losingPlayer, "horse racing", room, bet.amount, 0, "Loss", "Picked " + bet.horse + " · winner " + winner);
         }
       }
       currentRace.winner = winner;
@@ -1431,6 +1458,7 @@ function handleMessage(socket, message) {
         const payout = won ? share + (remainder-- > 0 ? 1 : 0) : 0;
         const winningPlayer = players.get(candidate.seat.id);
         if (winningPlayer && won) addChips(room, winningPlayer, payout);
+        if (winningPlayer) recordPlayerGame(winningPlayer, "poker", room, candidate.seat.bet, payout, won ? "Win" : "Loss", candidate.hand.name);
         candidate.seat.result = won
           ? `${candidate.hand.name} · won ${payout} chips`
           : candidate.hand.name;
