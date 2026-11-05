@@ -134,7 +134,7 @@
   function renderGameViewer() {
     const host = document.querySelector("#game-view-results");
     const rooms = (adminData.gameRooms || []).filter((entry) => entry.game === selectedGame);
-    const labels = { roulette: "Roulette", slots: "Slots", horses: "Horse racing", blackjack: "Blackjack", poker: "Poker" };
+    const labels = { roulette: "Roulette", slots: "Slots", horses: "Horse racing", blackjack: "Blackjack", poker: "Poker", wheel: "Wheel of Fortune", plinko: "Plinko" };
     if (!rooms.length) { host.innerHTML = '<p class="admin-muted">No ' + escapeHtml(labels[selectedGame]) + ' tables are currently active in any room.</p>'; return; }
     host.innerHTML = rooms.map((entry) => {
       const state = entry.state || {}, game = state[selectedGame] || {}, members = state.players || [];
@@ -143,6 +143,7 @@
       if (selectedGame === "slots") details = "Recent spins\n" + (game.history || []).slice(0, 8).map((x) => x.name + ": " + (x.symbols || []).join(" ") + " · wager " + x.amount + " · payout " + x.payout).join("\n");
       if (selectedGame === "horses") details = "Race: " + (game.phase || "waiting") + " · Winner: " + (game.winner || "—") + "\n" + (game.bets || []).map((b) => b.name + ": " + b.horse + " · " + b.amount + " chips").join("\n");
       if (selectedGame === "blackjack") details = "Round: " + (game.phase || "waiting") + " · Dealer score: " + (game.dealerScore ?? "hidden") + "\n" + (game.players || []).map((p) => p.name + ": " + (p.hand || []).map((c) => c.hidden ? "🂠" : (c.rank || "?") + (c.suit || "")).join(" ") + " · bet " + p.bet + " · " + p.status).join("\n");
+      if (selectedGame === "wheel" || selectedGame === "plinko") details = "Recent plays\\n" + (game.history || []).slice(0, 12).map((x) => x.name + ": " + x.multiplier + "× · wager " + x.amount + " · payout " + x.payout).join("\\n");
       if (selectedGame === "poker") details = "Round: " + (game.phase || "waiting") + "\n" + (game.players || []).map((p) => p.name + ": " + (p.hand || []).map((c) => c.hidden ? "🂠" : (c.rank || "?") + (c.suit || "")).join(" ") + " · buy-in " + p.bet + (p.result ? " · " + p.result : "")).join("\n") + (game.lastResult ? "\nLast result: " + game.lastResult.winners.join(", ") + " · " + game.lastResult.hand : "");
       return '<article class="admin-game-room"><div class="admin-game-room-heading"><strong>' + escapeHtml(entry.code) + '</strong><span>' + members.length + ' online · ' + (entry.isPrivate ? 'Private room' : 'Global room') + '</span></div><p class="admin-muted">Players: ' + escapeHtml(members.map((p) => p.name + " (" + Number(p.chips).toLocaleString() + ")").join(", ") || "None") + '</p><pre>' + escapeHtml(details || "No round data yet.") + '</pre></article>';
     }).join("");
