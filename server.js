@@ -26,6 +26,8 @@ const savedPlayers = fs.existsSync(playersFile)
 
 const slotSymbols = ["✦", "♣", "♦", "♠", "7"];
 const horseNames = ["Comet", "Clover", "Sundown", "Goldrush"];
+const allowedAvatars = new Set(["🦊", "🐼", "🐸", "🦉", "🐯", "🐙", "🦄", "🐲", "🐧", "🐻", "🐱", "🐵"]);
+const allowedAvatarColors = new Set(["#d6b46a", "#78a99a", "#8b9dc3", "#c58b9b", "#a58ac7", "#b9a27b"]);
 const rooms = new Map();
 
 function createRoom(code, isPrivate, ownerId = null) {
@@ -218,6 +220,8 @@ function savePlayers() {
   for (const player of players.values()) {
     savedPlayers[player.id] = {
       name: player.name,
+      avatar: player.avatar || "🦊",
+      avatarColor: player.avatarColor || "#d6b46a",
       chips: player.chips,
       lastGlobalRewardDate: player.lastGlobalRewardDate,
     };
@@ -231,6 +235,14 @@ function safeName(value) {
   if (typeof value !== "string") return "Guest";
   const name = value.trim().slice(0, 18);
   return /^[a-zA-Z0-9_]{1,18}$/.test(name) ? name : null;
+}
+
+function safeAvatar(value, fallback = "🦊") {
+  return typeof value === "string" && allowedAvatars.has(value) ? value : fallback;
+}
+
+function safeAvatarColor(value, fallback = "#d6b46a") {
+  return typeof value === "string" && allowedAvatarColors.has(value) ? value : fallback;
 }
 
 function score(hand) {
@@ -396,6 +408,8 @@ function snapshot(roomCode) {
       .map((player) => ({
         id: player.id,
         name: player.name,
+        avatar: player.avatar || "🦊",
+        avatarColor: player.avatarColor || "#d6b46a",
         chips: chipsFor(room, player),
         currentGame: player.currentGame || null,
       })),
@@ -412,6 +426,8 @@ function snapshot(roomCode) {
       members: connectedRoomPlayers(roomCode).map((player) => ({
         id: player.id,
         name: player.name,
+        avatar: player.avatar || "🦊",
+        avatarColor: player.avatarColor || "#d6b46a",
         chips: chipsFor(room, player),
       })),
     },
@@ -599,11 +615,15 @@ function handleMessage(socket, message) {
       return;
     }
     let player = players.get(message.id);
+    const saved = savedPlayers[message.id];
+    const avatar = safeAvatar(message.avatar, player?.avatar || saved?.avatar || "🦊");
+    const avatarColor = safeAvatarColor(message.avatarColor, player?.avatarColor || saved?.avatarColor || "#d6b46a");
     if (!player) {
-      const saved = savedPlayers[message.id];
       player = {
         id: message.id,
         name,
+        avatar,
+        avatarColor,
         chips: saved && Number.isSafeInteger(saved.chips) && saved.chips >= 0
           ? saved.chips
           : 1000,
@@ -633,6 +653,8 @@ function handleMessage(socket, message) {
     if (previousRoomCode && previousRoomCode !== requestedRoom) player.currentGame = null;
     player.roomCode = requestedRoom;
     player.name = name;
+    player.avatar = avatar;
+    player.avatarColor = avatarColor;
     player.connected = true;
     player.sockets.add(socket);
     const registeredRoom = rooms.get(requestedRoom);
