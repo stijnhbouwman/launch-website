@@ -569,7 +569,11 @@ function cardMarkup(card) {
 
 function playerHandMarkup(seat, turnId) {
   const status = seat.result || (seat.id === turnId ? "Your turn" : seat.status);
-  return `<div class="seat-card ${seat.id === turnId ? "current-turn" : ""}"><div class="seat-name">${escapeHtml(seat.name)} · ${seat.bet} chips</div><div class="seat-cards">${seat.hand.map(cardMarkup).join("")}</div><div class="seat-status">${escapeHtml(status || "Waiting")}</div></div>`;
+  let handTotal = seat.hand.reduce((sum, card) => sum + card.value, 0);
+  let aces = seat.hand.filter((card) => card.rank === "A").length;
+  while (handTotal > 21 && aces > 0) { handTotal -= 10; aces -= 1; }
+  const totalReadout = seat.id === playerId ? `<div class="blackjack-hand-total">YOUR TOTAL <strong>${handTotal}</strong></div>` : "";
+  return `<div class="seat-card ${seat.id === turnId ? "current-turn" : ""}"><div class="seat-name">${escapeHtml(seat.name)} · ${seat.bet} chips</div><div class="seat-cards">${seat.hand.map(cardMarkup).join("")}</div>${totalReadout}<div class="seat-status">${escapeHtml(status || "Waiting")}</div></div>`;
 }
 
 function renderBlackjack() {
