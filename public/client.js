@@ -242,6 +242,7 @@ function renderAdminPanelContent() {
   document.querySelector("#admin-login-form").hidden = adminAuthenticated;
   document.querySelector("#admin-player-list").hidden = !adminAuthenticated;
   document.querySelector("#admin-announcement-form").hidden = !adminAuthenticated;
+  document.querySelector("#admin-tools").hidden = !adminAuthenticated;
   if (!adminAuthenticated) return;
   const playerRows = adminPlayers.map((player) => {
     const roomLabel = player.isPrivate ? "Private · " + escapeHtml(player.roomCode) : "Global";
@@ -251,7 +252,8 @@ function renderAdminPanelContent() {
       escapeHtml(player.name) + "\"><button class=\"secondary-button\" type=\"button\" data-admin-action=\"grant\" data-player-id=\"" +
       escapeHtml(player.id) + "\">Grant</button><button class=\"quiet-button\" type=\"button\" data-admin-action=\"take\" data-player-id=\"" +
       escapeHtml(player.id) + "\">Take</button><button class=\"quiet-button\" type=\"button\" data-admin-action=\"kick\" data-player-id=\"" +
-      escapeHtml(player.id) + "\">Move to global</button></div></td></tr>";
+      escapeHtml(player.id) + "\">Move to global</button><button class=\"quiet-button\" type=\"button\" data-admin-action=\"mute\" data-player-id=\"" +
+      escapeHtml(player.id) + "\">" + (player.muted ? "Unmute chat" : "Mute chat") + "</button></div></td></tr>";
   }).join("");
   document.querySelector("#admin-player-list").innerHTML = adminPlayers.length
     ? "<div class=\"admin-table-wrap\"><table class=\"admin-table\"><thead><tr><th>Player</th><th>Room</th><th>Game</th><th>Balance</th><th>Actions</th></tr></thead><tbody>" + playerRows + "</tbody></table></div>"
@@ -825,10 +827,22 @@ document.querySelector("#admin-announcement-form").addEventListener("submit", (e
   send({ type: "admin-announcement", text });
   input.value = "";
 });
+document.querySelector("#admin-clear-chat").addEventListener("click", () => {
+  if (!isAdminDisplayName() || !adminAuthenticated) return;
+  if (window.confirm("Clear chat history in every room? This cannot be undone.")) {
+    send({ type: "admin-clear-chat" });
+  }
+});
 document.querySelector("#admin-player-list").addEventListener("click", (event) => {
   if (!isAdminDisplayName() || !adminAuthenticated) return;
   const button = event.target.closest("[data-admin-action]");
   if (!button) return;
+  if (button.dataset.adminAction === "mute") {
+    const target = adminPlayers.find((item) => item.id === button.dataset.playerId);
+    if (!target) return;
+    send({ type: "admin-set-mute", targetId: target.id, muted: !target.muted });
+    return;
+  }
   const amount = Number(button.closest(".admin-adjust").querySelector("input").value);
   if (!Number.isSafeInteger(amount) || amount < 1 || amount > 1000000) {
     showToast("Choose a chip amount from 1 to 1,000,000.");
