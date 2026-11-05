@@ -13,6 +13,8 @@
   let reconnectTimer = null;
   let adminData = { players: [], bans: [], rooms: [], gameRooms: [], onlineCount: 0 };
   let selectedGame = "roulette";
+  let selectedHistoryPlayer = null;
+  let selectedChatRoom = "global";
   const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[ch]));
   const send = (message) => {
     if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
@@ -36,6 +38,7 @@
     table.innerHTML = players.map((p) => {
       const room = p.isPrivate ? "Private · " + escapeHtml(p.roomCode) : "Global";
       return '<tr><td><strong>' + escapeHtml(p.name) + '</strong><small>' + escapeHtml(p.id) + '</small></td><td>' + room + '</td><td>' + escapeHtml(p.game || "lobby") + '</td><td>' + Number(p.chips).toLocaleString() + '</td><td><div class="admin-actions">' +
+        '<button class="quiet-button" data-action="history" data-id="' + escapeHtml(p.id) + '">History</button>' +
         '<button class="quiet-button" data-action="grant" data-id="' + escapeHtml(p.id) + '">Grant chips</button>' +
         '<button class="quiet-button" data-action="take" data-id="' + escapeHtml(p.id) + '">Take chips</button>' +
         '<button class="quiet-button" data-action="reset" data-id="' + escapeHtml(p.id) + '">Reset chips</button>' +
@@ -52,6 +55,28 @@
     ).join("");
     document.querySelector("#bans-empty").hidden = bans.length > 0;
     renderGameViewer();
+    renderAdminTools();
+  }
+
+  function renderAdminTools() {
+    const pauseStatus = document.querySelector("#games-pause-status");
+    const pauseButton = document.querySelector("#toggle-games-pause");
+    pauseStatus.textContent = adminData.gamesPaused ? "New game actions are paused" : "Games are running";
+    pauseButton.textContent = adminData.gamesPaused ? "Resume games" : "Pause new rounds";
+    const chats = adminData.chats || [];
+    const select = document.querySelector("#chat-room-select");
+    const current = chats.some((room) => room.code === selectedChatRoom) ? selectedChatRoom : "global";
+    selectedChatRoom = current;
+    select.innerHTML = chats.map((room) => '<option value="' + escapeHtml(room.code) + '">' + (room.isPrivate ? "Private · " : "") + escapeHtml(room.code) + '</option>').join("");
+    select.value = selectedChatRoom;
+    const room = chats.find((item) => item.code === selectedChatRoom);
+    const messages = room?.messages || [];
+    document.querySelector("#admin-chat-messages").innerHTML = messages.length ? messages.slice().reverse().map((message) => '<article class="admin-chat-message"><div><strong>' + escapeHtml(message.name) + '</strong><time>' + new Date(message.timestamp).toLocaleString() + '</time></div><p>' + escapeHtml(message.text) + '</p><button class="quiet-button admin-danger" data-delete-chat="' + escapeHtml(message.id) + '" data-room="' + escapeHtml(selectedChatRoom) + '">Delete message</button></article>').join("") : '<p class="admin-muted">No messages in this room.</p>';
+    const logs = adminData.adminLog || [];
+    document.querySelector("#admin-activity-log").innerHTML = logs.length ? logs.map((entry) => '<article class="admin-log-row"><div><strong>' + escapeHtml(entry.action) + '</strong><small>' + new Date(entry.timestamp).toLocaleString() + ' · ' + escapeHtml(entry.admin) + (entry.targetName ? ' · ' + escapeHtml(entry.targetName) : "") + '</small>' + (entry.details ? '<p>' + escapeHtml(entry.details) + '</p>' : "") + '</div>' + (entry.undo && !entry.undone ? '<button class="quiet-button" data-undo="' + escapeHtml(entry.id) + '">Undo</button>' : (entry.undone ? '<span class="admin-muted">Undone</span>' : '')) + '</article>').join("") : '<p class="admin-muted">No admin actions recorded yet.</p>';
+    const history = selectedHistoryPlayer ? logs.filter((entry) => entry.targetId === selectedHistoryPlayer) : [];
+    const historyHost = document.querySelector("#player-history");
+    historyHost.innerHTML = selectedHistoryPlayer ? (history.length ? history.map((entry) => '<article class="admin-log-row"><div><strong>' + escapeHtml(entry.action) + '</strong><small>' + new Date(entry.timestamp).toLocaleString() + '</small>' + (entry.details ? '<p>' + escapeHtml(entry.details) + '</p>' : "") + '</div></article>').join("") : '<p class="admin-muted">No recorded admin actions for this player.</p>') : '<p class="admin-muted">Select a player to view their history.</p>';
   }
 
   function renderGameViewer() {
@@ -132,6 +157,7 @@
     const button = event.target.closest("[data-action]");
     if (!button || !authenticated) return;
     const id = button.dataset.id;
+    if (button.dataset.action === "history") { selectedHistoryPlayer = id; renderAdminTools(); return; }
     if (button.dataset.action === "grant" || button.dataset.action === "take") {
       const action = button.dataset.action;
       const targetName = adminData.players.find((item) => item.id === id)?.name || "this player";
@@ -166,6 +192,18 @@
     send({ type: "admin-announcement", text });
     input.value = "";
     document.querySelector("#announcement-feedback").textContent = "Announcement sent.";
+  });
+  document.querySelector("#chat-room-select").addEventListener("change", (event) => { selectedChatRoom = event.target.value; renderAdminTools(); });
+  document.querySelector("#admin-chat-messages").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-delete-chat]");
+    if (button && authenticated && confirm("Delete this chat message? You can undo it in the activity log.")) send({ type: "admin-delete-chat-message", roomCode: button.dataset.room, messageId: button.dataset.deleteChat });
+  });
+  document.querySelector("#admin-activity-log").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-undo]");
+    if (button && authenticated && confirm("Reverse this admin change?")) send({ type: "admin-undo-action", logId: button.dataset.undo });
+  });
+  document.querySelector("#toggle-games-pause").addEventListener("click", () => {
+    if (authenticated) send({ type: "admin-set-games-paused", paused: !adminData.gamesPaused });
   });
   document.querySelector("#clear-chat").addEventListener("click", () => {
     if (authenticated && confirm("Clear chat history in every room? This cannot be undone.")) send({ type: "admin-clear-chat" });
