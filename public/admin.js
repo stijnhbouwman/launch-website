@@ -11,7 +11,8 @@
   let socket = null;
   let authenticated = false;
   let reconnectTimer = null;
-  let adminData = { players: [], bans: [], rooms: [], onlineCount: 0 };
+  let adminData = { players: [], bans: [], rooms: [], gameRooms: [], onlineCount: 0 };
+  let selectedGame = "roulette";
   const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (ch) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[ch]));
   const send = (message) => {
     if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
@@ -48,6 +49,24 @@
       '<div class="admin-ban-row"><div><strong>' + escapeHtml(b.name) + '</strong><small>Banned ' + new Date(b.bannedAt).toLocaleString() + '</small></div><button class="quiet-button" data-unban="' + escapeHtml(b.id) + '">Unban</button></div>'
     ).join("");
     document.querySelector("#bans-empty").hidden = bans.length > 0;
+    renderGameViewer();
+  }
+
+  function renderGameViewer() {
+    const host = document.querySelector("#game-view-results");
+    const rooms = (adminData.gameRooms || []).filter((entry) => entry.game === selectedGame);
+    const labels = { roulette: "Roulette", slots: "Slots", horses: "Horse racing", blackjack: "Blackjack", poker: "Poker" };
+    if (!rooms.length) { host.innerHTML = '<p class="admin-muted">No ' + escapeHtml(labels[selectedGame]) + ' tables are currently active in any room.</p>'; return; }
+    host.innerHTML = rooms.map((entry) => {
+      const state = entry.state || {}, game = state[selectedGame] || {}, members = state.players || [];
+      let details = "";
+      if (selectedGame === "roulette") details = "Wheel: " + (game.spinning ? "Spinning" : "Waiting") + " · Bets: " + ((game.bets || []).length) + " · Last result: " + (game.lastResult ? game.lastResult.number + " (" + game.lastResult.color + ")" : "—") + "\n" + (game.bets || []).map((b) => b.name + ": " + b.selection + " · " + b.amount + " chips").join("\n");
+      if (selectedGame === "slots") details = "Recent spins\n" + (game.history || []).slice(0, 8).map((x) => x.name + ": " + (x.symbols || []).join(" ") + " · wager " + x.amount + " · payout " + x.payout).join("\n");
+      if (selectedGame === "horses") details = "Race: " + (game.phase || "waiting") + " · Winner: " + (game.winner || "—") + "\n" + (game.bets || []).map((b) => b.name + ": " + b.horse + " · " + b.amount + " chips").join("\n");
+      if (selectedGame === "blackjack") details = "Round: " + (game.phase || "waiting") + " · Dealer score: " + (game.dealerScore ?? "hidden") + "\n" + (game.players || []).map((p) => p.name + ": " + (p.hand || []).map((c) => c.hidden ? "🂠" : (c.rank || "?") + (c.suit || "")).join(" ") + " · bet " + p.bet + " · " + p.status).join("\n");
+      if (selectedGame === "poker") details = "Round: " + (game.phase || "waiting") + "\n" + (game.players || []).map((p) => p.name + ": " + (p.hand || []).map((c) => c.hidden ? "🂠" : (c.rank || "?") + (c.suit || "")).join(" ") + " · buy-in " + p.bet + (p.result ? " · " + p.result : "")).join("\n") + (game.lastResult ? "\nLast result: " + game.lastResult.winners.join(", ") + " · " + game.lastResult.hand : "");
+      return '<article class="admin-game-room"><div class="admin-game-room-heading"><strong>' + escapeHtml(entry.code) + '</strong><span>' + members.length + ' online · ' + (entry.isPrivate ? 'Private room' : 'Global room') + '</span></div><p class="admin-muted">Players: ' + escapeHtml(members.map((p) => p.name + " (" + Number(p.chips).toLocaleString() + ")").join(", ") || "None") + '</p><pre>' + escapeHtml(details || "No round data yet.") + '</pre></article>';
+    }).join("");
   }
   function lockDashboard(message) {
     authenticated = false;
@@ -101,6 +120,7 @@
       reconnectTimer = setTimeout(connect, 1800);
     });
   }
+  document.querySelector("#game-view-select").addEventListener("change", (event) => { selectedGame = event.target.value; renderGameViewer(); });
   document.querySelector("#admin-login-form").addEventListener("submit", (event) => {
     event.preventDefault();
     feedback.textContent = "";
