@@ -60,17 +60,20 @@
     renderAdminTools();
   }
 
-  function renderRoomToolkit() {
-    const rooms = adminData.rooms || [];
-    const active = rooms.filter((room) => room.players > 0).length;
-    const empty = rooms.filter((room) => room.players === 0 && !room.running).length;
-    const busy = rooms.slice().sort((a, b) => b.players - a.players)[0];
-    document.querySelector("#room-insights").innerHTML = '<div><strong>' + rooms.length + '</strong><span>Rooms open</span></div><div><strong>' + active + '</strong><span>Occupied</span></div><div><strong>' + empty + '</strong><span>Safe to clean</span></div><p>' + (busy && busy.players ? "Busiest room: " + escapeHtml(busy.code) + " (" + busy.players + " online)" : "No private rooms currently have players.") + '</p>';
-    const select = document.querySelector("#room-tool-select");
-    if (!rooms.some((room) => room.code === selectedRoomTool)) selectedRoomTool = rooms[0]?.code || "";
-    select.innerHTML = '<option value="">Select a private room</option>' + rooms.map((room) => '<option value="' + escapeHtml(room.code) + '">' + escapeHtml(room.code) + ' · ' + room.players + ' online</option>').join("");
-    select.value = selectedRoomTool;
-    document.querySelector("#close-empty-rooms").disabled = empty === 0;
+  function renderCasinoInsights() {
+    const players = adminData.players || [];
+    const rooms = adminData.gameRooms || [];
+    const totalChips = players.reduce((sum, player) => sum + (Number(player.chips) || 0), 0);
+    const playing = players.filter((player) => player.game && player.game !== "lobby").length;
+    const busiest = players.slice().sort((a, b) => (Number(b.chips) || 0) - (Number(a.chips) || 0))[0];
+    const host = document.querySelector("#casino-insights");
+    host.innerHTML = '<div><strong>' + players.length + '</strong><span>Players online</span></div>' +
+      '<div><strong>' + playing + '</strong><span>Playing a game</span></div>' +
+      '<div><strong>' + rooms.length + '</strong><span>Live tables</span></div>' +
+      '<div><strong>' + totalChips.toLocaleString() + '</strong><span>Chips held online</span></div>' +
+      '<p>' + (busiest ? 'Largest online balance: ' + escapeHtml(busiest.name) + ' (' + Number(busiest.chips).toLocaleString() + ' chips)' : 'No players are online right now.') + '</p>';
+    const pause = document.querySelector("#overview-pause");
+    pause.textContent = adminData.gamesPaused ? "Resume games" : "Pause new rounds";
   }
 
   function renderAdminTools() {
@@ -194,18 +197,6 @@
     }
     if (button.dataset.action === "disconnect" && confirm("Disconnect this player? They can reconnect unless banned.")) send({ type: "admin-disconnect-player", targetId: id });
     if (button.dataset.action === "ban" && confirm("Permanently ban this player account? You can unban them later.")) send({ type: "admin-ban-player", targetId: id });
-  });
-  document.querySelector("#room-tool-select").addEventListener("change", (event) => { selectedRoomTool = event.target.value; });
-  document.querySelector("#room-announcement-form").addEventListener("submit", (event) => {
-    event.preventDefault();
-    const text = document.querySelector("#room-announcement-text").value.trim();
-    if (!authenticated || !selectedRoomTool || !text) { showToast("Choose a private room and enter a message."); return; }
-    send({ type: "admin-room-announcement", roomCode: selectedRoomTool, text });
-    document.querySelector("#room-announcement-text").value = "";
-    showToast("Room announcement sent.");
-  });
-  document.querySelector("#close-empty-rooms").addEventListener("click", () => {
-    if (authenticated && confirm("Close every private room with no connected players and no active round?")) send({ type: "admin-close-empty-rooms" });
   });
   document.querySelector("#rooms-list").addEventListener("click", (event) => {
     const button = event.target.closest("[data-room-close]");
