@@ -833,7 +833,7 @@ function handleMessage(socket, message) {
     const durationMinutes = Number(message.durationMinutes);
     if (!target || !target.connected || target.id === player.id) return sendError(socket, "Choose another online player.");
     if (!allowedGames.includes(message.game)) return sendError(socket, "Choose a valid game.");
-    if (![15, 60, 1440, 10080].includes(durationMinutes)) return sendError(socket, "Choose a supported ban duration.");
+    if (!Number.isSafeInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 43200) return sendError(socket, "Choose a duration from 1 minute up to 30 days.");
     const key = target.id + ":" + message.game;
     const previous = gameBans.get(key) || null;
     const ban = { id: randomBytes(8).toString("hex"), playerId: target.id, name: target.name, game: message.game, createdAt: Date.now(), expiresAt: Date.now() + durationMinutes * 60000, admin: player.name };
