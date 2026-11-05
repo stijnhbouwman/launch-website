@@ -73,15 +73,15 @@
               <div class="admin-room-list" id="rooms-list"></div>
             </section>
             <section class="admin-card">
-              <h2>Casino overview &amp; tools</h2>
-              <p class="admin-muted">A live snapshot of the whole casino, across global and private rooms.</p>
-              <div class="admin-room-insights" id="casino-insights"></div>
-              <div class="admin-overview-columns"><div><h3>Game activity</h3><div id="game-activity" class="admin-mini-list"></div></div><div><h3>Recent admin activity</h3><div id="recent-activity" class="admin-mini-list"></div></div></div>
-              <div class="admin-form-row admin-room-cleanup-row">
-                <span class="admin-muted">Quick access to the main casino controls.</span>
-                <button class="secondary-button" id="overview-pause" type="button">Pause new rounds</button>
-                <button class="secondary-button" id="overview-broadcast" type="button">Write announcement</button>
+              <h2>Admin quick tools</h2>
+              <p class="admin-muted">Useful live-player utilities. Reports include only players currently online.</p>
+              <div class="admin-quick-tools">
+                <button class="secondary-button" id="export-players" type="button">Export player report (CSV)</button>
+                <button class="secondary-button" id="copy-player-ids" type="button">Copy all player IDs</button>
               </div>
+              <h3 class="admin-tool-heading">Richest players online</h3>
+              <div id="player-leaderboard" class="admin-mini-list"><p class="admin-muted">Waiting for player data…</p></div>
+              <p class="admin-feedback" id="tools-feedback" aria-live="polite"></p>
             </section>
           </div>
           <div>
