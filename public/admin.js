@@ -47,7 +47,8 @@
         '<button class="quiet-button" data-action="disconnect" data-id="' + escapeHtml(p.id) + '">Disconnect</button>' +
         '<button class="quiet-button admin-danger" data-action="ban" data-id="' + escapeHtml(p.id) + '">Ban</button></div></td></tr>';
     }).join("");
-    document.querySelector("#players-empty").hidden = players.length > 0;
+    document.querySelector("#players-empty").hidden = visiblePlayers.length > 0;
+    document.querySelector("#players-empty").textContent = players.length && !visiblePlayers.length ? "No players match these filters." : "No players are online.";
     document.querySelector("#rooms-list").innerHTML = rooms.length ? rooms.map((r) =>
       '<div class="admin-room-row"><div><strong>' + escapeHtml(r.code) + '</strong><small>' + r.players + ' online · Host: ' + escapeHtml(r.owner || "Unknown") + ' · ' + escapeHtml(r.game) + (r.running ? ' · round running' : '') + '</small></div><button class="quiet-button admin-danger" data-room-close="' + escapeHtml(r.code) + '"' + (r.running ? " disabled" : "") + '>Close room</button></div>'
     ).join("") : '<p class="admin-muted">No private rooms are currently open.</p>';
@@ -55,7 +56,7 @@
       '<div class="admin-ban-row"><div><strong>' + escapeHtml(b.name) + '</strong><small>Banned ' + new Date(b.bannedAt).toLocaleString() + '</small></div><button class="quiet-button" data-unban="' + escapeHtml(b.id) + '">Unban</button></div>'
     ).join("");
     document.querySelector("#bans-empty").hidden = bans.length > 0;
-    renderRoomToolkit();
+    renderCasinoInsights();
     renderGameViewer();
     renderAdminTools();
   }
@@ -65,13 +66,19 @@
     const rooms = adminData.gameRooms || [];
     const totalChips = players.reduce((sum, player) => sum + (Number(player.chips) || 0), 0);
     const playing = players.filter((player) => player.game && player.game !== "lobby").length;
-    const busiest = players.slice().sort((a, b) => (Number(b.chips) || 0) - (Number(a.chips) || 0))[0];
+    const richest = players.slice().sort((a, b) => (Number(b.chips) || 0) - (Number(a.chips) || 0))[0];
     const host = document.querySelector("#casino-insights");
     host.innerHTML = '<div><strong>' + players.length + '</strong><span>Players online</span></div>' +
       '<div><strong>' + playing + '</strong><span>Playing a game</span></div>' +
       '<div><strong>' + rooms.length + '</strong><span>Live tables</span></div>' +
       '<div><strong>' + totalChips.toLocaleString() + '</strong><span>Chips held online</span></div>' +
-      '<p>' + (busiest ? 'Largest online balance: ' + escapeHtml(busiest.name) + ' (' + Number(busiest.chips).toLocaleString() + ' chips)' : 'No players are online right now.') + '</p>';
+      '<p>' + (richest ? 'Largest online balance: ' + escapeHtml(richest.name) + ' (' + Number(richest.chips).toLocaleString() + ' chips)' : 'No players are online right now.') + '</p>';
+    const counts = {};
+    players.forEach((player) => { const game = player.game || "lobby"; counts[game] = (counts[game] || 0) + 1; });
+    const labels = { lobby: "Lobby", roulette: "Roulette", slots: "Slots", horses: "Horse racing", blackjack: "Blackjack", poker: "Poker" };
+    document.querySelector("#game-activity").innerHTML = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([game, count]) => '<div><span>' + escapeHtml(labels[game] || game) + '</span><strong>' + count + '</strong></div>').join("") || '<p class="admin-muted">No live activity.</p>';
+    const recent = (adminData.adminLog || []).slice(0, 5);
+    document.querySelector("#recent-activity").innerHTML = recent.map((entry) => '<div><span>' + escapeHtml(entry.action) + (entry.targetName ? ' · ' + escapeHtml(entry.targetName) : '') + '</span><small>' + new Date(entry.timestamp).toLocaleTimeString() + '</small></div>').join("") || '<p class="admin-muted">No recent admin actions.</p>';
     const pause = document.querySelector("#overview-pause");
     pause.textContent = adminData.gamesPaused ? "Resume games" : "Pause new rounds";
   }
@@ -176,6 +183,8 @@
     feedback.textContent = "";
     send({ type: "admin-login", username: document.querySelector("#admin-username").value.trim(), password: document.querySelector("#admin-password").value });
   });
+  document.querySelector("#player-search").addEventListener("input", () => render());
+  document.querySelector("#player-game-filter").addEventListener("change", () => render());
   document.querySelector("#players-table").addEventListener("click", (event) => {
     const button = event.target.closest("[data-action]");
     if (!button || !authenticated) return;
