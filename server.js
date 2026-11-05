@@ -1459,6 +1459,7 @@ function handleMessage(socket, message) {
       symbols,
       amount: message.amount,
       payout,
+      timestamp: Date.now(),
     });
     room.slots.history = room.slots.history.slice(0, 12);
     endRoomIfBroke(room);
