@@ -79,6 +79,16 @@
                 <button class="secondary-button" id="export-players" type="button">Export player report (CSV)</button>
                 <button class="secondary-button" id="copy-player-ids" type="button">Copy all player IDs</button>
               </div>
+              <h3 class="admin-tool-heading">Temporary game ban</h3>
+              <p class="admin-muted">Block an online player from joining one game for a limited time. Existing rounds can finish.</p>
+              <div class="admin-player-filters">
+                <select class="chip-input" id="game-ban-player"><option value="">Select player…</option></select>
+                <select class="chip-input" id="game-ban-game"><option value="roulette">Roulette</option><option value="slots">Slots</option><option value="horses">Horse racing</option><option value="blackjack">Blackjack</option><option value="poker">Poker</option></select>
+                <select class="chip-input" id="game-ban-duration"><option value="15">15 minutes</option><option value="60">1 hour</option><option value="1440">24 hours</option><option value="10080">7 days</option></select>
+                <button class="secondary-button" id="apply-game-ban" type="button">Apply game ban</button>
+              </div>
+              <h3 class="admin-tool-heading">Active game bans</h3>
+              <div id="game-bans-list" class="admin-mini-list"><p class="admin-muted">No active game bans.</p></div>
               <h3 class="admin-tool-heading">Richest players online</h3>
               <div id="player-leaderboard" class="admin-mini-list"><p class="admin-muted">Waiting for player data…</p></div>
               <p class="admin-feedback" id="tools-feedback" aria-live="polite"></p>
