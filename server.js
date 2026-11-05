@@ -1411,7 +1411,7 @@ function handleMessage(socket, message) {
     if (!validAmount(amount) || amount > chipsFor(room, player)) return sendError(socket, "Choose a wager from 1 chip up to your available balance.");
     const cooldown = gameCooldownRemaining(player, "wheel", 4300);
     if (cooldown) return sendError(socket, "Please wait " + Math.ceil(cooldown / 1000) + " seconds before spinning again.");
-    const segments = [0, 0, 0.5, 0.75, 1, 1, 1.5, 2, 2.5];
+    const segments = [0, 0, 0.5, 0.75, 1, 1, 1.5, 2, 5];
     const segment = randomInt(segments.length);
     const multiplier = segments[segment];
     setChips(room, player, chipsFor(room, player) - amount);
@@ -1428,7 +1428,7 @@ function handleMessage(socket, message) {
     if (!validAmount(amount) || amount > chipsFor(room, player)) return sendError(socket, "Choose a wager from 1 chip up to your available balance.");
     const cooldown = gameCooldownRemaining(player, "plinko", 2400);
     if (cooldown) return sendError(socket, "Please wait " + Math.ceil(cooldown / 1000) + " seconds before dropping again.");
-    const multipliers = [0, 0, 0.5, 0.75, 1, 1.5, 1, 0.75, 0.5, 0, 0];
+    const multipliers = [0, 0, 0.5, 0.75, 1, 3, 1, 0.75, 0.5, 0, 0];
     const slot = randomInt(multipliers.length);
     const multiplier = multipliers[slot];
     setChips(room, player, chipsFor(room, player) - amount);
