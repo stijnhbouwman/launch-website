@@ -59,7 +59,7 @@
             <section class="admin-card">
               <h2>Player management</h2>
               <p class="admin-muted">Reset balances, mute chat, disconnect or ban a player. Bans are saved server-side and checked on every reconnect.</p>
-              <div class="admin-table-wrap"><table class="admin-dashboard-table"><thead><tr><th>Player</th><th>Room</th><th>Game</th><th>Chips</th><th>Actions</th></tr></thead><tbody id="players-table"></tbody></table></div>
+              <div class="admin-player-filters"><input class="chip-input" id="player-search" type="search" placeholder="Find player by name, ID or room…"><select class="chip-input" id="player-game-filter"><option value="">All games</option><option value="lobby">Lobby</option><option value="roulette">Roulette</option><option value="slots">Slots</option><option value="horses">Horse racing</option><option value="blackjack">Blackjack</option><option value="poker">Poker</option></select></div><div class="admin-table-wrap"><table class="admin-dashboard-table"><thead><tr><th>Player</th><th>Room</th><th>Game</th><th>Chips</th><th>Actions</th></tr></thead><tbody id="players-table"></tbody></table></div>
               <p class="admin-muted" id="players-empty" hidden>No players are online.</p>
             </section>
             <section class="admin-card">
@@ -76,6 +76,7 @@
               <h2>Casino overview &amp; tools</h2>
               <p class="admin-muted">A live snapshot of the whole casino, across global and private rooms.</p>
               <div class="admin-room-insights" id="casino-insights"></div>
+              <div class="admin-overview-columns"><div><h3>Game activity</h3><div id="game-activity" class="admin-mini-list"></div></div><div><h3>Recent admin activity</h3><div id="recent-activity" class="admin-mini-list"></div></div></div>
               <div class="admin-form-row admin-room-cleanup-row">
                 <span class="admin-muted">Quick access to the main casino controls.</span>
                 <button class="secondary-button" id="overview-pause" type="button">Pause new rounds</button>
