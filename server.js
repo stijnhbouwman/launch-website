@@ -11,12 +11,14 @@ const dataDirectory = process.env.DATA_DIR
   : path.join(__dirname, "data");
 const playersFile = path.join(dataDirectory, "players.json");
 const bansFile = path.join(dataDirectory, "bans.json");
+const gameBansFile = path.join(dataDirectory, "game-bans.json");
 const adminLogFile = path.join(dataDirectory, "admin-log.json");
 const playerHistoryFile = path.join(dataDirectory, "player-history.json");
 const playerHistory = new Map(Object.entries(fs.existsSync(playerHistoryFile) ? JSON.parse(fs.readFileSync(playerHistoryFile, "utf8")) : {}));
 let adminLog = fs.existsSync(adminLogFile) ? JSON.parse(fs.readFileSync(adminLogFile, "utf8")) : [];
 let gamesPaused = false;
 const bannedPlayers = new Map(Object.entries(fs.existsSync(bansFile) ? JSON.parse(fs.readFileSync(bansFile, "utf8")) : {}));
+const gameBans = new Map(Object.entries(fs.existsSync(gameBansFile) ? JSON.parse(fs.readFileSync(gameBansFile, "utf8")) : {}));
 const players = new Map();
 const savedPlayers = fs.existsSync(playersFile)
   ? JSON.parse(fs.readFileSync(playersFile, "utf8"))
@@ -194,6 +196,21 @@ function saveBans() {
   const temporaryFile = `${bansFile}.tmp`;
   fs.writeFileSync(temporaryFile, JSON.stringify(Object.fromEntries(bannedPlayers), null, 2));
   fs.renameSync(temporaryFile, bansFile);
+}
+
+function saveGameBans() {
+  fs.mkdirSync(dataDirectory, { recursive: true });
+  const active = Object.fromEntries([...gameBans].filter(([, ban]) => ban.expiresAt > Date.now()));
+  const temporaryFile = `${gameBansFile}.tmp`;
+  fs.writeFileSync(temporaryFile, JSON.stringify(active, null, 2));
+  fs.renameSync(temporaryFile, gameBansFile);
+}
+
+function activeGameBan(playerId, game) {
+  const ban = gameBans.get(`${playerId}:${game}`);
+  if (!ban) return null;
+  if (ban.expiresAt <= Date.now()) { gameBans.delete(`${playerId}:${game}`); saveGameBans(); return null; }
+  return ban;
 }
 
 function savePlayers() {
@@ -488,6 +505,7 @@ function sendAdminState(socket) {
     type: "admin-state",
     players: onlinePlayers,
     bans: [...bannedPlayers.values()],
+    gameBans: [...gameBans.values()].filter((ban) => ban.expiresAt > Date.now()).sort((a, b) => a.expiresAt - b.expiresAt),
     rooms: privateRooms,
     gameRooms: [...rooms.values()].flatMap((room) => {
       const activeGames = room.isPrivate
@@ -728,7 +746,8 @@ function handleMessage(socket, message) {
       const target = players.get(undo.targetId); if (!target) return sendError(socket, "Player record unavailable."); target.muted = undo.muted;
     } else if (undo.type === "ban") {
       if (undo.wasBanned) bannedPlayers.set(undo.targetId, undo.previousBan); else bannedPlayers.delete(undo.targetId); saveBans();
-    } else if (undo.type === "pause") { gamesPaused = undo.wasPaused; }
+    } else if (undo.type === "game-ban") { if (undo.previous) gameBans.set(undo.key, undo.previous); else gameBans.delete(undo.key); saveGameBans(); }
+    else if (undo.type === "pause") { gamesPaused = undo.wasPaused; }
     else if (undo.type === "chat-delete") {
       const targetRoom = rooms.get(undo.roomCode); if (!targetRoom) return sendError(socket, "Original chat room no longer exists.");
       targetRoom.chat.push(undo.message); targetRoom.chat = targetRoom.chat.slice(-80);
@@ -803,6 +822,37 @@ function handleMessage(socket, message) {
     recordAdminAction(player, "Unbanned player", banned, "", {type:"ban",targetId:message.targetId,wasBanned:true,previousBan:banned});
     saveBans();
     console.info("Admin " + player.name + " unbanned " + banned.name + " (" + banned.id + ").");
+    sendAdminState(socket);
+    return;
+  }
+
+  if (message.type === "admin-game-ban") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    const target = players.get(message.targetId);
+    const allowedGames = ["roulette", "slots", "horses", "blackjack", "poker"];
+    const durationMinutes = Number(message.durationMinutes);
+    if (!target || !target.connected || target.id === player.id) return sendError(socket, "Choose another online player.");
+    if (!allowedGames.includes(message.game)) return sendError(socket, "Choose a valid game.");
+    if (![15, 60, 1440, 10080].includes(durationMinutes)) return sendError(socket, "Choose a supported ban duration.");
+    const key = target.id + ":" + message.game;
+    const previous = gameBans.get(key) || null;
+    const ban = { id: randomBytes(8).toString("hex"), playerId: target.id, name: target.name, game: message.game, createdAt: Date.now(), expiresAt: Date.now() + durationMinutes * 60000, admin: player.name };
+    gameBans.set(key, ban);
+    recordAdminAction(player, "Temporarily banned from " + message.game, target, durationMinutes + " minutes", { type: "game-ban", key, previous });
+    saveGameBans();
+    sendAdminState(socket);
+    broadcast();
+    return;
+  }
+
+  if (message.type === "admin-remove-game-ban") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    const match = [...gameBans.entries()].find(([, ban]) => ban.id === message.banId);
+    if (!match) return sendError(socket, "That game ban is no longer active.");
+    const [key, ban] = match;
+    gameBans.delete(key);
+    recordAdminAction(player, "Removed game ban for " + ban.game, { id: ban.playerId, name: ban.name }, "", { type: "game-ban", key, previous: ban });
+    saveGameBans();
     sendAdminState(socket);
     return;
   }
@@ -1197,6 +1247,11 @@ function handleMessage(socket, message) {
     "blackjack-action": "blackjack",
   };
   const requestedGame = gameByMessageType[message.type];
+  const gameEntryActions = new Set(["roulette-bet", "slots-spin", "horse-bet", "join-poker", "join-blackjack"]);
+  if (requestedGame && gameEntryActions.has(message.type)) {
+    const ban = activeGameBan(player.id, requestedGame);
+    if (ban) return sendError(socket, "You are temporarily blocked from " + requestedGame + " until " + new Date(ban.expiresAt).toLocaleString() + ".");
+  }
   if (requestedGame && player.currentGame && player.currentGame !== requestedGame) return sendError(socket, 'Quit your current game before switching to another one.');
   if (room.isPrivate && requestedGame && room.selectedGame !== requestedGame) {
     return sendError(socket, room.selectedGame
