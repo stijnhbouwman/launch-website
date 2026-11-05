@@ -524,11 +524,11 @@ function renderLobby() {
       </article>
       <article class="game-card">
         <div class="game-art wheel-fortune-art"><div class="fortune-preview">✦ 0.5× · 1× · 5× ✦</div></div>
-        <div class="game-card-content"><div class="game-card-head"><h3>Wheel of Fortune</h3><span class="table-live"><span></span> PLAY ANYTIME</span></div><p>Spin for a prize of up to 2.5× your wager.</p><div class="game-card-footer"><span class="players-label"><strong>${state.wheelFortune.history.length}</strong> recent spins</span><button class="primary-button" data-go="wheel">Spin the wheel&nbsp; ↗</button></div></div>
+        <div class="game-card-content"><div class="game-card-head"><h3>Wheel of Fortune</h3><span class="table-live"><span></span> PLAY ANYTIME</span></div><p>Spin for a prize of up to 5× your wager.</p><div class="game-card-footer"><span class="players-label"><strong>${state.wheelFortune.history.length}</strong> recent spins</span><button class="primary-button" data-go="wheel">Spin the wheel&nbsp; ↗</button></div></div>
       </article>
       <article class="game-card">
         <div class="game-art plinko-art"><div class="plinko-preview">• · • · • · •</div></div>
-        <div class="game-card-content"><div class="game-card-head"><h3>Plinko</h3><span class="table-live"><span></span> PLAY ANYTIME</span></div><p>Drop a ball through the pegs and land in a slot worth up to 1×.</p><div class="game-card-footer"><span class="players-label"><strong>${state.plinko.history.length}</strong> recent drops</span><button class="primary-button" data-go="plinko">Play Plinko&nbsp; ↗</button></div></div>
+        <div class="game-card-content"><div class="game-card-head"><h3>Plinko</h3><span class="table-live"><span></span> PLAY ANYTIME</span></div><p>Drop a ball through the pegs and land in a slot worth up to 3×.</p><div class="game-card-footer"><span class="players-label"><strong>${state.plinko.history.length}</strong> recent drops</span><button class="primary-button" data-go="plinko">Play Plinko&nbsp; ↗</button></div></div>
       </article>
       <article class="game-card">
         <div class="game-art poker-art"><div class="poker-preview">♣ &nbsp; ♠ &nbsp; ♥ &nbsp; ♦</div></div>
