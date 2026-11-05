@@ -30,13 +30,20 @@
   }
   function render() {
     const players = adminData.players || [];
+    const searchText = (document.querySelector("#player-search")?.value || "").trim().toLowerCase();
+    const gameFilter = document.querySelector("#player-game-filter")?.value || "";
+    const visiblePlayers = players.filter((p) => {
+      const roomLabel = p.isPrivate ? String(p.roomCode || "") : "global";
+      const matchesSearch = !searchText || [p.name, p.id, roomLabel, p.game || "lobby"].some((value) => String(value).toLowerCase().includes(searchText));
+      return matchesSearch && (!gameFilter || (p.game || "lobby") === gameFilter);
+    });
     const bans = adminData.bans || [];
     const rooms = adminData.rooms || [];
     document.querySelector("#metric-online").textContent = adminData.onlineCount ?? players.length;
     document.querySelector("#metric-rooms").textContent = rooms.length;
     document.querySelector("#metric-bans").textContent = bans.length;
     const table = document.querySelector("#players-table");
-    table.innerHTML = players.map((p) => {
+    table.innerHTML = visiblePlayers.map((p) => {
       const room = p.isPrivate ? "Private · " + escapeHtml(p.roomCode) : "Global";
       return '<tr><td><strong>' + escapeHtml(p.name) + '</strong><small>' + escapeHtml(p.id) + '</small></td><td>' + room + '</td><td>' + escapeHtml(p.game || "lobby") + '</td><td>' + Number(p.chips).toLocaleString() + '</td><td><div class="admin-actions">' +
         '<button class="quiet-button" data-action="history" data-id="' + escapeHtml(p.id) + '">History</button>' +
@@ -56,31 +63,35 @@
       '<div class="admin-ban-row"><div><strong>' + escapeHtml(b.name) + '</strong><small>Banned ' + new Date(b.bannedAt).toLocaleString() + '</small></div><button class="quiet-button" data-unban="' + escapeHtml(b.id) + '">Unban</button></div>'
     ).join("");
     document.querySelector("#bans-empty").hidden = bans.length > 0;
-    renderCasinoInsights();
+    renderPlayerLeaderboard();
     renderGameViewer();
     renderAdminTools();
   }
 
-  function renderCasinoInsights() {
+  function renderPlayerLeaderboard() {
+    const top = (adminData.players || []).slice().sort((a, b) => (Number(b.chips) || 0) - (Number(a.chips) || 0)).slice(0, 5);
+    document.querySelector("#player-leaderboard").innerHTML = top.length
+      ? top.map((player, index) => '<div><span>' + (index + 1) + '. ' + escapeHtml(player.name) + '</span><strong>' + Number(player.chips || 0).toLocaleString() + ' chips</strong></div>').join("")
+      : '<p class="admin-muted">No players are online.</p>';
+  }
+
+  function downloadPlayerReport() {
     const players = adminData.players || [];
-    const rooms = adminData.gameRooms || [];
-    const totalChips = players.reduce((sum, player) => sum + (Number(player.chips) || 0), 0);
-    const playing = players.filter((player) => player.game && player.game !== "lobby").length;
-    const richest = players.slice().sort((a, b) => (Number(b.chips) || 0) - (Number(a.chips) || 0))[0];
-    const host = document.querySelector("#casino-insights");
-    host.innerHTML = '<div><strong>' + players.length + '</strong><span>Players online</span></div>' +
-      '<div><strong>' + playing + '</strong><span>Playing a game</span></div>' +
-      '<div><strong>' + rooms.length + '</strong><span>Live tables</span></div>' +
-      '<div><strong>' + totalChips.toLocaleString() + '</strong><span>Chips held online</span></div>' +
-      '<p>' + (richest ? 'Largest online balance: ' + escapeHtml(richest.name) + ' (' + Number(richest.chips).toLocaleString() + ' chips)' : 'No players are online right now.') + '</p>';
-    const counts = {};
-    players.forEach((player) => { const game = player.game || "lobby"; counts[game] = (counts[game] || 0) + 1; });
-    const labels = { lobby: "Lobby", roulette: "Roulette", slots: "Slots", horses: "Horse racing", blackjack: "Blackjack", poker: "Poker" };
-    document.querySelector("#game-activity").innerHTML = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([game, count]) => '<div><span>' + escapeHtml(labels[game] || game) + '</span><strong>' + count + '</strong></div>').join("") || '<p class="admin-muted">No live activity.</p>';
-    const recent = (adminData.adminLog || []).slice(0, 5);
-    document.querySelector("#recent-activity").innerHTML = recent.map((entry) => '<div><span>' + escapeHtml(entry.action) + (entry.targetName ? ' · ' + escapeHtml(entry.targetName) : '') + '</span><small>' + new Date(entry.timestamp).toLocaleTimeString() + '</small></div>').join("") || '<p class="admin-muted">No recent admin actions.</p>';
-    const pause = document.querySelector("#overview-pause");
-    pause.textContent = adminData.gamesPaused ? "Resume games" : "Pause new rounds";
+    if (!players.length) return showToast("There are no online players to export.");
+    const columns = ["name", "playerId", "room", "game", "chips", "muted"];
+    const rows = players.map((p) => [p.name, p.id, p.isPrivate ? p.roomCode : "global", p.game || "lobby", p.chips, p.muted ? "yes" : "no"]);
+    const csvCell = (value) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+    const csv = [columns, ...rows].map((row) => row.map(csvCell).join(",")).join("\\r\\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "golden-hour-online-players-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast("Player report exported.");
   }
 
   function renderAdminTools() {
@@ -185,6 +196,14 @@
   });
   document.querySelector("#player-search").addEventListener("input", () => render());
   document.querySelector("#player-game-filter").addEventListener("change", () => render());
+  document.querySelector("#export-players").addEventListener("click", () => { if (authenticated) downloadPlayerReport(); });
+  document.querySelector("#copy-player-ids").addEventListener("click", async () => {
+    if (!authenticated) return;
+    const ids = (adminData.players || []).map((player) => player.id).filter(Boolean).join("\\n");
+    if (!ids) return showToast("No online player IDs to copy.");
+    try { await navigator.clipboard.writeText(ids); showToast("Copied " + (adminData.players || []).length + " player IDs."); }
+    catch { showToast("Clipboard access is unavailable in this browser."); }
+  });
   document.querySelector("#players-table").addEventListener("click", (event) => {
     const button = event.target.closest("[data-action]");
     if (!button || !authenticated) return;
