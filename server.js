@@ -29,6 +29,15 @@ const horseNames = ["Comet", "Clover", "Sundown", "Goldrush"];
 const allowedAvatars = new Set(["🦊", "🐼", "🐸", "🦉", "🐯", "🐙", "🦄", "🐲", "🐧", "🐻", "🐱", "🐵"]);
 const allowedAvatarColors = new Set(["#d6b46a", "#78a99a", "#8b9dc3", "#c58b9b", "#a58ac7", "#b9a27b"]);
 const rooms = new Map();
+const gameActionCooldowns = new Map();
+function gameCooldownRemaining(player, game, durationMs = 5000) {
+  const key = player.id + ":" + game;
+  const now = Date.now();
+  const nextAllowedAt = gameActionCooldowns.get(key) || 0;
+  if (nextAllowedAt > now) return nextAllowedAt - now;
+  gameActionCooldowns.set(key, now + durationMs);
+  return 0;
+}
 
 function createRoom(code, isPrivate, ownerId = null) {
   return {
@@ -1397,6 +1406,8 @@ function handleMessage(socket, message) {
   if (message.type === "wheel-fortune-spin") {
     const amount = message.amount;
     if (!validAmount(amount) || amount > chipsFor(room, player)) return sendError(socket, "Choose a wager from 1 chip up to your available balance.");
+    const cooldown = gameCooldownRemaining(player, "wheel");
+    if (cooldown) return sendError(socket, "Please wait " + Math.ceil(cooldown / 1000) + " seconds before spinning again.");
     const segments = [0, 0, 0.5, 1, 1.5, 2, 3, 5, 10];
     const segment = randomInt(segments.length);
     const multiplier = segments[segment];
@@ -1412,6 +1423,8 @@ function handleMessage(socket, message) {
   if (message.type === "plinko-drop") {
     const amount = message.amount;
     if (!validAmount(amount) || amount > chipsFor(room, player)) return sendError(socket, "Choose a wager from 1 chip up to your available balance.");
+    const cooldown = gameCooldownRemaining(player, "plinko");
+    if (cooldown) return sendError(socket, "Please wait " + Math.ceil(cooldown / 1000) + " seconds before dropping again.");
     const multipliers = [0, 0.5, 1, 2, 5, 10, 5, 2, 1, 0.5, 0];
     const slot = randomInt(multipliers.length);
     const multiplier = multipliers[slot];
@@ -1428,6 +1441,8 @@ function handleMessage(socket, message) {
     if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
       return sendError(socket, "Choose a slot wager from 1 chip up to your available balance.");
     }
+    const cooldown = gameCooldownRemaining(player, "slots");
+    if (cooldown) return sendError(socket, "Please wait " + Math.ceil(cooldown / 1000) + " seconds before spinning again.");
     setChips(room, player, chipsFor(room, player) - message.amount);
     const symbols = Array.from({ length: 3 }, () => slotSymbols[randomInt(slotSymbols.length)]);
     const same = symbols[0] === symbols[1] && symbols[1] === symbols[2];
