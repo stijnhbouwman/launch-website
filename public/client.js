@@ -419,6 +419,8 @@ function renderContent() {
   else if (view === "slots") renderSlots();
   else if (view === "horses") renderHorseRace();
   else if (view === "poker") renderPoker();
+  else if (view === "wheel") renderWheelFortune();
+  else if (view === "plinko") renderPlinko();
   else renderLobby();
   if (view !== "lobby" && !state.room.ended) {
     const stillInGame = !state.room.isPrivate || (state.room.gameParticipants || []).includes(playerId);
@@ -503,6 +505,14 @@ function renderLobby() {
           <p>Choose your horse, place a chip bet, and race together for a 3× payout.</p>
           <div class="game-card-footer"><span class="players-label"><strong>${state.horseRace.bets.length}</strong> bets this race</span><button class="primary-button" data-go="horses">Visit the track&nbsp; ↗</button></div>
         </div>
+      </article>
+      <article class="game-card">
+        <div class="game-art wheel-fortune-art"><div class="fortune-preview">✦ 2× · 5× · 10× ✦</div></div>
+        <div class="game-card-content"><div class="game-card-head"><h3>Wheel of Fortune</h3><span class="table-live"><span></span> PLAY ANYTIME</span></div><p>Spin the prize wheel for multipliers from 0× up to 10× your wager.</p><div class="game-card-footer"><span class="players-label"><strong>${state.wheelFortune.history.length}</strong> recent spins</span><button class="primary-button" data-go="wheel">Spin the wheel&nbsp; ↗</button></div></div>
+      </article>
+      <article class="game-card">
+        <div class="game-art plinko-art"><div class="plinko-preview">• · • · • · •</div></div>
+        <div class="game-card-content"><div class="game-card-head"><h3>Plinko</h3><span class="table-live"><span></span> PLAY ANYTIME</span></div><p>Drop a ball through the pegs and land in a prize slot worth up to 10×.</p><div class="game-card-footer"><span class="players-label"><strong>${state.plinko.history.length}</strong> recent drops</span><button class="primary-button" data-go="plinko">Play Plinko&nbsp; ↗</button></div></div>
       </article>
       <article class="game-card">
         <div class="game-art poker-art"><div class="poker-preview">♣ &nbsp; ♠ &nbsp; ♥ &nbsp; ♦</div></div>
@@ -778,6 +788,26 @@ function renderHorseRace() {
   content.querySelector("#start-race").addEventListener("click", () => {
     send({ type: "horse-start" });
   });
+}
+
+function renderWheelFortune() {
+  const history = state.wheelFortune.history || [];
+  const latest = history[0];
+  const segments = [0, 0, 0.5, 1, 1.5, 2, 3, 5, 10];
+  content.innerHTML = `<span class="eyebrow">THE PRIZE HALL</span><h1>Wheel of Fortune</h1><p class="hero-subtitle">One spin can turn your wager into up to ten times the chips.</p><div class="game-layout"><section class="table-panel"><div class="table-panel-top"><h2>The golden prize wheel</h2><small>Server-drawn result · shared history</small></div><div class="fortune-stage"><div class="fortune-wheel">${segments.map((m,i)=>`<span class="fortune-segment segment-${i}">${m}×</span>`).join("")}</div><div class="fortune-pointer">▼</div></div><div class="fortune-result">${latest ? `${escapeHtml(latest.name)} · ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid` : "The wheel is ready for its first spin."}</div><div class="recent-bets"><h4>Recent spins</h4>${history.length ? `<div class="activity-list">${history.slice(0,10).map(item=>`<div class="activity-row"><span>${escapeHtml(item.name)} · ${item.multiplier}×</span><small>${item.payout ? `+${item.payout}` : `−${item.amount}`} chips</small></div>`).join("")}</div>` : `<div class="activity-empty">No spins yet.</div>`}</div></section><aside class="control-panel"><h3>Spin for a prize</h3><p class="control-copy">The wager is deducted before each spin. All prizes are complimentary chips.</p><label class="field-label" for="wheel-amount">Your wager</label><div class="amount-row"><input class="chip-input" id="wheel-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10,25,50].map(a=>`<button class="preset ${selectedAmount===a?"selected":""}" data-amount="${a}">${a}</button>`).join("")}</div></div><button class="primary-button full-button" id="spin-fortune">Spin the wheel ↗</button><div class="table-rules">${[0,0.5,1,1.5,2,3,5,10].map(m=>`<div class="rule-row"><span>${m}× prize</span><strong>${m===0?"No payout":`${m}× wager`}</strong></div>`).join("")}</div></aside></div>`;
+  content.querySelectorAll("[data-amount]").forEach(button=>button.addEventListener("click",()=>{selectedAmount=Number(button.dataset.amount);renderWheelFortune();}));
+  content.querySelector("#wheel-amount").addEventListener("input",event=>selectedAmount=Number(event.target.value));
+  content.querySelector("#spin-fortune").addEventListener("click",()=>send({type:"wheel-fortune-spin",amount:selectedAmount}));
+}
+
+function renderPlinko() {
+  const history = state.plinko.history || [];
+  const latest = history[0];
+  const multipliers = [0,0.5,1,2,5,10,5,2,1,0.5,0];
+  content.innerHTML = `<span class="eyebrow">THE DROP ZONE</span><h1>Plinko</h1><p class="hero-subtitle">Drop a ball through the pegs and see which prize slot catches it.</p><div class="game-layout"><section class="table-panel"><div class="table-panel-top"><h2>The Plinko board</h2><small>Randomized landing slot · shared history</small></div><div class="plinko-board"><div class="plinko-peg-field">${Array.from({length:7},(_,row)=>`<div class="plinko-peg-row">${Array.from({length:row+3},()=>"<i></i>").join("")}</div>`).join("")}</div><div class="plinko-slots">${multipliers.map((m,i)=>`<span class="${latest?.slot===i?"landed":""}">${m}×</span>`).join("")}</div></div><div class="fortune-result">${latest ? `${escapeHtml(latest.name)} landed on ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid` : "Drop the first ball to get started."}</div><div class="recent-bets"><h4>Recent drops</h4>${history.length ? `<div class="activity-list">${history.slice(0,10).map(item=>`<div class="activity-row"><span>${escapeHtml(item.name)} · ${item.multiplier}×</span><small>${item.payout ? `+${item.payout}` : `−${item.amount}`} chips</small></div>`).join("")}</div>` : `<div class="activity-empty">No balls dropped yet.</div>`}</div></section><aside class="control-panel"><h3>Drop your ball</h3><p class="control-copy">The landing slot is selected securely by the server. Multipliers are shown along the bottom.</p><label class="field-label" for="plinko-amount">Your wager</label><div class="amount-row"><input class="chip-input" id="plinko-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10,25,50].map(a=>`<button class="preset ${selectedAmount===a?"selected":""}" data-amount="${a}">${a}</button>`).join("")}</div></div><button class="primary-button full-button" id="drop-plinko">Drop the ball ↘</button><div class="table-rules">${[0,0.5,1,2,5,10].map(m=>`<div class="rule-row"><span>${m}× slot</span><strong>${m===0?"No payout":`${m}× wager`}</strong></div>`).join("")}</div></aside></div>`;
+  content.querySelectorAll("[data-amount]").forEach(button=>button.addEventListener("click",()=>{selectedAmount=Number(button.dataset.amount);renderPlinko();}));
+  content.querySelector("#plinko-amount").addEventListener("input",event=>selectedAmount=Number(event.target.value));
+  content.querySelector("#drop-plinko").addEventListener("click",()=>send({type:"plinko-drop",amount:selectedAmount}));
 }
 
 function renderPoker() {
