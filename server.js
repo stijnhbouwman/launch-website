@@ -428,7 +428,7 @@ function sendAdminState(socket) {
     .map((player) => {
       const room = rooms.get(player.roomCode);
       const activeGame = player.currentGame || (room?.gameParticipants.has(player.id) ? room.selectedGame : (room?.roulette.bets.some((bet) => bet.playerId === player.id) ? "roulette" : room?.blackjack.players.some((seat) => seat.id === player.id) ? "blackjack" : room?.horseRace.bets.some((bet) => bet.playerId === player.id) ? "horses" : room?.poker.players.some((seat) => seat.id === player.id) ? "poker" : "lobby"));
-      return { id: player.id, name: player.name, chips: room ? chipsFor(room, player) : player.chips, roomCode: player.roomCode, isPrivate: Boolean(room && room.isPrivate), game: activeGame };
+      return { id: player.id, name: player.name, chips: room ? chipsFor(room, player) : player.chips, roomCode: player.roomCode, isPrivate: Boolean(room && room.isPrivate), game: activeGame, muted: Boolean(player.muted) };
     })
     .sort((first, second) => first.name.localeCompare(second.name));
   socket.send(JSON.stringify({ type: "admin-state", players: onlinePlayers }));
@@ -521,6 +521,7 @@ function handleMessage(socket, message) {
           : null,
         roomCode: requestedRoom,
         currentGame: null,
+        muted: false,
         connected: false,
         sockets: new Set(),
       };
@@ -585,6 +586,7 @@ function handleMessage(socket, message) {
     if (!room || room.ended) return sendError(socket, "Chat is unavailable in this room.");
     const text = typeof message.text === "string" ? message.text.trim().slice(0, 240) : "";
     if (!text) return;
+    if (player.muted) return sendError(socket, "You are muted and cannot send chat messages.");
     if (Date.now() - (socket.lastChatAt || 0) < 650) {
       return sendError(socket, "Please wait before sending another message.");
     }
@@ -651,6 +653,25 @@ function handleMessage(socket, message) {
     target.roomCode = "global";
     for (const targetSocket of target.sockets) if (targetSocket.readyState === WebSocket.OPEN) targetSocket.send(JSON.stringify({ type: "room-kicked" }));
     savePlayers();
+    broadcast();
+    return;
+  }
+
+  if (message.type === "admin-set-mute") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin access is only available to the stijn display name.");
+    if (typeof message.targetId !== "string" || typeof message.muted !== "boolean" || message.targetId === player.id) return sendError(socket, "Choose another player.");
+    const target = players.get(message.targetId);
+    if (!target || !target.connected) return sendError(socket, "That player is no longer online.");
+    target.muted = message.muted;
+    console.info("Admin " + player.name + (target.muted ? " muted " : " unmuted ") + target.name + " (" + target.id + ").");
+    broadcast();
+    return;
+  }
+
+  if (message.type === "admin-clear-chat") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin access is only available to the stijn display name.");
+    for (const room of rooms.values()) room.chat = [];
+    console.info("Admin " + player.name + " cleared chat history in all rooms.");
     broadcast();
     return;
   }
