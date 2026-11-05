@@ -73,16 +73,14 @@
               <div class="admin-room-list" id="rooms-list"></div>
             </section>
             <section class="admin-card">
-              <h2>Private room toolkit</h2>
-              <p class="admin-muted">Send a message to one private room, or clean up abandoned empty rooms safely.</p>
-              <div class="admin-room-insights" id="room-insights"></div>
-              <label class="field-label" for="room-tool-select">Target room</label>
-              <select class="chip-input" id="room-tool-select"><option value="">Select a private room</option></select>
-              <form id="room-announcement-form">
-                <label class="field-label" for="room-announcement-text">Room announcement</label>
-                <div class="admin-form-row"><input class="chip-input" id="room-announcement-text" maxlength="180" placeholder="Message for this room…" required><button class="secondary-button" type="submit">Send to room</button></div>
-              </form>
-              <div class="admin-form-row admin-room-cleanup-row"><span class="admin-muted">Only closes rooms with zero connected players and no active round.</span><button class="quiet-button admin-danger" id="close-empty-rooms" type="button">Clean empty rooms</button></div>
+              <h2>Casino overview &amp; tools</h2>
+              <p class="admin-muted">A live snapshot of the whole casino, across global and private rooms.</p>
+              <div class="admin-room-insights" id="casino-insights"></div>
+              <div class="admin-form-row admin-room-cleanup-row">
+                <span class="admin-muted">Quick access to the main casino controls.</span>
+                <button class="secondary-button" id="overview-pause" type="button">Pause new rounds</button>
+                <button class="secondary-button" id="overview-broadcast" type="button">Write announcement</button>
+              </div>
             </section>
           </div>
           <div>
