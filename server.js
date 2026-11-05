@@ -451,6 +451,12 @@ function sendAdminState(socket) {
     players: onlinePlayers,
     bans: [...bannedPlayers.values()],
     rooms: privateRooms,
+    gameRooms: [...rooms.values()].flatMap((room) => {
+      const activeGames = room.isPrivate
+        ? [room.selectedGame].filter(Boolean)
+        : [...new Set(connectedRoomPlayers(room.code).map((member) => member.currentGame).filter(Boolean))];
+      return activeGames.map((game) => ({ code: room.code, game, isPrivate: room.isPrivate, state: snapshot(room.code) }));
+    }),
     onlineCount: onlinePlayers.length,
   }));
 }
