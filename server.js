@@ -10,6 +10,8 @@ const dataDirectory = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : path.join(__dirname, "data");
 const playersFile = path.join(dataDirectory, "players.json");
+const bansFile = path.join(dataDirectory, "bans.json");
+const bannedPlayers = new Map(Object.entries(fs.existsSync(bansFile) ? JSON.parse(fs.readFileSync(bansFile, "utf8")) : {}));
 const players = new Map();
 const savedPlayers = fs.existsSync(playersFile)
   ? JSON.parse(fs.readFileSync(playersFile, "utf8"))
@@ -151,6 +153,13 @@ function refundRoomEntries(player, room) {
     refund(pokerSeat.bet);
     room.poker.players = room.poker.players.filter((seat) => seat.id !== player.id);
   }
+}
+
+function saveBans() {
+  fs.mkdirSync(dataDirectory, { recursive: true });
+  const temporaryFile = `${bansFile}.tmp`;
+  fs.writeFileSync(temporaryFile, JSON.stringify(Object.fromEntries(bannedPlayers), null, 2));
+  fs.renameSync(temporaryFile, bansFile);
 }
 
 function savePlayers() {
@@ -431,7 +440,19 @@ function sendAdminState(socket) {
       return { id: player.id, name: player.name, chips: room ? chipsFor(room, player) : player.chips, roomCode: player.roomCode, isPrivate: Boolean(room && room.isPrivate), game: activeGame, muted: Boolean(player.muted) };
     })
     .sort((first, second) => first.name.localeCompare(second.name));
-  socket.send(JSON.stringify({ type: "admin-state", players: onlinePlayers }));
+  const privateRooms = [...rooms.values()].filter((room) => room.isPrivate).map((room) => ({
+    code: room.code,
+    players: connectedRoomPlayers(room.code).length,
+    game: room.selectedGame || "lobby",
+    running: roomHasRunningGame(room),
+  })).sort((a, b) => a.code.localeCompare(b.code));
+  socket.send(JSON.stringify({
+    type: "admin-state",
+    players: onlinePlayers,
+    bans: [...bannedPlayers.values()],
+    rooms: privateRooms,
+    onlineCount: onlinePlayers.length,
+  }));
 }
 
 function isAdminDisplayName(player) {
@@ -476,6 +497,10 @@ function handleMessage(socket, message) {
       !/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(message.id)
     ) {
       sendError(socket, "This player session is invalid. Refresh to try again.");
+      return;
+    }
+    if (bannedPlayers.has(message.id)) {
+      sendError(socket, "This player account is banned from the casino.");
       return;
     }
     const name = safeName(message.name);
@@ -652,6 +677,86 @@ function handleMessage(socket, message) {
     }
     target.roomCode = "global";
     for (const targetSocket of target.sockets) if (targetSocket.readyState === WebSocket.OPEN) targetSocket.send(JSON.stringify({ type: "room-kicked" }));
+    savePlayers();
+    broadcast();
+    return;
+  }
+
+  if (message.type === "admin-ban-player") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    if (typeof message.targetId !== "string" || message.targetId === player.id) return sendError(socket, "You cannot ban your own admin account.");
+    const target = players.get(message.targetId);
+    if (!target) return sendError(socket, "Player not found.");
+    bannedPlayers.set(target.id, { id: target.id, name: target.name, bannedAt: Date.now() });
+    saveBans();
+    for (const targetSocket of target.sockets) {
+      if (targetSocket.readyState === WebSocket.OPEN) targetSocket.close(4003, "Banned by administrator");
+    }
+    console.info("Admin " + player.name + " banned " + target.name + " (" + target.id + ").");
+    broadcast();
+    sendAdminState(socket);
+    return;
+  }
+
+  if (message.type === "admin-unban-player") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    if (typeof message.targetId !== "string" || !bannedPlayers.has(message.targetId)) return sendError(socket, "That ban was not found.");
+    const banned = bannedPlayers.get(message.targetId);
+    bannedPlayers.delete(message.targetId);
+    saveBans();
+    console.info("Admin " + player.name + " unbanned " + banned.name + " (" + banned.id + ").");
+    sendAdminState(socket);
+    return;
+  }
+
+  if (message.type === "admin-reset-balance") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    if (typeof message.targetId !== "string" || message.targetId === player.id) return sendError(socket, "Choose another player.");
+    const target = players.get(message.targetId);
+    if (!target || !target.connected) return sendError(socket, "That player is no longer online.");
+    target.chips = 1000;
+    const targetRoom = rooms.get(target.roomCode);
+    if (targetRoom?.isPrivate) targetRoom.bankrolls.set(target.id, 1000);
+    for (const room of rooms.values()) {
+      if (room.isPrivate && room.bankrolls.has(target.id)) room.bankrolls.set(target.id, 1000);
+    }
+    savePlayers();
+    console.info("Admin " + player.name + " reset " + target.name + "'s balance.");
+    broadcast();
+    return;
+  }
+
+  if (message.type === "admin-disconnect-player") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    if (typeof message.targetId !== "string" || message.targetId === player.id) return sendError(socket, "You cannot disconnect your admin account.");
+    const target = players.get(message.targetId);
+    if (!target || !target.connected) return sendError(socket, "That player is no longer online.");
+    for (const targetSocket of target.sockets) {
+      if (targetSocket.readyState === WebSocket.OPEN) targetSocket.close(4002, "Disconnected by administrator");
+    }
+    console.info("Admin " + player.name + " disconnected " + target.name + " (" + target.id + ").");
+    return;
+  }
+
+  if (message.type === "admin-close-room") {
+    if (!socket.adminAuthorized || !isAdminDisplayName(player)) return sendError(socket, "Admin authorization required.");
+    if (typeof message.roomCode !== "string") return sendError(socket, "Choose a private room.");
+    const targetRoom = rooms.get(message.roomCode);
+    if (!targetRoom?.isPrivate) return sendError(socket, "That private room no longer exists.");
+    if (roomHasRunningGame(targetRoom)) return sendError(socket, "Finish the active round before closing this room.");
+    for (const member of connectedRoomPlayers(targetRoom.code)) {
+      refundRoomEntries(member, targetRoom);
+      targetRoom.bankrolls.delete(member.id);
+      targetRoom.gameParticipants.delete(member.id);
+      targetRoom.replayVotes.delete(member.id);
+      member.currentGame = null;
+      member.roomCode = "global";
+      for (const targetSocket of member.sockets) {
+        if (targetSocket.readyState === WebSocket.OPEN) targetSocket.send(JSON.stringify({ type: "room-kicked" }));
+      }
+    }
+    rooms.delete(targetRoom.code);
+    console.info("Admin " + player.name + " closed private room " + targetRoom.code + ".");
     savePlayers();
     broadcast();
     return;
@@ -1349,7 +1454,7 @@ const server = http.createServer((request, response) => {
   }
   let relativePath;
   try {
-    relativePath = pathname === "/" ? "index.html" : decodeURIComponent(pathname.slice(1));
+    relativePath = pathname === "/" ? "index.html" : pathname === "/admin" || pathname === "/admin/" ? "admin.html" : decodeURIComponent(pathname.slice(1));
   } catch {
     response.writeHead(400);
     response.end("Invalid path");

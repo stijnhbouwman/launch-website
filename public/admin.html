@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111311">
+  <title>Admin Dashboard — Golden Hour</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="admin-page">
+  <main class="admin-shell">
+    <header class="admin-top">
+      <a class="admin-brand" href="/">
+        <span class="brand-mark">G<span>H</span></span>
+        <span>GOLDEN HOUR<small>ADMINISTRATION</small></span>
+      </a>
+      <a class="secondary-button" href="/">Back to casino</a>
+    </header>
+    <section class="admin-main">
+      <div class="admin-title-row">
+        <div><span class="eyebrow">PRIVATE CONTROL ROOM</span><h1>Admin dashboard</h1><p>Manage players, balances, rooms and moderation from one place.</p></div>
+        <span class="admin-status" id="connection-status">Connecting</span>
+      </div>
+      <section class="admin-card admin-login-card" id="admin-login-card">
+        <h2>Administrator sign in</h2>
+        <p class="admin-muted" id="login-intro">Sign in with the administrator account. Your casino display name must be stijn.</p>
+        <form id="admin-login-form">
+          <label class="field-label" for="admin-username">Username</label>
+          <input class="chip-input" id="admin-username" value="stijn" autocomplete="username" required>
+          <label class="field-label" for="admin-password">Password</label>
+          <input class="chip-input" id="admin-password" type="password" autocomplete="current-password" required>
+          <button class="primary-button" type="submit">Unlock dashboard</button>
+          <p class="admin-feedback" id="login-feedback" role="alert"></p>
+        </form>
+      </section>
+      <section class="admin-dashboard" id="admin-dashboard" hidden>
+        <div class="admin-metrics">
+          <div class="admin-metric"><span>Players online</span><strong id="metric-online">0</strong></div>
+          <div class="admin-metric"><span>Private rooms</span><strong id="metric-rooms">0</strong></div>
+          <div class="admin-metric"><span>Active bans</span><strong id="metric-bans">0</strong></div>
+        </div>
+        <div class="admin-grid">
+          <div>
+            <section class="admin-card">
+              <h2>Player management</h2>
+              <p class="admin-muted">Reset balances, mute chat, disconnect or ban a player. Bans are saved server-side and checked on every reconnect.</p>
+              <div class="admin-table-wrap"><table class="admin-dashboard-table"><thead><tr><th>Player</th><th>Room</th><th>Game</th><th>Chips</th><th>Actions</th></tr></thead><tbody id="players-table"></tbody></table></div>
+              <p class="admin-muted" id="players-empty" hidden>No players are online.</p>
+            </section>
+            <section class="admin-card">
+              <h2>Private rooms</h2>
+              <p class="admin-muted">Close rooms after the current round has finished. Players are returned to the global lobby.</p>
+              <div class="admin-room-list" id="rooms-list"></div>
+            </section>
+          </div>
+          <div>
+            <section class="admin-card">
+              <h2>Broadcast announcement</h2>
+              <p class="admin-muted">Send a prominent message to everyone currently online.</p>
+              <form id="announcement-form"><div class="admin-form-row"><input class="chip-input" id="announcement-text" maxlength="180" placeholder="Announcement…" required><button class="secondary-button" type="submit">Send</button></div></form>
+              <p class="admin-feedback" id="announcement-feedback"></p>
+            </section>
+            <section class="admin-card">
+              <h2>Chat moderation</h2>
+              <p class="admin-muted">Clear chat history in all rooms. This cannot be undone.</p>
+              <button class="quiet-button admin-danger" id="clear-chat" type="button">Clear all room chats</button>
+            </section>
+            <section class="admin-card">
+              <h2>Banned players</h2>
+              <p class="admin-muted">Unban a player to allow their saved account to reconnect.</p>
+              <div class="admin-ban-list" id="bans-list"></div>
+              <p class="admin-muted" id="bans-empty" hidden>No active bans.</p>
+            </section>
+            <section class="admin-card">
+              <button class="quiet-button" id="lock-dashboard" type="button">Lock admin dashboard</button>
+            </section>
+          </div>
+        </div>
+      </section>
+    </section>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+  <script src="/admin.js" defer></script>
+</body>
+</html>

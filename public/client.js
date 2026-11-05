@@ -801,8 +801,7 @@ document.querySelectorAll(".nav-link").forEach((button) => {
 });
 document.querySelector("#admin-toggle").addEventListener("click", () => {
   if (!isAdminDisplayName()) return;
-  adminPanelOpen = !adminPanelOpen;
-  renderAdminPanel();
+  location.href = "/admin";
 });
 document.querySelector("#admin-close").addEventListener("click", () => {
   adminPanelOpen = false;
