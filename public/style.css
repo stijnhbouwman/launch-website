@@ -358,8 +358,8 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .roulette-wheel-stage.spinning .roulette-wheel { animation: rouletteWheelSpin 2.5s cubic-bezier(.12,.72,.15,1) both; }
 .roulette-wheel-stage.spinning .roulette-ball-orbit { animation: rouletteBallOrbit 2.5s cubic-bezier(.18,.65,.22,1) both; }
 .roulette-wheel-stage.spinning .roulette-ball { animation: rouletteBallBounce .22s ease-in-out infinite alternate; }
-@keyframes rouletteWheelSpin { from { transform: rotate(0); } to { transform: rotate(1260deg); } }
-@keyframes rouletteBallOrbit { from { transform: rotate(0deg); } to { transform: rotate(-1620deg); } }
+@keyframes rouletteWheelSpin { from { transform: rotate(0); } to { transform: rotate(var(--roulette-rotation,1260deg)); } }
+@keyframes rouletteBallOrbit { from { transform: rotate(0deg); } to { transform: rotate(var(--roulette-ball-rotation,-1620deg)); } }
 @keyframes rouletteBallBounce { from { translate: 0 0; } to { translate: 1px 3px; } }
 @media (prefers-reduced-motion: reduce) {
   .roulette-wheel-stage.spinning .roulette-wheel,
