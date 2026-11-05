@@ -2,7 +2,12 @@ const content = document.querySelector("#content");
 const socketUrl = `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/live`;
 const playerKey = "golden-hour-player";
 const nameKey = "golden-hour-name";
+const avatarKey = "golden-hour-avatar";
+const avatarColorKey = "golden-hour-avatar-color";
+const loggedOutKey = "golden-hour-logged-out";
 const roomKey = "golden-hour-room";
+const avatarOptions = ["🦊", "🐼", "🐸", "🦉", "🐯", "🐙", "🦄", "🐲", "🐧", "🐻", "🐱", "🐵"];
+const avatarColorOptions = ["#d6b46a", "#78a99a", "#8b9dc3", "#c58b9b", "#a58ac7", "#b9a27b"];
 const queryRoomCode = new URLSearchParams(location.search).get("room") || "";
 let requestedRoomCode = (queryRoomCode || localStorage.getItem(roomKey) || "").toUpperCase();
 let playerId = localStorage.getItem(playerKey);
@@ -11,6 +16,9 @@ if (!playerId) {
   localStorage.setItem(playerKey, playerId);
 }
 let playerName = localStorage.getItem(nameKey) || "";
+let playerAvatar = avatarOptions.includes(localStorage.getItem(avatarKey)) ? localStorage.getItem(avatarKey) : "🦊";
+let playerAvatarColor = avatarColorOptions.includes(localStorage.getItem(avatarColorKey)) ? localStorage.getItem(avatarColorKey) : avatarColorOptions[0];
+let loggedOut = localStorage.getItem(loggedOutKey) === "true";
 let state = null;
 let view = "lobby";
 let selectedBet = "red";
@@ -60,7 +68,7 @@ function connect() {
   socket = connection;
   connection.addEventListener("open", () => {
     document.querySelector(".online-pulse")?.classList.remove("offline");
-    send({ type: "register", id: playerId, name: playerName, roomCode: requestedRoomCode });
+    send({ type: "register", id: playerId, name: playerName, avatar: playerAvatar, avatarColor: playerAvatarColor, roomCode: requestedRoomCode });
   });
   connection.addEventListener("message", (event) => {
     const message = JSON.parse(event.data);
@@ -144,7 +152,9 @@ function connect() {
     renderAdminPanel();
     document.querySelector(".online-pulse")?.classList.add("offline");
     clearTimeout(reconnectTimer);
-    if (joined) {
+    if (loggedOut) {
+      renderUsernamePicker();
+    } else if (joined) {
       reconnectTimer = setTimeout(connect, 1500);
     } else {
       renderUsernamePicker("Could not connect to the table. Check your connection and try again.");
@@ -167,16 +177,33 @@ function renderUsernamePicker(message = "") {
         <label class="field-label" for="join-username">Display name</label>
         <input class="chip-input" id="join-username" name="username" type="text" minlength="1" maxlength="18" pattern="[A-Za-z0-9_]{1,18}" autocomplete="nickname" placeholder="e.g. GoldenAce" value="${escapeHtml(playerName)}" required>
         <small class="join-hint">1–18 letters, numbers, or underscores</small>
+        <div class="character-picker"><span class="field-label">Choose your character</span><div class="character-options" role="group" aria-label="Choose an avatar">${avatarOptions.map((avatar) => `<button class="character-option ${avatar === playerAvatar ? "selected" : ""}" type="button" data-avatar="${avatar}" aria-label="Choose ${avatar}" aria-pressed="${avatar === playerAvatar}">${avatar}</button>`).join("")}</div><span class="field-label character-color-label">Character color</span><div class="character-colors" role="group" aria-label="Choose character color">${avatarColorOptions.map((color) => `<button class="character-color ${color === playerAvatarColor ? "selected" : ""}" type="button" data-avatar-color="${color}" style="--avatar-color:${color}" aria-label="Choose character color" aria-pressed="${color === playerAvatarColor}"></button>`).join("")}</div></div>
         <p class="join-error" id="join-error" role="alert">${escapeHtml(message)}</p>
         <button class="primary-button full-button join-submit" id="join-submit" type="submit">Join the lounge&nbsp; ↗</button>
       </form>
       <p class="join-footnote">Everyone starts with 1,000 complimentary chips. Play for fun—chips have no cash value.</p>
     </section>`;
+  screen.querySelectorAll("[data-avatar]").forEach((button) => button.addEventListener("click", () => {
+    playerAvatar = button.dataset.avatar;
+    localStorage.setItem(avatarKey, playerAvatar);
+    renderUsernamePicker(message);
+    screen.querySelector("#join-username")?.focus();
+  }));
+  screen.querySelectorAll("[data-avatar-color]").forEach((button) => button.addEventListener("click", () => {
+    playerAvatarColor = button.dataset.avatarColor;
+    localStorage.setItem(avatarColorKey, playerAvatarColor);
+    renderUsernamePicker(message);
+    screen.querySelector("#join-username")?.focus();
+  }));
   screen.querySelector("#join-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     playerName = String(form.get("username")).trim();
     localStorage.setItem(nameKey, playerName);
+    localStorage.setItem(avatarKey, playerAvatar);
+    localStorage.setItem(avatarColorKey, playerAvatarColor);
+    loggedOut = false;
+    localStorage.removeItem(loggedOutKey);
     const submit = screen.querySelector("#join-submit");
     submit.disabled = true;
     submit.textContent = "Joining…";
@@ -218,8 +245,9 @@ function updateHeader() {
   document.querySelector("#chip-count").textContent =
     (player?.chips ?? 1000).toLocaleString();
   document.querySelector("#profile-name").textContent = player?.name ?? playerName;
-  document.querySelector("#avatar").textContent =
-    (player?.name ?? (playerName || "G")).slice(0, 1).toUpperCase();
+  const avatar = document.querySelector("#avatar");
+  avatar.textContent = player?.avatar || playerAvatar;
+  avatar.style.backgroundColor = player?.avatarColor || playerAvatarColor;
   document.querySelector("#crumb-current").textContent =
     view === "lobby" ? "OVERVIEW" : view.toUpperCase();
   document.querySelector("#admin-toggle").hidden = !isAdminDisplayName();
@@ -909,6 +937,25 @@ document.querySelector("#copy-invite").addEventListener("click", async () => {
     showToast("Copy failed. Select and copy the invite link instead.");
   }
 });
+document.querySelector("#log-off").addEventListener("click", () => {
+  if (!window.confirm("Log off from Golden Hour? Your chips and character will be saved on this device.")) return;
+  loggedOut = true;
+  localStorage.setItem(loggedOutKey, "true");
+  joined = false;
+  state = null;
+  adminAuthenticated = false;
+  adminPlayers = [];
+  adminPanelOpen = false;
+  requestedRoomCode = "";
+  localStorage.removeItem(roomKey);
+  const cleanUrl = new URL(location.href);
+  cleanUrl.searchParams.delete("room");
+  history.replaceState(null, "", cleanUrl);
+  document.body.classList.remove("joined");
+  clearTimeout(reconnectTimer);
+  if (socket && socket.readyState !== WebSocket.CLOSED) socket.close();
+  renderUsernamePicker();
+});
 document.querySelector("#edit-name").addEventListener("click", () => {
   const nextName = window.prompt("Choose a username:", playerName);
   if (nextName === null) return;
@@ -917,5 +964,5 @@ document.querySelector("#edit-name").addEventListener("click", () => {
   send({ type: "set-name", name: playerName });
 });
 
-if (playerName && playerName.toLowerCase() !== "guest") connect();
+if (playerName && playerName.toLowerCase() !== "guest" && !loggedOut) connect();
 else renderUsernamePicker();
