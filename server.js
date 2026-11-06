@@ -494,6 +494,50 @@ function snapshot(roomCode) {
   };
 }
 
+function simulatePlinkoDrop() {
+  // Server-authoritative Galton-board physics. Coordinates are normalized to
+  // the board, so the same recorded path can be replayed at any screen size.
+  const radius = 0.014, halfWidth = 0.48, gravity = 2.8, restitution = 0.72;
+  const pegs = [];
+  for (let row = 0; row < 10; row++) {
+    const count = row + 1, span = (row + 1) / 10 * 0.82;
+    for (let col = 0; col < count; col++) {
+      pegs.push({x: count === 1 ? 0 : -span / 2 + span * col / (count - 1), y: 0.13 + row * 0.071, r: 0.022 + radius});
+    }
+  }
+  let x = 0, y = 0.015, vx = (Math.random() - 0.5) * 0.62, vy = 0.12;
+  const path = [];
+  const dt = 1 / 120;
+  for (let frame = 0; frame < 720 && y < 1; frame++) {
+    vx *= 0.999;
+    vy += gravity * dt;
+    x += vx * dt;
+    y += vy * dt;
+    if (x < -halfWidth + radius || x > halfWidth - radius) {
+      x = Math.max(-halfWidth + radius, Math.min(halfWidth - radius, x));
+      vx *= -0.72;
+    }
+    for (const peg of pegs) {
+      const dx = x - peg.x, dy = y - peg.y, distance = Math.hypot(dx, dy);
+      if (distance > 0 && distance < peg.r) {
+        const nx = dx / distance, ny = dy / distance;
+        x = peg.x + nx * peg.r;
+        y = peg.y + ny * peg.r;
+        const normal = vx * nx + vy * ny;
+        if (normal < 0) {
+          vx -= (1 + restitution) * normal * nx;
+          vy -= (1 + restitution) * normal * ny;
+          vx += (Math.random() - 0.5) * 0.18;
+        }
+      }
+    }
+    if (frame % 2 === 0) path.push([Number(x.toFixed(4)), Number(Math.min(y, 1).toFixed(4))]);
+  }
+  const slot = Math.max(0, Math.min(10, Math.floor((x + halfWidth) / (halfWidth * 2) * 11)));
+  path.push([Number(x.toFixed(4)), 1]);
+  return { slot, path };
+}
+
 const sockets = new Set();
 function broadcast() {
   const states = new Map();
@@ -1429,12 +1473,13 @@ function handleMessage(socket, message) {
     const cooldown = gameCooldownRemaining(player, "plinko", 2400);
     if (cooldown) return sendError(socket, "Please wait " + Math.ceil(cooldown / 1000) + " seconds before dropping again.");
     const multipliers = [0, 0, 0.5, 0.75, 1, 3, 1, 0.75, 0.5, 0, 0];
-    const slot = randomInt(multipliers.length);
+    const drop = simulatePlinkoDrop();
+    const slot = drop.slot;
     const multiplier = multipliers[slot];
     setChips(room, player, chipsFor(room, player) - amount);
     const payout = Math.floor(amount * multiplier);
     if (payout) addChips(room, player, payout);
-    room.plinko.history.unshift({ playerId: player.id, name: player.name, amount, payout, multiplier, slot, timestamp: Date.now() });
+    room.plinko.history.unshift({ playerId: player.id, name: player.name, amount, payout, multiplier, slot, path: drop.path, timestamp: Date.now() });
     room.plinko.history = room.plinko.history.slice(0, 20);
     recordPlayerGame(player, "plinko", room, amount, payout, payout > amount ? "Win" : payout === amount ? "Push" : "Loss", multiplier + "× slot");
     endRoomIfBroke(room); savePlayers(); broadcast(); return;
