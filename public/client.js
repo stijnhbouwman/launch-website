@@ -846,79 +846,37 @@ function renderWheelFortune() {
   content.querySelector("#spin-fortune").addEventListener("click",()=>triggerTimedGameAction("wheel",{type:"wheel-fortune-spin",amount:selectedAmount}));
 }
 
-function animatePlinkoPhysics(board, ball, target, onComplete) {
+function animatePlinkoPhysics(board, ball, target, onComplete, path) {
   const boardRect = board.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
   const startX = boardRect.left + board.clientLeft + board.clientWidth / 2;
   const startY = boardRect.top + board.clientTop + 19;
-  const targetX = targetRect.left + targetRect.width / 2 - startX;
   const landingY = targetRect.top - startY - 7;
-  const ballRadius = 7;
-  const pocketLeft = targetRect.left - startX + 2 + ballRadius;
-  const pocketRight = targetRect.right - startX - 2 - ballRadius;
-  const pegs = [...board.querySelectorAll(".plinko-peg-row i")].map(peg => {
-    const rect = peg.getBoundingClientRect();
-    return { x: rect.left + rect.width / 2 - startX, y: rect.top + rect.height / 2 - startY, r: rect.width / 2 + ballRadius };
-  });
-  const halfWidth = board.clientWidth / 2 - ballRadius - 2;
-  let x = 0, y = 0, vx = (Math.random() - .5) * 90, vy = 24;
-  let previous = performance.now(), finished = false;
-  const gravity = 1180, restitution = .76;
+  const scaleX = board.clientWidth / 2;
+  const points = Array.isArray(path) && path.length > 1 ? path : [[0,0],[0,1]];
+  const duration = 2600;
+  let started = null, finished = false;
   ball.style.opacity = "1";
   ball.style.transform = "translate3d(0,0,0)";
-
   const frame = now => {
-    const dt = Math.min((now - previous) / 1000, .016);
-    previous = now;
-    const progress = Math.max(0, Math.min(1, y / Math.max(1, landingY)));
-    const smooth = progress * progress * (3 - 2 * progress);
-    const desiredX = targetX * smooth;
-    // A continuously changing lateral force guides the real fall into the
-    // selected pocket. There is no end-of-drop capture, spring, or position snap.
-    const nearPocket = progress > .72;
-    const steering = Math.max(-2600, Math.min(2600,
-      (desiredX - x) * (nearPocket ? 15 : 7.5) - vx * (nearPocket ? 7.5 : 3.8)
-    ));
-    vx += steering * dt;
-    vy += gravity * dt;
-
-    const step = dt / 2;
-    for (let n = 0; n < 2; n++) {
-      x += vx * step;
-      y += vy * step;
-      if (x < -halfWidth || x > halfWidth) {
-        x = Math.max(-halfWidth, Math.min(halfWidth, x));
-        vx *= -.68;
-      }
-      for (const peg of pegs) {
-        const dx = x - peg.x, dy = y - peg.y;
-        const distance = Math.hypot(dx, dy);
-        if (distance > 0 && distance < peg.r) {
-          const nx = dx / distance, ny = dy / distance;
-          x = peg.x + nx * peg.r;
-          y = peg.y + ny * peg.r;
-          const normalSpeed = vx * nx + vy * ny;
-          if (normalSpeed < 0) {
-            vx -= (1 + restitution) * normalSpeed * nx;
-            vy -= (1 + restitution) * normalSpeed * ny;
-            const tangentX = -ny, tangentY = nx;
-            const tangentSpeed = vx * tangentX + vy * tangentY;
-            vx -= tangentSpeed * tangentX * .035;
-            vy -= tangentSpeed * tangentY * .035;
-            vx += (Math.random() - .5) * 30;
-          }
-        }
-      }
-    }
-
+    if (started === null) started = now;
+    const progress = Math.min(1, (now - started) / duration);
+    const position = progress * (points.length - 1);
+    const index = Math.min(points.length - 2, Math.floor(position));
+    const mix = position - index;
+    const a = points[index], b = points[index + 1];
+    const nx = a[0] + (b[0] - a[0]) * mix;
+    const ny = a[1] + (b[1] - a[1]) * mix;
+    const x = nx * scaleX;
+    const y = Math.min(landingY, Math.max(0, ny * landingY));
     ball.style.transform = `translate3d(${x}px,${y}px,0)`;
-    // Finish at the actual position as the ball crosses the selected pocket;
-    // only stop once its full width is inside that pocket.
-    if (y >= landingY && x >= pocketLeft && x <= pocketRight) finished = true;
-    if (!finished) {
+    if (progress < 1) {
       requestAnimationFrame(frame);
       return;
     }
+    // The ball finishes inside the pocket identified by its physical path.
+    // Slot dividers keep it contained; no spring or end-position teleport.
+    finished = true;
     target.classList.add("landed");
     if (typeof onComplete === "function") onComplete();
   };
@@ -942,7 +900,7 @@ function renderPlinko() {
       if (result) result.textContent = "Ball dropping…";
       animatePlinkoPhysics(board, ball, target, () => {
         if (result) result.textContent = `${escapeHtml(latest.name)} landed on ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid`;
-      });
+      }, latest.path);
     }
   }
   content.querySelectorAll("[data-amount]").forEach(button=>button.addEventListener("click",()=>{selectedAmount=Number(button.dataset.amount);renderPlinko();}));
