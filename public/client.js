@@ -853,38 +853,46 @@ function animatePlinkoPhysics(board, ball, target, onComplete) {
   const startY = boardRect.top + board.clientTop + 19;
   const targetX = targetRect.left + targetRect.width / 2 - startX;
   const targetY = targetRect.top + targetRect.height / 2 - startY;
+  const ballRadius = 7;
   const pegs = [...board.querySelectorAll(".plinko-peg-row i")].map(peg => {
     const rect = peg.getBoundingClientRect();
-    return { x: rect.left + rect.width / 2 - startX, y: rect.top + rect.height / 2 - startY, r: rect.width / 2 + 7 };
+    return { x: rect.left + rect.width / 2 - startX, y: rect.top + rect.height / 2 - startY, r: rect.width / 2 + ballRadius };
   });
-  const halfWidth = board.clientWidth / 2 - 9;
-  let x = 0, y = 0, vx = (Math.random() - .5) * 24, vy = 28;
-  let previous = performance.now(), elapsed = 0, settled = false;
-  let settleElapsed = 0, settleStartX = 0, settleStartY = 0;
-  const settleDuration = 0.32;
-  const gravity = 1050;
+  const halfWidth = board.clientWidth / 2 - ballRadius - 2;
+  let x = 0, y = 0;
+  let vx = (Math.random() - .5) * 90, vy = 24;
+  let previous = performance.now(), elapsed = 0;
+  let finished = false;
+  const gravity = 1180;
+  const restitution = .76;
   ball.style.opacity = "1";
   ball.style.transform = "translate3d(0,0,0)";
+
   const frame = now => {
-    const dt = Math.min((now - previous) / 1000, .02);
+    const dt = Math.min((now - previous) / 1000, .016);
     previous = now;
     elapsed += dt;
-    if (!settled) {
-      // Guide the ball through a gently curving, target-specific corridor.
-      // Gravity and peg impacts remain active, so the ball still bounces naturally.
-      const progress = Math.max(0, Math.min(1, y / Math.max(1, targetY - 18)));
-      const curve = progress * progress * (3 - 2 * progress);
-      const pathX = targetX * curve;
-      const lateralError = pathX - x;
-      const guidance = Math.max(-1850, Math.min(1850, lateralError * 30 - vx * 8));
-      vx += (guidance + (Math.random() - .5) * 95) * dt;
-      vy += gravity * dt;
-      x += vx * dt;
-      y += vy * dt;
+    const progress = Math.max(0, Math.min(1, y / Math.max(1, targetY)));
+    const smooth = progress * progress * (3 - 2 * progress);
+    // A subtle, broad steering bias keeps the server-selected pocket reachable
+    // without pulling the ball along a visible rail or fixed scripted curve.
+    const desiredX = targetX * smooth;
+    let steering = (desiredX - x) * 4.2 - vx * 2.1;
+    steering = Math.max(-720, Math.min(720, steering));
+    vx += steering * dt;
+    vy += gravity * dt;
+
+    // Two small physics steps make peg contacts stable and prevent tunnelling.
+    const step = dt / 2;
+    for (let n = 0; n < 2; n++) {
+      x += vx * step;
+      y += vy * step;
+
       if (x < -halfWidth || x > halfWidth) {
         x = Math.max(-halfWidth, Math.min(halfWidth, x));
-        vx *= -.62;
+        vx *= -.68;
       }
+
       for (const peg of pegs) {
         const dx = x - peg.x, dy = y - peg.y;
         const distance = Math.hypot(dx, dy);
@@ -892,38 +900,46 @@ function animatePlinkoPhysics(board, ball, target, onComplete) {
           const nx = dx / distance, ny = dy / distance;
           x = peg.x + nx * peg.r;
           y = peg.y + ny * peg.r;
-          const impact = vx * nx + vy * ny;
-          if (impact < 0) {
-            vx -= 1.82 * impact * nx;
-            vy -= 1.82 * impact * ny;
+          const normalSpeed = vx * nx + vy * ny;
+          if (normalSpeed < 0) {
+            vx -= (1 + restitution) * normalSpeed * nx;
+            vy -= (1 + restitution) * normalSpeed * ny;
+            // A little tangential energy loss gives each peg hit some weight.
+            const tangentX = -ny, tangentY = nx;
+            const tangentSpeed = vx * tangentX + vy * tangentY;
+            vx -= tangentSpeed * tangentX * .035;
+            vy -= tangentSpeed * tangentY * .035;
+            vx += (Math.random() - .5) * 30;
           }
-          vx += (Math.random() - .5) * 48;
         }
       }
-      if (y >= targetY - 34 || elapsed > 4) {
-        settled = true;
-        settleStartX = x;
-        settleStartY = y;
-        settleElapsed = 0;
+    }
+
+    // Let the ball roll into the chosen pocket under a damped spring force.
+    // This replaces the previous visible end-of-drop interpolation/snap.
+    if (y >= targetY - 15) {
+      const dx = targetX - x;
+      vx += (dx * 18 - vx * 7) * dt;
+      vy += (targetY - y) * 5 * dt;
+      if (Math.abs(dx) < 1.8 && Math.abs(vx) < 12 && y >= targetY - 2) {
+        finished = true;
       }
     }
-    if (settled) {
-      // A short, smooth guided roll into the selected pocket; no end-of-drop teleport.
-      settleElapsed += dt;
-      const progress = Math.min(1, settleElapsed / settleDuration);
-      const eased = progress * progress * (3 - 2 * progress);
-      x = settleStartX + (targetX - settleStartX) * eased;
-      y = settleStartY + (targetY - settleStartY) * eased;
-      if (progress >= 1) {
-        x = targetX; y = targetY;
-        ball.style.transform = `translate3d(${x}px,${y}px,0)`;
-        target.classList.add("landed");
-        if (typeof onComplete === "function") onComplete();
-        return;
-      }
+
+    if (!finished && elapsed < 5.5) {
+      ball.style.transform = `translate3d(${x}px,${y}px,0)`;
+      requestAnimationFrame(frame);
+      return;
+    }
+
+    // End only once the ball is already at the pocket; no visual jump across the board.
+    if (!finished) {
+      x = targetX;
+      y = targetY;
     }
     ball.style.transform = `translate3d(${x}px,${y}px,0)`;
-    requestAnimationFrame(frame);
+    target.classList.add("landed");
+    if (typeof onComplete === "function") onComplete();
   };
   requestAnimationFrame(frame);
 }
