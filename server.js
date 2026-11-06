@@ -497,7 +497,7 @@ function snapshot(roomCode) {
 function simulatePlinkoDrop() {
   // Server-authoritative Galton-board physics. Coordinates are normalized to
   // the board, so the same recorded path can be replayed at any screen size.
-  const radius = 0.014, halfWidth = 0.48, gravity = 2.8, restitution = 0.72;
+  const radius = 0.014, halfWidth = 0.48, gravity = 2.8, restitution = 0.64;
   const pegs = [];
   for (let row = 0; row < 10; row++) {
     const count = row + 1, span = (row + 1) / 10 * 0.82;
