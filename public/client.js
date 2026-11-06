@@ -851,8 +851,8 @@ function animatePlinkoPhysics(board, ball, target, onComplete, path) {
   const targetRect = target.getBoundingClientRect();
   const startX = boardRect.left + board.clientLeft + board.clientWidth / 2;
   const startY = boardRect.top + board.clientTop + 19;
-  const landingY = targetRect.top - startY - 7;
-  const scaleX = board.clientWidth / 2;
+  const landingY = targetRect.top - startY + 7;
+  const scaleX = (board.clientWidth - 24) / 0.96;
   const points = Array.isArray(path) && path.length > 1 ? path : [[0,0],[0,1]];
   const duration = 2600;
   let started = null, finished = false;
