@@ -846,6 +846,71 @@ function renderWheelFortune() {
   content.querySelector("#spin-fortune").addEventListener("click",()=>triggerTimedGameAction("wheel",{type:"wheel-fortune-spin",amount:selectedAmount}));
 }
 
+function animatePlinkoPhysics(board, ball, target) {
+  const boardRect = board.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const startX = boardRect.left + board.clientLeft + board.clientWidth / 2;
+  const startY = boardRect.top + board.clientTop + 19;
+  const targetX = targetRect.left + targetRect.width / 2 - startX;
+  const targetY = targetRect.top + targetRect.height / 2 - startY;
+  const pegs = [...board.querySelectorAll(".plinko-peg-row i")].map(peg => {
+    const rect = peg.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2 - startX, y: rect.top + rect.height / 2 - startY, r: rect.width / 2 + 7 };
+  });
+  const halfWidth = board.clientWidth / 2 - 9;
+  let x = 0, y = 0, vx = (Math.random() - .5) * 55, vy = 35;
+  let previous = performance.now(), elapsed = 0, settled = false;
+  const gravity = 1050;
+  ball.style.opacity = "1";
+  ball.style.transform = "translate3d(0,0,0)";
+  const frame = now => {
+    const dt = Math.min((now - previous) / 1000, .025);
+    previous = now;
+    elapsed += dt;
+    if (!settled) {
+      const steer = Math.max(-260, Math.min(260, (targetX - x) * .85));
+      vx += (steer + (Math.random() - .5) * 22) * dt;
+      vy += gravity * dt;
+      x += vx * dt;
+      y += vy * dt;
+      if (x < -halfWidth || x > halfWidth) {
+        x = Math.max(-halfWidth, Math.min(halfWidth, x));
+        vx *= -.68;
+      }
+      for (const peg of pegs) {
+        const dx = x - peg.x, dy = y - peg.y;
+        const distance = Math.hypot(dx, dy);
+        if (distance > 0 && distance < peg.r) {
+          const nx = dx / distance, ny = dy / distance;
+          x = peg.x + nx * peg.r;
+          y = peg.y + ny * peg.r;
+          const impact = vx * nx + vy * ny;
+          if (impact < 0) {
+            vx -= 1.72 * impact * nx;
+            vy -= 1.72 * impact * ny;
+          }
+          vx += (Math.random() - .5) * 105;
+        }
+      }
+      if (y >= targetY - 22 || elapsed > 2.5) settled = true;
+    }
+    if (settled) {
+      const settle = Math.min(1, dt * 7);
+      x += (targetX - x) * settle;
+      y += (targetY - y) * settle;
+      vx *= .75;
+      if (Math.abs(targetX - x) < .7 && Math.abs(targetY - y) < .7) {
+        x = targetX; y = targetY;
+        ball.style.transform = `translate3d(${x}px,${y}px,0)`;
+        return;
+      }
+    }
+    ball.style.transform = `translate3d(${x}px,${y}px,0)`;
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
 function renderPlinko() {
   const history = state.plinko.history || [];
   const latest = history[0];
@@ -857,20 +922,7 @@ function renderPlinko() {
     const board = content.querySelector(".plinko-board");
     const ball = content.querySelector(".plinko-ball");
     const target = content.querySelectorAll(".plinko-slots span")[latest.slot];
-    if (board && ball && target) {
-      const boardRect = board.getBoundingClientRect();
-      const targetRect = target.getBoundingClientRect();
-      const startX = boardRect.left + board.clientLeft + board.clientWidth / 2;
-      const startY = boardRect.top + board.clientTop + 12 + 7;
-      const shift = targetRect.left + targetRect.width / 2 - startX;
-      const dropY = targetRect.top + targetRect.height / 2 - startY;
-      board.style.setProperty("--plinko-shift", shift + "px");
-      board.style.setProperty("--plinko-drop-y", dropY + "px");
-      [[.08,.15,"15"],[-.12,.3,"30"],[.18,.48,"45"],[-.1,.65,"60"],[.35,.84,"78"]].forEach(([x,y,label]) => {
-        board.style.setProperty("--plinko-x-" + label, (shift * x) + "px");
-        board.style.setProperty("--plinko-y-" + label, (dropY * y) + "px");
-      });
-    }
+    if (board && ball && target) animatePlinkoPhysics(board, ball, target);
   }
   content.querySelectorAll("[data-amount]").forEach(button=>button.addEventListener("click",()=>{selectedAmount=Number(button.dataset.amount);renderPlinko();}));
   content.querySelector("#plinko-amount").addEventListener("input",event=>selectedAmount=Number(event.target.value));
