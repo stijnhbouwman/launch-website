@@ -860,6 +860,8 @@ function animatePlinkoPhysics(board, ball, target, onComplete) {
   const halfWidth = board.clientWidth / 2 - 9;
   let x = 0, y = 0, vx = (Math.random() - .5) * 55, vy = 35;
   let previous = performance.now(), elapsed = 0, settled = false;
+  let settleElapsed = 0, settleStartX = 0, settleStartY = 0;
+  const settleDuration = 0.85;
   const gravity = 1050;
   ball.style.opacity = "1";
   ball.style.transform = "translate3d(0,0,0)";
@@ -892,14 +894,21 @@ function animatePlinkoPhysics(board, ball, target, onComplete) {
           vx += (Math.random() - .5) * 105;
         }
       }
-      if (y >= targetY - 22 || elapsed > 2.5) settled = true;
+      if (y >= targetY - 85 || elapsed > 3.2) {
+        settled = true;
+        settleStartX = x;
+        settleStartY = y;
+        settleElapsed = 0;
+      }
     }
     if (settled) {
-      const settle = Math.min(1, dt * 7);
-      x += (targetX - x) * settle;
-      y += (targetY - y) * settle;
-      vx *= .75;
-      if (Math.abs(targetX - x) < .7 && Math.abs(targetY - y) < .7) {
+      // Ease the ball along a visible final path instead of snapping it into the winning slot.
+      settleElapsed += dt;
+      const progress = Math.min(1, settleElapsed / settleDuration);
+      const eased = progress * progress * (3 - 2 * progress);
+      x = settleStartX + (targetX - settleStartX) * eased;
+      y = settleStartY + (targetY - settleStartY) * eased;
+      if (progress >= 1) {
         x = targetX; y = targetY;
         ball.style.transform = `translate3d(${x}px,${y}px,0)`;
         target.classList.add("landed");
