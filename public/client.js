@@ -858,26 +858,32 @@ function animatePlinkoPhysics(board, ball, target, onComplete) {
     return { x: rect.left + rect.width / 2 - startX, y: rect.top + rect.height / 2 - startY, r: rect.width / 2 + 7 };
   });
   const halfWidth = board.clientWidth / 2 - 9;
-  let x = 0, y = 0, vx = (Math.random() - .5) * 55, vy = 35;
+  let x = 0, y = 0, vx = (Math.random() - .5) * 24, vy = 28;
   let previous = performance.now(), elapsed = 0, settled = false;
   let settleElapsed = 0, settleStartX = 0, settleStartY = 0;
-  const settleDuration = 0.85;
+  const settleDuration = 0.32;
   const gravity = 1050;
   ball.style.opacity = "1";
   ball.style.transform = "translate3d(0,0,0)";
   const frame = now => {
-    const dt = Math.min((now - previous) / 1000, .025);
+    const dt = Math.min((now - previous) / 1000, .02);
     previous = now;
     elapsed += dt;
     if (!settled) {
-      const steer = Math.max(-260, Math.min(260, (targetX - x) * .85));
-      vx += (steer + (Math.random() - .5) * 22) * dt;
+      // Guide the ball through a gently curving, target-specific corridor.
+      // Gravity and peg impacts remain active, so the ball still bounces naturally.
+      const progress = Math.max(0, Math.min(1, y / Math.max(1, targetY - 18)));
+      const curve = progress * progress * (3 - 2 * progress);
+      const pathX = targetX * curve;
+      const lateralError = pathX - x;
+      const guidance = Math.max(-1850, Math.min(1850, lateralError * 30 - vx * 8));
+      vx += (guidance + (Math.random() - .5) * 95) * dt;
       vy += gravity * dt;
       x += vx * dt;
       y += vy * dt;
       if (x < -halfWidth || x > halfWidth) {
         x = Math.max(-halfWidth, Math.min(halfWidth, x));
-        vx *= -.68;
+        vx *= -.62;
       }
       for (const peg of pegs) {
         const dx = x - peg.x, dy = y - peg.y;
@@ -888,13 +894,13 @@ function animatePlinkoPhysics(board, ball, target, onComplete) {
           y = peg.y + ny * peg.r;
           const impact = vx * nx + vy * ny;
           if (impact < 0) {
-            vx -= 1.72 * impact * nx;
-            vy -= 1.72 * impact * ny;
+            vx -= 1.82 * impact * nx;
+            vy -= 1.82 * impact * ny;
           }
-          vx += (Math.random() - .5) * 105;
+          vx += (Math.random() - .5) * 48;
         }
       }
-      if (y >= targetY - 85 || elapsed > 3.2) {
+      if (y >= targetY - 34 || elapsed > 4) {
         settled = true;
         settleStartX = x;
         settleStartY = y;
@@ -902,7 +908,7 @@ function animatePlinkoPhysics(board, ball, target, onComplete) {
       }
     }
     if (settled) {
-      // Ease the ball along a visible final path instead of snapping it into the winning slot.
+      // A short, smooth guided roll into the selected pocket; no end-of-drop teleport.
       settleElapsed += dt;
       const progress = Math.min(1, settleElapsed / settleDuration);
       const eased = progress * progress * (3 - 2 * progress);
