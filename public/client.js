@@ -859,85 +859,76 @@ function animatePlinkoPhysics(board, ball, target, onComplete) {
     return { x: rect.left + rect.width / 2 - startX, y: rect.top + rect.height / 2 - startY, r: rect.width / 2 + ballRadius };
   });
   const halfWidth = board.clientWidth / 2 - ballRadius - 2;
-  let x = 0, y = 0;
-  let vx = (Math.random() - .5) * 90, vy = 24;
-  let previous = performance.now(), elapsed = 0;
-  let finished = false;
-  const gravity = 1180;
-  const restitution = .76;
+  let x = 0, y = 0, vx = (Math.random() - .5) * 90, vy = 24;
+  let previous = performance.now(), landing = false, finished = false;
+  const gravity = 1180, restitution = .76;
   ball.style.opacity = "1";
   ball.style.transform = "translate3d(0,0,0)";
 
   const frame = now => {
     const dt = Math.min((now - previous) / 1000, .016);
     previous = now;
-    elapsed += dt;
-    const progress = Math.max(0, Math.min(1, y / Math.max(1, targetY)));
-    const smooth = progress * progress * (3 - 2 * progress);
-    // A subtle, broad steering bias keeps the server-selected pocket reachable
-    // without pulling the ball along a visible rail or fixed scripted curve.
-    const desiredX = targetX * smooth;
-    let steering = (desiredX - x) * 4.2 - vx * 2.1;
-    steering = Math.max(-720, Math.min(720, steering));
-    vx += steering * dt;
-    const nearingPocket = y >= targetY - 24;
-    if (!nearingPocket) vy += gravity * dt;
-    else {
-      const pocketDx = targetX - x;
-      vx += (pocketDx * 18 - vx * 7) * dt;
-      vy += ((targetY - y) * 22 - vy * 8) * dt;
-    }
 
-    // Two small physics steps make peg contacts stable and prevent tunnelling.
-    const step = dt / 2;
-    for (let n = 0; n < 2; n++) {
-      x += vx * step;
-      y += vy * step;
+    // Once the ball reaches the lower pocket area, capture it with a damped
+    // spring aimed at the centre of the server-selected box.
+    if (!landing && y >= targetY - 34) landing = true;
 
-      if (x < -halfWidth || x > halfWidth) {
-        x = Math.max(-halfWidth, Math.min(halfWidth, x));
-        vx *= -.68;
+    if (landing) {
+      const spring = 95, damping = 19;
+      vx += ((targetX - x) * spring - vx * damping) * dt;
+      vy += ((targetY - y) * spring - vy * damping) * dt;
+      x += vx * dt;
+      y += vy * dt;
+      if (Math.hypot(targetX - x, targetY - y) < .65 && Math.hypot(vx, vy) < 5) {
+        x = targetX;
+        y = targetY;
+        finished = true;
       }
+    } else {
+      const progress = Math.max(0, Math.min(1, y / Math.max(1, targetY)));
+      const smooth = progress * progress * (3 - 2 * progress);
+      // Gentle broad steering makes every server-selected pocket reachable,
+      // while gravity, inertia and individual peg collisions shape the route.
+      const desiredX = targetX * smooth;
+      const steering = Math.max(-720, Math.min(720, (desiredX - x) * 4.2 - vx * 2.1));
+      vx += steering * dt;
+      vy += gravity * dt;
 
-      for (const peg of pegs) {
-        const dx = x - peg.x, dy = y - peg.y;
-        const distance = Math.hypot(dx, dy);
-        if (distance > 0 && distance < peg.r) {
-          const nx = dx / distance, ny = dy / distance;
-          x = peg.x + nx * peg.r;
-          y = peg.y + ny * peg.r;
-          const normalSpeed = vx * nx + vy * ny;
-          if (normalSpeed < 0) {
-            vx -= (1 + restitution) * normalSpeed * nx;
-            vy -= (1 + restitution) * normalSpeed * ny;
-            // A little tangential energy loss gives each peg hit some weight.
-            const tangentX = -ny, tangentY = nx;
-            const tangentSpeed = vx * tangentX + vy * tangentY;
-            vx -= tangentSpeed * tangentX * .035;
-            vy -= tangentSpeed * tangentY * .035;
-            vx += (Math.random() - .5) * 30;
+      const step = dt / 2;
+      for (let n = 0; n < 2; n++) {
+        x += vx * step;
+        y += vy * step;
+        if (x < -halfWidth || x > halfWidth) {
+          x = Math.max(-halfWidth, Math.min(halfWidth, x));
+          vx *= -.68;
+        }
+        for (const peg of pegs) {
+          const dx = x - peg.x, dy = y - peg.y;
+          const distance = Math.hypot(dx, dy);
+          if (distance > 0 && distance < peg.r) {
+            const nx = dx / distance, ny = dy / distance;
+            x = peg.x + nx * peg.r;
+            y = peg.y + ny * peg.r;
+            const normalSpeed = vx * nx + vy * ny;
+            if (normalSpeed < 0) {
+              vx -= (1 + restitution) * normalSpeed * nx;
+              vy -= (1 + restitution) * normalSpeed * ny;
+              const tangentX = -ny, tangentY = nx;
+              const tangentSpeed = vx * tangentX + vy * tangentY;
+              vx -= tangentSpeed * tangentX * .035;
+              vy -= tangentSpeed * tangentY * .035;
+              vx += (Math.random() - .5) * 30;
+            }
           }
         }
       }
     }
 
-    // Let the ball roll into the chosen pocket under a damped spring force.
-    // This replaces the previous visible end-of-drop interpolation/snap.
-    if (y >= targetY - 15) {
-      const dx = targetX - x;
-      if (Math.abs(dx) < 1.8 && Math.abs(vx) < 12 && Math.abs(targetY - y) < 2 && Math.abs(vy) < 12) {
-        finished = true;
-      }
-    }
-
+    ball.style.transform = `translate3d(${x}px,${y}px,0)`;
     if (!finished) {
-      ball.style.transform = `translate3d(${x}px,${y}px,0)`;
       requestAnimationFrame(frame);
       return;
     }
-
-    // The damped pocket spring brings the ball to rest without a scripted snap.
-    ball.style.transform = `translate3d(${x}px,${y}px,0)`;
     target.classList.add("landed");
     if (typeof onComplete === "function") onComplete();
   };
