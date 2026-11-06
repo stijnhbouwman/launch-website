@@ -527,17 +527,6 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 @keyframes fortuneWheelSpin { from { transform: rotate(0); } to { transform: rotate(var(--wheel-rotation)); } }
 .plinko-board { position: relative; overflow: hidden; }
 .plinko-ball { position: absolute; z-index: 3; top: 12px; left: calc(50% - 7px); width: 14px; height: 14px; border-radius: 50%; opacity: 0; background: radial-gradient(circle at 32% 28%,#fff8c9,#e9bd52 55%,#8b5d1c); box-shadow: 0 0 12px #f7d77b,0 2px 4px #000b; pointer-events: none; }
-.plinko-board.dropping .plinko-ball { opacity: 1; animation: plinkoBallDrop 2.2s cubic-bezier(.35,.05,.6,1) both; }
-@keyframes plinkoBallDrop { 0% { transform: translate(0,0) scale(1); } 15% { transform: translate(calc(var(--plinko-shift) * .08),45px) scale(.95); } 30% { transform: translate(calc(var(--plinko-shift) * -.18),92px) scale(1); } 45% { transform: translate(calc(var(--plinko-shift) * .16),140px) scale(.92); } 60% { transform: translate(calc(var(--plinko-shift) * -.12),188px) scale(1); } 78% { transform: translate(calc(var(--plinko-shift) * .3),238px) scale(.9); } 100% { transform: translate(var(--plinko-shift),285px) scale(.82); opacity: 1; } }
+.plinko-board.dropping .plinko-ball { opacity: 1; will-change: transform; }
 @media (prefers-reduced-motion: reduce) { .slot-machine.spinning .slot-reels span,.fortune-wheel.spinning,.plinko-board.dropping .plinko-ball { animation-duration: .01ms; animation-iteration-count: 1; } }
 
-/* Keep the Plinko ball path compatible with standard CSS calc support. */
-@keyframes plinkoBallDrop {
-  0% { transform: translate(0,0) scale(1); }
-  15% { transform: translate(var(--plinko-x-15),var(--plinko-y-15)) scale(.95); }
-  30% { transform: translate(var(--plinko-x-30),var(--plinko-y-30)) scale(1); }
-  45% { transform: translate(var(--plinko-x-45),var(--plinko-y-45)) scale(.92); }
-  60% { transform: translate(var(--plinko-x-60),var(--plinko-y-60)) scale(1); }
-  78% { transform: translate(var(--plinko-x-78),var(--plinko-y-78)) scale(.9); }
-  100% { transform: translate(var(--plinko-shift),var(--plinko-drop-y)) scale(.82); opacity: 1; }
-}
