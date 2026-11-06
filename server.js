@@ -531,6 +531,16 @@ function simulatePlinkoDrop() {
         }
       }
     }
+    // The bottom tray is divided into 11 real pockets. Once the ball enters
+    // the tray, the divider walls contain it instead of assigning a slot by RNG.
+    if (y >= 0.86) {
+      const width = halfWidth * 2 / 11;
+      const pocket = Math.max(0, Math.min(10, Math.floor((x + halfWidth) / width)));
+      const left = -halfWidth + pocket * width + radius;
+      const right = -halfWidth + (pocket + 1) * width - radius;
+      if (x < left) { x = left; vx = Math.abs(vx) * 0.45; }
+      if (x > right) { x = right; vx = -Math.abs(vx) * 0.45; }
+    }
     if (frame % 2 === 0) path.push([Number(x.toFixed(4)), Number(Math.min(y, 1).toFixed(4))]);
   }
   const slot = Math.max(0, Math.min(10, Math.floor((x + halfWidth) / (halfWidth * 2) * 11)));
