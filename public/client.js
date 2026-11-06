@@ -880,7 +880,13 @@ function animatePlinkoPhysics(board, ball, target, onComplete) {
     let steering = (desiredX - x) * 4.2 - vx * 2.1;
     steering = Math.max(-720, Math.min(720, steering));
     vx += steering * dt;
-    vy += gravity * dt;
+    const nearingPocket = y >= targetY - 24;
+    if (!nearingPocket) vy += gravity * dt;
+    else {
+      const pocketDx = targetX - x;
+      vx += (pocketDx * 18 - vx * 7) * dt;
+      vy += ((targetY - y) * 22 - vy * 8) * dt;
+    }
 
     // Two small physics steps make peg contacts stable and prevent tunnelling.
     const step = dt / 2;
@@ -919,24 +925,18 @@ function animatePlinkoPhysics(board, ball, target, onComplete) {
     // This replaces the previous visible end-of-drop interpolation/snap.
     if (y >= targetY - 15) {
       const dx = targetX - x;
-      vx += (dx * 18 - vx * 7) * dt;
-      vy += (targetY - y) * 5 * dt;
-      if (Math.abs(dx) < 1.8 && Math.abs(vx) < 12 && y >= targetY - 2) {
+      if (Math.abs(dx) < 1.8 && Math.abs(vx) < 12 && Math.abs(targetY - y) < 2 && Math.abs(vy) < 12) {
         finished = true;
       }
     }
 
-    if (!finished && elapsed < 5.5) {
+    if (!finished) {
       ball.style.transform = `translate3d(${x}px,${y}px,0)`;
       requestAnimationFrame(frame);
       return;
     }
 
-    // End only once the ball is already at the pocket; no visual jump across the board.
-    if (!finished) {
-      x = targetX;
-      y = targetY;
-    }
+    // The damped pocket spring brings the ball to rest without a scripted snap.
     ball.style.transform = `translate3d(${x}px,${y}px,0)`;
     target.classList.add("landed");
     if (typeof onComplete === "function") onComplete();
