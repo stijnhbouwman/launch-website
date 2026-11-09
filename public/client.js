@@ -925,6 +925,11 @@ function animatePlinkoPhysics(board, ball, onComplete, path) {
       if (typeof onComplete === "function") onComplete(detectedBox);
       return;
     }
+    if (elapsed >= 15000) {
+      detected = true;
+      if (typeof onComplete === "function") onComplete(null);
+      return;
+    }
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
@@ -945,6 +950,10 @@ function renderPlinko() {
       detectors.forEach(detector => detector.classList.remove("landed"));
       if (result) result.textContent = "Ball dropping…";
       animatePlinkoPhysics(board, ball, detectedBox => {
+        if (!detectedBox) {
+          if (result) result.textContent = "The ball did not reach a box within 15 seconds.";
+          return;
+        }
         const detectedSlot = [...detectors].indexOf(detectedBox);
         if (result) result.textContent = `${escapeHtml(latest.name)} landed in box ${detectedSlot + 1} · ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid`;
       }, latest.path);
