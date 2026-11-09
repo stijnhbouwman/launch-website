@@ -548,7 +548,7 @@ function simulatePlinkoDrop() {
     // trajectory without skipping samples or inventing a final landing point.
     path.push([Number(x.toFixed(4)), Number(Math.min(y, 1).toFixed(4))]);
   }
-  const slot = Math.max(0, Math.min(10, Math.floor((x + halfWidth) / (halfWidth * 2) * 11)));
+  const slot = Math.max(0, Math.min(8, Math.floor((x + halfWidth) / (halfWidth * 2) * 9)));
   return { slot, path };
 }
 
@@ -1486,7 +1486,7 @@ function handleMessage(socket, message) {
     if (!validAmount(amount) || amount > chipsFor(room, player)) return sendError(socket, "Choose a wager from 1 chip up to your available balance.");
     const cooldown = gameCooldownRemaining(player, "plinko", 2400);
     if (cooldown) return sendError(socket, "Please wait " + Math.ceil(cooldown / 1000) + " seconds before dropping again.");
-    const multipliers = [0, 0, 0.5, 0.75, 1, 3, 1, 0.75, 0.5, 0, 0];
+    const multipliers = [3, 1, 0.75, 0.5, 0, 0.5, 0.75, 1, 3];
     const drop = simulatePlinkoDrop();
     const slot = drop.slot;
     const multiplier = multipliers[slot];
