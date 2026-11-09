@@ -875,7 +875,7 @@ function animatePlinkoPhysics(board, ball, target, onComplete, path) {
     const nx = a[0] + (b[0] - a[0]) * mix;
     const ny = a[1] + (b[1] - a[1]) * mix;
     const x = progress >= 1 ? landingX : nx * scaleX;
-    const y = progress >= 1 ? landingY : Math.max(0, ny * (targetRect.top - startY));
+    const y = progress >= 1 ? landingY : Math.max(0, ny * landingY);
     ball.style.transform = `translate3d(${x}px,${y}px,0)`;
     if (progress < 1) {
       requestAnimationFrame(frame);
