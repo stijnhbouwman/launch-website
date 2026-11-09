@@ -503,8 +503,9 @@ function simulatePlinkoDrop() {
   for (let row = 0; row < 10; row++) {
     const span = 0.82, count = row % 2 === 0 ? 10 : 9;
     for (let col = 0; col < count; col++) {
-      const offset = count === 9 ? 0.5 : 0;
-      pegs.push({x: -span / 2 + span * (col + offset) / 9, y: 0.13 + row * 0.071, r: 0.022 + radius});
+      // Match the 19-column visual grid: pegs occupy alternating columns.
+      const gridColumnCenter = (row % 2 === 0 ? col * 2 + 0.5 : col * 2 + 1.5) / 19;
+      pegs.push({x: -span / 2 + span * gridColumnCenter, y: 0.13 + row * 0.071, r: 0.022 + radius});
     }
   }
   let x = 0, y = 0.015, vx = (Math.random() - 0.5) * 0.62, vy = 0.12;
