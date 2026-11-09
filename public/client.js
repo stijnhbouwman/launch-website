@@ -33,7 +33,19 @@ function triggerTimedGameAction(game, message) {
   localGameCooldowns[game] = Date.now() + (durations[game] || 5000);
   send(message);
   render();
-  window.setTimeout(() => render(), (durations[game] || 5000) + 50);
+  window.setTimeout(() => {
+    if (game === "plinko") {
+      // Do not rerender the game board when the wager cooldown ends:
+      // replacing the board DOM would interrupt the in-progress ball animation.
+      const button = content.querySelector("#drop-plinko");
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Drop the ball ↘";
+      }
+    } else {
+      render();
+    }
+  }, (durations[game] || 5000) + 50);
 }
 function shouldAnimateResult(game, timestamp) {
   if (!timestamp || Date.now() - timestamp > 6000 || animatedGameResults[game] === timestamp) return false;
