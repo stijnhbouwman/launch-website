@@ -544,10 +544,11 @@ function simulatePlinkoDrop() {
       if (x < left) { x = left; vx = Math.abs(vx) * 0.45; }
       if (x > right) { x = right; vx = -Math.abs(vx) * 0.45; }
     }
-    if (frame % 2 === 0) path.push([Number(x.toFixed(4)), Number(Math.min(y, 1).toFixed(4))]);
+    // Record every 120 Hz physics step so the client can replay the
+    // trajectory without skipping samples or inventing a final landing point.
+    path.push([Number(x.toFixed(4)), Number(Math.min(y, 1).toFixed(4))]);
   }
   const slot = Math.max(0, Math.min(10, Math.floor((x + halfWidth) / (halfWidth * 2) * 11)));
-  path.push([Number(x.toFixed(4)), 1]);
   return { slot, path };
 }
 
