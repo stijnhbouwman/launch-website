@@ -577,6 +577,34 @@ function betList() {
   ).join("")}</div>`;
 }
 
+function detectRoulettePocket(stage, ball, pocket, caption) {
+  let started = null;
+  let detected = false;
+  const frame = now => {
+    if (detected || !stage.isConnected || !ball.isConnected || !pocket.isConnected) return;
+    if (started === null) started = now;
+    const elapsed = now - started;
+    const ballRect = ball.getBoundingClientRect();
+    const pocketRect = pocket.getBoundingClientRect();
+    const ballX = ballRect.left + ballRect.width / 2;
+    const ballY = ballRect.top + ballRect.height / 2;
+    const pocketX = pocketRect.left + pocketRect.width / 2;
+    const pocketY = pocketRect.top + pocketRect.height / 2;
+    const contactDistance = Math.hypot(ballX - pocketX, ballY - pocketY);
+    // Only accept contact during the final settling pass, not while the ball
+    // is racing past the same pocket during its earlier revolutions.
+    if (elapsed >= 3200 && contactDistance <= (ballRect.width + pocketRect.width) / 2 + 2) {
+      detected = true;
+      stage.classList.add("pocket-detected");
+      pocket.classList.add("landed");
+      if (caption) caption.textContent = `Ball detected in pocket ${pocket.textContent.trim()}.`;
+      return;
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
 function renderRoulette() {
   const roulette = state.roulette;
   const readiness = roomReadiness(roulette.readyIds);
@@ -591,7 +619,7 @@ function renderRoulette() {
   const roulettePockets = wheelOrder.map((number, index) => {
     const angle = index * (360 / 37);
     const color = number === 0 ? "green" : reds.has(number) ? "red" : "black";
-    return `<span class="roulette-pocket ${color}" style="--pocket-angle:${angle}deg">${number}</span>`;
+    return `<span class="roulette-pocket ${color}" data-roulette-pocket="${number}" style="--pocket-angle:${angle}deg">${number}</span>`;
   }).join("");
   content.innerHTML = `
     <span class="eyebrow">THE WHEEL ROOM</span><h1>Roulette</h1>
@@ -600,7 +628,7 @@ function renderRoulette() {
       <section class="table-panel">
         <div class="table-panel-top"><h2>The shared wheel</h2><small>${state.room.isPrivate ? `${readiness.ready} / ${readiness.total} players ready` : `${roulette.bets.length} bets placed`}</small></div>
         <div class="roulette-table">
-          <div class="roulette-wheel-stage ${roulette.spinning ? "spinning" : ""}" style="--roulette-rotation:${rouletteRotation}deg;--roulette-ball-rotation:-1620deg">
+          <div class="roulette-wheel-stage ${roulette.spinning ? "spinning" : ""}" style="--roulette-rotation:${rouletteRotation}deg;--roulette-ball-rotation:-1800deg">
             <div class="roulette-wheel" style="transform:rotate(${rouletteRotation}deg)"><div class="roulette-pocket-ring">${roulettePockets}</div><div class="roulette-wheel-center">GH</div></div>
             <div class="roulette-ball-orbit"><span class="roulette-ball"></span></div>
             <div class="roulette-result ${result?.color ?? ""}">${roulette.spinning ? "✳" : result?.number ?? "—"}</div>
@@ -622,6 +650,13 @@ function renderRoulette() {
         <div class="recent-bets"><h4>On the table</h4>${betList()}</div>
       </aside>
     </div>`;
+  if (roulette.spinning && roulette.spinningResult) {
+    const stage = content.querySelector(".roulette-wheel-stage");
+    const ball = content.querySelector(".roulette-ball");
+    const pocket = content.querySelector(`[data-roulette-pocket="${roulette.spinningResult.number}"]`);
+    const caption = content.querySelector(".result-caption");
+    if (stage && ball && pocket) detectRoulettePocket(stage, ball, pocket, caption);
+  }
   content.querySelectorAll("[data-selection]").forEach((button) => {
     button.addEventListener("click", () => {
       selectedBet = button.dataset.selection;
