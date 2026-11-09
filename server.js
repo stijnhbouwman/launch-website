@@ -1397,8 +1397,8 @@ function handleMessage(socket, message) {
     if (roulette.bets.some((bet) => bet.playerId === player.id)) {
       return sendError(socket, "You have already placed your bet for this spin.");
     }
-    if (!/^(red|black|[0-9]|[12][0-9]|3[0-6])$/.test(selection)) {
-      return sendError(socket, "Choose red, black, or a number from 0 to 36.");
+    if (!/^(red|black|odd|even|[0-9]|[12][0-9]|3[0-6])$/.test(selection)) {
+      return sendError(socket, "Choose red, black, odd, even, or a number from 0 to 36.");
     }
     if (!validAmount(message.amount) || message.amount > chipsFor(room, player)) {
       return sendError(socket, "Enter a whole-number wager from 1 chip up to your available balance.");
