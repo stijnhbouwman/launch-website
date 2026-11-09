@@ -949,31 +949,31 @@ function animatePlinkoPhysics(board, ball, onComplete, path) {
 function renderPlinko() {
   const history = state.plinko.history || [];
   const latest = history[0];
+  const latestBatch = latest ? history.filter(item => item.timestamp === latest.timestamp).slice(0, 5) : [];
   const animateDrop = shouldAnimateResult("plinko", latest?.timestamp);
   const cooldown = gameCooldownActive("plinko");
   const multipliers = [3,1,0.75,0.5,0,0.5,0.75,1,3];
-  content.innerHTML = `<span class="eyebrow">THE DROP ZONE</span><h1>Plinko</h1><p class="hero-subtitle">Drop a ball through the pegs for a prize of up to 3× your wager.</p><div class="game-layout"><section class="table-panel"><div class="table-panel-top"><h2>The Plinko board</h2><small>Randomized landing slot · shared history</small></div><div class="plinko-board ${animateDrop ? "dropping" : ""}" style="--plinko-shift:${latest ? (latest.slot - 4) * 22 : 0}px"><div class="plinko-peg-field">${Array.from({length:10},(_,row)=>{const count=row%2===0?10:9;return `<div class="plinko-peg-row">${Array.from({length:count},(_,col)=>`<i style="grid-column:${row%2===0?col*2+1:col*2+2}"></i>`).join("")}</div>`;}).join("")}</div><div class="plinko-ball" data-plinko-detectable="true" aria-hidden="true"></div><div class="plinko-slots">${multipliers.map((m,i)=>`<span data-plinko-detector="${i}" class="${latest?.slot===i?"landed":""}">${m}×</span>`).join("")}</div></div><div class="fortune-result">${latest ? `${escapeHtml(latest.name)} landed on ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid` : "Drop the first ball to get started."}</div><div class="recent-bets"><h4>Recent drops</h4>${history.length ? `<div class="activity-list">${history.slice(0,10).map(item=>`<div class="activity-row"><span>${escapeHtml(item.name)} · ${item.multiplier}×</span><small>${item.payout ? `+${item.payout}` : `−${item.amount}`} chips</small></div>`).join("")}</div>` : `<div class="activity-empty">No balls dropped yet.</div>`}</div></section><aside class="control-panel"><h3>Drop your ball</h3><p class="control-copy">The landing slot is selected securely by the server. Multipliers are shown along the bottom.</p><label class="field-label" for="plinko-amount">Your wager</label><div class="amount-row"><input class="chip-input" id="plinko-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10,25,50].map(a=>`<button class="preset ${selectedAmount===a?"selected":""}" data-amount="${a}">${a}</button>`).join("")}</div></div><button class="primary-button full-button" id="drop-plinko" ${cooldown ? "disabled" : ""}>${cooldown ? "Ball dropping…" : "Drop the ball ↘"}</button><div class="table-rules">${[0,0.5,0.75,1,3].map(m=>`<div class="rule-row"><span>${m}× slot</span><strong>${m===0?"No payout":`${m}× wager`}</strong></div>`).join("")}</div></aside></div>`;
-  if (animateDrop && latest) {
+  content.innerHTML = `<span class="eyebrow">THE DROP ZONE</span><h1>Plinko</h1><p class="hero-subtitle">Drop a ball through the pegs for a prize of up to 3× your wager.</p><div class="game-layout"><section class="table-panel"><div class="table-panel-top"><h2>The Plinko board</h2><small>Randomized landing slot · shared history</small></div><div class="plinko-board ${animateDrop ? "dropping" : ""}" style="--plinko-shift:${latest ? (latest.slot - 4) * 22 : 0}px"><div class="plinko-peg-field">${Array.from({length:10},(_,row)=>{const count=row%2===0?10:9;return `<div class="plinko-peg-row">${Array.from({length:count},(_,col)=>`<i style="grid-column:${row%2===0?col*2+1:col*2+2}"></i>`).join("")}</div>`;}).join("")}</div>${latestBatch.map((item,index)=>`<div class="plinko-ball" data-plinko-ball="${index}" data-plinko-detectable="true" aria-hidden="true" style="left:calc(50% + ${(index-(latestBatch.length-1)/2)*9}px)"></div>`).join("")}<div class="plinko-slots">${multipliers.map((m,i)=>`<span data-plinko-detector="${i}" class="${latest?.slot===i?"landed":""}">${m}×</span>`).join("")}</div></div><div class="fortune-result">${latest ? `${escapeHtml(latest.name)} landed on ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid` : "Drop the first ball to get started."}</div><div class="recent-bets"><h4>Recent drops</h4>${history.length ? `<div class="activity-list">${history.slice(0,10).map(item=>`<div class="activity-row"><span>${escapeHtml(item.name)} · ${item.multiplier}×</span><small>${item.payout ? `+${item.payout}` : `−${item.amount}`} chips</small></div>`).join("")}</div>` : `<div class="activity-empty">No balls dropped yet.</div>`}</div></section><aside class="control-panel"><h3>Drop your ball</h3><p class="control-copy">The landing slot is selected securely by the server. Multipliers are shown along the bottom.</p><label class="field-label" for="plinko-amount">Wager per ball</label><div class="amount-row"><input class="chip-input" id="plinko-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10,25,50].map(a=>`<button class="preset ${selectedAmount===a?"selected":""}" data-amount="${a}">${a}</button>`).join("")}</div></div><label class="field-label" for="plinko-count">Number of balls (1–5)</label><select class="chip-input" id="plinko-count">${[1,2,3,4,5].map(n=>`<option value="${n}">${n} ${n===1?"ball":"balls"}</option>`).join("")}</select><p class="control-copy">Total wager: <strong id="plinko-total">${selectedAmount.toLocaleString()} chips</strong></p><button class="primary-button full-button" id="drop-plinko" ${cooldown ? "disabled" : ""}>${cooldown ? "Balls dropping…" : "Drop balls ↘"}</button><div class="table-rules">${[0,0.5,0.75,1,3].map(m=>`<div class="rule-row"><span>${m}× slot</span><strong>${m===0?"No payout":`${m}× wager`}</strong></div>`).join("")}</div></aside></div>`;
+  if (animateDrop && latest && latestBatch.length) {
     const board = content.querySelector(".plinko-board");
-    const ball = content.querySelector(".plinko-ball");
-    const detectors = board?.querySelectorAll(".plinko-slots [data-plinko-detector]");
+    const balls = [...content.querySelectorAll(".plinko-ball[data-plinko-ball]")];
     const result = content.querySelector(".fortune-result");
-    if (board && ball && detectors?.length) {
+    if (board && balls.length) {
+      const detectors = board.querySelectorAll(".plinko-slots [data-plinko-detector]");
       detectors.forEach(detector => detector.classList.remove("landed"));
-      if (result) result.textContent = "Ball dropping…";
-      animatePlinkoPhysics(board, ball, detectedBox => {
-        if (!detectedBox) {
-          if (result) result.textContent = "The ball did not reach a box within 15 seconds.";
-          return;
-        }
-        const detectedSlot = [...detectors].indexOf(detectedBox);
-        if (result) result.textContent = `${escapeHtml(latest.name)} landed in box ${detectedSlot + 1} · ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid`;
-      }, latest.path);
+      if (result) result.textContent = `${balls.length} ${balls.length===1?"ball":"balls"} dropping…`;
+      let completed = 0, paid = 0, landed = 0;
+      balls.forEach((ball,index)=>animatePlinkoPhysics(board,ball,detectedBox=>{
+        completed++;
+        if (detectedBox) { landed++; paid += latestBatch[index].payout; }
+        if (completed === balls.length && result) result.textContent = `${escapeHtml(latest.name)} dropped ${balls.length} ${balls.length===1?"ball":"balls"} · ${landed} landed · ${paid.toLocaleString()} chips paid in total`;
+      },latestBatch[index].path));
     }
   }
   content.querySelectorAll("[data-amount]").forEach(button=>button.addEventListener("click",()=>{selectedAmount=Number(button.dataset.amount);renderPlinko();}));
-  content.querySelector("#plinko-amount").addEventListener("input",event=>selectedAmount=Number(event.target.value));
-  content.querySelector("#drop-plinko").addEventListener("click",()=>triggerTimedGameAction("plinko",{type:"plinko-drop",amount:selectedAmount}));
+  content.querySelector("#plinko-amount").addEventListener("input",event=>{selectedAmount=Number(event.target.value);const count=Number(content.querySelector("#plinko-count").value);const total=content.querySelector("#plinko-total");if(total)total.textContent=`${(selectedAmount*count).toLocaleString()} chips`;});
+  content.querySelector("#plinko-count").addEventListener("change",event=>{const total=content.querySelector("#plinko-total");if(total)total.textContent=`${(selectedAmount*Number(event.target.value)).toLocaleString()} chips`;});
+  content.querySelector("#drop-plinko").addEventListener("click",()=>triggerTimedGameAction("plinko",{type:"plinko-drop",amount:selectedAmount,count:Number(content.querySelector("#plinko-count").value)}));
 }
 
 function renderPoker() {
