@@ -873,7 +873,7 @@ function animatePlinkoPhysics(board, ball, onComplete, path) {
   const points = Array.isArray(path) && path.length > 1 ? path : [[0,0],[0,1]];
   // Replay the full physical trajectory without steering or snapping it
   // toward a predetermined prize pocket.
-  const duration = (points.length - 1) * (1000 / 60);
+  const duration = (points.length - 1) * (1000 / 120);
   let started = null;
   let detected = false;
   ball.style.opacity = "1";
