@@ -846,34 +846,34 @@ function renderWheelFortune() {
   content.querySelector("#spin-fortune").addEventListener("click",()=>triggerTimedGameAction("wheel",{type:"wheel-fortune-spin",amount:selectedAmount}));
 }
 
-function plinkoDetectorRecognizesBall(detector, detectableObject, expectedSlot) {
-  if (!detector?.matches("[data-plinko-detector]") ||
-      !detectableObject?.matches("[data-plinko-detectable]") ||
-      detector.dataset.plinkoDetector !== String(expectedSlot)) return false;
-  const detectorRect = detector.getBoundingClientRect();
+function plinkoDetectorRecognizesBall(detectors, detectableObject) {
+  if (!detectableObject?.matches("[data-plinko-detectable]")) return null;
   const objectRect = detectableObject.getBoundingClientRect();
   const centerX = objectRect.left + objectRect.width / 2;
   const centerY = objectRect.top + objectRect.height / 2;
-  // The selected prize box is the detector; it only fires when the ball
-  // object itself enters that exact box.
-  return centerX >= detectorRect.left && centerX <= detectorRect.right &&
-    centerY >= detectorRect.top && centerY <= detectorRect.bottom;
+  // Every prize pocket is a detector. Return whichever pocket the ball
+  // physically enters; no pocket is preselected for the animation.
+  for (const detector of detectors) {
+    if (!detector.matches("[data-plinko-detector]")) continue;
+    const rect = detector.getBoundingClientRect();
+    if (centerX >= rect.left && centerX <= rect.right &&
+        centerY >= rect.top && centerY <= rect.bottom) return detector;
+  }
+  return null;
 }
 
-function animatePlinkoPhysics(board, ball, target, onComplete, path, expectedSlot) {
-  const startX = board.getBoundingClientRect().left + board.clientLeft + board.clientWidth / 2;
-  const startY = board.getBoundingClientRect().top + board.clientTop + 19;
+function animatePlinkoPhysics(board, ball, onComplete, path) {
+  const boardRect = board.getBoundingClientRect();
+  const startX = boardRect.left + board.clientLeft + board.clientWidth / 2;
+  const startCenterY = boardRect.top + board.clientTop + 19;
+  const slots = [...board.querySelectorAll(".plinko-slots [data-plinko-detector]")];
+  const slotsRect = board.querySelector(".plinko-slots")?.getBoundingClientRect();
   const scaleX = (board.clientWidth - 24) / 0.96;
+  const scaleY = slotsRect ? slotsRect.top + slotsRect.height / 2 - startCenterY : board.clientHeight - 30;
   const points = Array.isArray(path) && path.length > 1 ? path : [[0,0],[0,1]];
-  // Server path samples are recorded at 60 frames per second.
+  // Replay the full physical trajectory without steering or snapping it
+  // toward a predetermined prize pocket.
   const duration = (points.length - 1) * (1000 / 60);
-  const ballRadius = (ball.offsetWidth || 14) / 2;
-  const detectorRect = target.getBoundingClientRect();
-  const landingX = Math.max(
-    detectorRect.left + ballRadius,
-    Math.min(detectorRect.right - ballRadius, startX + points[points.length - 1][0] * scaleX)
-  ) - startX;
-  const landingY = detectorRect.top + detectorRect.height / 2 - ballRadius - startY;
   let started = null;
   let detected = false;
   ball.style.opacity = "1";
@@ -888,22 +888,21 @@ function animatePlinkoPhysics(board, ball, target, onComplete, path, expectedSlo
     const a = points[index], b = points[index + 1];
     const nx = a[0] + (b[0] - a[0]) * mix;
     const ny = a[1] + (b[1] - a[1]) * mix;
-    const x = progress >= 1 ? landingX : nx * scaleX;
-    const y = progress >= 1 ? landingY : Math.max(0, ny * landingY);
-    ball.style.transform = `translate3d(${x}px,${y}px,0)`;
+    ball.style.transform = `translate3d(${nx * scaleX}px,${Math.max(0, ny * scaleY)}px,0)`;
 
-    // Keep the animation running until the correct box detects the ball.
-    if (!plinkoDetectorRecognizesBall(target, ball, expectedSlot)) {
-      requestAnimationFrame(frame);
+    const detectedBox = plinkoDetectorRecognizesBall(slots, ball);
+    if (detectedBox) {
+      detected = true;
+      detectedBox.classList.add("landed");
+      if (typeof onComplete === "function") onComplete(detectedBox);
       return;
     }
-    detected = true;
-    target.classList.add("landed");
-    if (typeof onComplete === "function") onComplete();
+    // If the ball has not entered any detector yet, keep following its
+    // physical path; reaching the last sample alone never completes it.
+    requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
 }
-
 function renderPlinko() {
   const history = state.plinko.history || [];
   const latest = history[0];
@@ -914,14 +913,15 @@ function renderPlinko() {
   if (animateDrop && latest) {
     const board = content.querySelector(".plinko-board");
     const ball = content.querySelector(".plinko-ball");
-    const target = content.querySelectorAll(".plinko-slots span")[latest.slot];
+    const detectors = board?.querySelectorAll(".plinko-slots [data-plinko-detector]");
     const result = content.querySelector(".fortune-result");
-    if (board && ball && target) {
-      target.classList.remove("landed");
+    if (board && ball && detectors?.length) {
+      detectors.forEach(detector => detector.classList.remove("landed"));
       if (result) result.textContent = "Ball dropping…";
-      animatePlinkoPhysics(board, ball, target, () => {
-        if (result) result.textContent = `${escapeHtml(latest.name)} landed on ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid`;
-      }, latest.path, latest.slot);
+      animatePlinkoPhysics(board, ball, detectedBox => {
+        const detectedSlot = [...detectors].indexOf(detectedBox);
+        if (result) result.textContent = `${escapeHtml(latest.name)} landed in box ${detectedSlot + 1} · ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid`;
+      }, latest.path);
     }
   }
   content.querySelectorAll("[data-amount]").forEach(button=>button.addEventListener("click",()=>{selectedAmount=Number(button.dataset.amount);renderPlinko();}));
