@@ -846,26 +846,40 @@ function renderWheelFortune() {
   content.querySelector("#spin-fortune").addEventListener("click",()=>triggerTimedGameAction("wheel",{type:"wheel-fortune-spin",amount:selectedAmount}));
 }
 
-function animatePlinkoPhysics(board, ball, target, onComplete, path) {
-  const boardRect = board.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
-  const startX = boardRect.left + board.clientLeft + board.clientWidth / 2;
-  const startY = boardRect.top + board.clientTop + 19;
+function plinkoDetectorRecognizesBall(detector, detectableObject, expectedSlot) {
+  if (!detector?.matches("[data-plinko-detector]") ||
+      !detectableObject?.matches("[data-plinko-detectable]") ||
+      detector.dataset.plinkoDetector !== String(expectedSlot)) return false;
+  const detectorRect = detector.getBoundingClientRect();
+  const objectRect = detectableObject.getBoundingClientRect();
+  const centerX = objectRect.left + objectRect.width / 2;
+  const centerY = objectRect.top + objectRect.height / 2;
+  // The selected prize box is the detector; it only fires when the ball
+  // object itself enters that exact box.
+  return centerX >= detectorRect.left && centerX <= detectorRect.right &&
+    centerY >= detectorRect.top && centerY <= detectorRect.bottom;
+}
+
+function animatePlinkoPhysics(board, ball, target, onComplete, path, expectedSlot) {
+  const startX = board.getBoundingClientRect().left + board.clientLeft + board.clientWidth / 2;
+  const startY = board.getBoundingClientRect().top + board.clientTop + 19;
   const scaleX = (board.clientWidth - 24) / 0.96;
   const points = Array.isArray(path) && path.length > 1 ? path : [[0,0],[0,1]];
-  // The server records one point every 1/60 second. Play the complete recorded
-  // trajectory instead of forcing it into a short fixed animation window.
+  // Server path samples are recorded at 60 frames per second.
   const duration = (points.length - 1) * (1000 / 60);
   const ballRadius = (ball.offsetWidth || 14) / 2;
+  const detectorRect = target.getBoundingClientRect();
   const landingX = Math.max(
-    targetRect.left + ballRadius,
-    Math.min(targetRect.right - ballRadius, startX + points[points.length - 1][0] * scaleX)
+    detectorRect.left + ballRadius,
+    Math.min(detectorRect.right - ballRadius, startX + points[points.length - 1][0] * scaleX)
   ) - startX;
-  const landingY = targetRect.top + targetRect.height / 2 - ballRadius - startY;
+  const landingY = detectorRect.top + detectorRect.height / 2 - ballRadius - startY;
   let started = null;
+  let detected = false;
   ball.style.opacity = "1";
   ball.style.transform = "translate3d(0,0,0)";
   const frame = now => {
+    if (detected) return;
     if (started === null) started = now;
     const progress = Math.min(1, (now - started) / duration);
     const position = progress * (points.length - 1);
@@ -877,20 +891,13 @@ function animatePlinkoPhysics(board, ball, target, onComplete, path) {
     const x = progress >= 1 ? landingX : nx * scaleX;
     const y = progress >= 1 ? landingY : Math.max(0, ny * landingY);
     ball.style.transform = `translate3d(${x}px,${y}px,0)`;
-    if (progress < 1) {
+
+    // Keep the animation running until the correct box detects the ball.
+    if (!plinkoDetectorRecognizesBall(target, ball, expectedSlot)) {
       requestAnimationFrame(frame);
       return;
     }
-    // Complete only once the ball's center is physically inside its prize box.
-    const ballRect = ball.getBoundingClientRect();
-    const centerX = ballRect.left + ballRect.width / 2;
-    const centerY = ballRect.top + ballRect.height / 2;
-    const landed = centerX >= targetRect.left && centerX <= targetRect.right &&
-      centerY >= targetRect.top && centerY <= targetRect.bottom;
-    if (!landed) {
-      requestAnimationFrame(frame);
-      return;
-    }
+    detected = true;
     target.classList.add("landed");
     if (typeof onComplete === "function") onComplete();
   };
@@ -903,7 +910,7 @@ function renderPlinko() {
   const animateDrop = shouldAnimateResult("plinko", latest?.timestamp);
   const cooldown = gameCooldownActive("plinko");
   const multipliers = [0,0,0.5,0.75,1,3,1,0.75,0.5,0,0];
-  content.innerHTML = `<span class="eyebrow">THE DROP ZONE</span><h1>Plinko</h1><p class="hero-subtitle">Drop a ball through the pegs for a prize of up to 3× your wager.</p><div class="game-layout"><section class="table-panel"><div class="table-panel-top"><h2>The Plinko board</h2><small>Randomized landing slot · shared history</small></div><div class="plinko-board ${animateDrop ? "dropping" : ""}" style="--plinko-shift:${latest ? (latest.slot - 5) * 22 : 0}px"><div class="plinko-peg-field">${Array.from({length:10},(_,row)=>{const count=row%2===0?10:9;return `<div class="plinko-peg-row">${Array.from({length:count},(_,col)=>`<i style="grid-column:${row%2===0?col*2+1:col*2+2}"></i>`).join("")}</div>`;}).join("")}</div><div class="plinko-ball" aria-hidden="true"></div><div class="plinko-slots">${multipliers.map((m,i)=>`<span class="${latest?.slot===i?"landed":""}">${m}×</span>`).join("")}</div></div><div class="fortune-result">${latest ? `${escapeHtml(latest.name)} landed on ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid` : "Drop the first ball to get started."}</div><div class="recent-bets"><h4>Recent drops</h4>${history.length ? `<div class="activity-list">${history.slice(0,10).map(item=>`<div class="activity-row"><span>${escapeHtml(item.name)} · ${item.multiplier}×</span><small>${item.payout ? `+${item.payout}` : `−${item.amount}`} chips</small></div>`).join("")}</div>` : `<div class="activity-empty">No balls dropped yet.</div>`}</div></section><aside class="control-panel"><h3>Drop your ball</h3><p class="control-copy">The landing slot is selected securely by the server. Multipliers are shown along the bottom.</p><label class="field-label" for="plinko-amount">Your wager</label><div class="amount-row"><input class="chip-input" id="plinko-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10,25,50].map(a=>`<button class="preset ${selectedAmount===a?"selected":""}" data-amount="${a}">${a}</button>`).join("")}</div></div><button class="primary-button full-button" id="drop-plinko" ${cooldown ? "disabled" : ""}>${cooldown ? "Ball dropping…" : "Drop the ball ↘"}</button><div class="table-rules">${[0,0.5,0.75,1,3].map(m=>`<div class="rule-row"><span>${m}× slot</span><strong>${m===0?"No payout":`${m}× wager`}</strong></div>`).join("")}</div></aside></div>`;
+  content.innerHTML = `<span class="eyebrow">THE DROP ZONE</span><h1>Plinko</h1><p class="hero-subtitle">Drop a ball through the pegs for a prize of up to 3× your wager.</p><div class="game-layout"><section class="table-panel"><div class="table-panel-top"><h2>The Plinko board</h2><small>Randomized landing slot · shared history</small></div><div class="plinko-board ${animateDrop ? "dropping" : ""}" style="--plinko-shift:${latest ? (latest.slot - 5) * 22 : 0}px"><div class="plinko-peg-field">${Array.from({length:10},(_,row)=>{const count=row%2===0?10:9;return `<div class="plinko-peg-row">${Array.from({length:count},(_,col)=>`<i style="grid-column:${row%2===0?col*2+1:col*2+2}"></i>`).join("")}</div>`;}).join("")}</div><div class="plinko-ball" data-plinko-detectable="true" aria-hidden="true"></div><div class="plinko-slots">${multipliers.map((m,i)=>`<span data-plinko-detector="${i}" class="${latest?.slot===i?"landed":""}">${m}×</span>`).join("")}</div></div><div class="fortune-result">${latest ? `${escapeHtml(latest.name)} landed on ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid` : "Drop the first ball to get started."}</div><div class="recent-bets"><h4>Recent drops</h4>${history.length ? `<div class="activity-list">${history.slice(0,10).map(item=>`<div class="activity-row"><span>${escapeHtml(item.name)} · ${item.multiplier}×</span><small>${item.payout ? `+${item.payout}` : `−${item.amount}`} chips</small></div>`).join("")}</div>` : `<div class="activity-empty">No balls dropped yet.</div>`}</div></section><aside class="control-panel"><h3>Drop your ball</h3><p class="control-copy">The landing slot is selected securely by the server. Multipliers are shown along the bottom.</p><label class="field-label" for="plinko-amount">Your wager</label><div class="amount-row"><input class="chip-input" id="plinko-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10,25,50].map(a=>`<button class="preset ${selectedAmount===a?"selected":""}" data-amount="${a}">${a}</button>`).join("")}</div></div><button class="primary-button full-button" id="drop-plinko" ${cooldown ? "disabled" : ""}>${cooldown ? "Ball dropping…" : "Drop the ball ↘"}</button><div class="table-rules">${[0,0.5,0.75,1,3].map(m=>`<div class="rule-row"><span>${m}× slot</span><strong>${m===0?"No payout":`${m}× wager`}</strong></div>`).join("")}</div></aside></div>`;
   if (animateDrop && latest) {
     const board = content.querySelector(".plinko-board");
     const ball = content.querySelector(".plinko-ball");
@@ -914,7 +921,7 @@ function renderPlinko() {
       if (result) result.textContent = "Ball dropping…";
       animatePlinkoPhysics(board, ball, target, () => {
         if (result) result.textContent = `${escapeHtml(latest.name)} landed on ${latest.multiplier}× · ${latest.payout.toLocaleString()} chips paid`;
-      }, latest.path);
+      }, latest.path, latest.slot);
     }
   }
   content.querySelectorAll("[data-amount]").forEach(button=>button.addEventListener("click",()=>{selectedAmount=Number(button.dataset.amount);renderPlinko();}));
