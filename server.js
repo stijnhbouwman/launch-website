@@ -1438,7 +1438,9 @@ function handleMessage(socket, message) {
         const winner =
           bet.selection === String(result) ||
           (bet.selection === "red" && color === "red") ||
-          (bet.selection === "black" && color === "black") ||\n          (bet.selection === "odd" && result !== 0 && result % 2 === 1) ||\n          (bet.selection === "even" && result !== 0 && result % 2 === 0);
+          (bet.selection === "black" && color === "black") ||
+          (bet.selection === "odd" && result !== 0 && result % 2 === 1) ||
+          (bet.selection === "even" && result !== 0 && result % 2 === 0);
         if (winner) {
           const winnerPlayer = players.get(bet.playerId);
           if (winnerPlayer) {
