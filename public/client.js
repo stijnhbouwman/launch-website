@@ -851,45 +851,73 @@ function plinkoDetectorRecognizesBall(detectors, detectableObject) {
   const objectRect = detectableObject.getBoundingClientRect();
   const centerX = objectRect.left + objectRect.width / 2;
   const centerY = objectRect.top + objectRect.height / 2;
-  // Every prize pocket is a detector. Return whichever pocket the ball
-  // physically enters; no pocket is preselected for the animation.
+  const radius = Math.min(objectRect.width, objectRect.height) / 2;
+  // Detect physical contact with a pocket, including contact across the
+  // narrow visual gaps between adjacent pocket boxes.
+  let contacted = null;
+  let nearestDistance = Infinity;
   for (const detector of detectors) {
     if (!detector.matches("[data-plinko-detector]")) continue;
     const rect = detector.getBoundingClientRect();
-    if (centerX >= rect.left && centerX <= rect.right &&
-        centerY >= rect.top && centerY <= rect.bottom) return detector;
+    const closestX = Math.max(rect.left, Math.min(centerX, rect.right));
+    const closestY = Math.max(rect.top, Math.min(centerY, rect.bottom));
+    const distance = Math.hypot(centerX - closestX, centerY - closestY);
+    if (distance <= radius && distance < nearestDistance) {
+      contacted = detector;
+      nearestDistance = distance;
+    }
   }
-  return null;
+  return contacted;
 }
 
 function animatePlinkoPhysics(board, ball, onComplete, path) {
   const boardRect = board.getBoundingClientRect();
-  const startX = boardRect.left + board.clientLeft + board.clientWidth / 2;
   const startCenterY = boardRect.top + board.clientTop + 19;
   const slots = [...board.querySelectorAll(".plinko-slots [data-plinko-detector]")];
   const slotsRect = board.querySelector(".plinko-slots")?.getBoundingClientRect();
   const scaleX = (board.clientWidth - 24) / 0.96;
   const scaleY = slotsRect ? slotsRect.top + slotsRect.height / 2 - startCenterY : board.clientHeight - 30;
   const points = Array.isArray(path) && path.length > 1 ? path : [[0,0],[0,1]];
-  // Replay the full physical trajectory without steering or snapping it
-  // toward a predetermined prize pocket.
   const duration = (points.length - 1) * (1000 / 120);
+  const last = points[points.length - 1];
+  const previous = points[points.length - 2];
+  let tailX = last[0], tailY = last[1];
+  let tailVx = (last[0] - previous[0]) * 0.85;
+  let tailVy = Math.max(0.0015, last[1] - previous[1]);
   let started = null;
+  let previousFrame = null;
   let detected = false;
   ball.style.opacity = "1";
   ball.style.transform = "translate3d(0,0,0)";
   const frame = now => {
     if (detected) return;
     if (started === null) started = now;
-    const progress = Math.min(1, (now - started) / duration);
-    const position = progress * (points.length - 1);
-    const index = Math.min(points.length - 2, Math.floor(position));
-    const mix = position - index;
-    const a = points[index], b = points[index + 1];
-    const nx = a[0] + (b[0] - a[0]) * mix;
-    const ny = a[1] + (b[1] - a[1]) * mix;
+    const elapsed = now - started;
+    let nx, ny;
+    if (elapsed <= duration) {
+      const position = Math.min(points.length - 1, elapsed / (1000 / 120));
+      const index = Math.min(points.length - 2, Math.floor(position));
+      const mix = position - index;
+      const a = points[index], b = points[index + 1];
+      nx = a[0] + (b[0] - a[0]) * mix;
+      ny = a[1] + (b[1] - a[1]) * mix;
+    } else {
+      // Continue the same momentum and gravity after the recorded samples;
+      // the animation has no timer-based or path-end completion condition.
+      const frameScale = previousFrame === null ? 1 : Math.min(2, (now - previousFrame) / (1000 / 60));
+      tailVy += 0.00022 * frameScale;
+      tailX += tailVx * frameScale;
+      tailY += tailVy * frameScale;
+      if (tailX < -0.48 || tailX > 0.48) {
+        tailX = Math.max(-0.48, Math.min(0.48, tailX));
+        tailVx *= -0.45;
+      }
+      tailVx *= Math.pow(0.985, frameScale);
+      nx = tailX;
+      ny = tailY;
+    }
+    previousFrame = now;
     ball.style.transform = `translate3d(${nx * scaleX}px,${Math.max(0, ny * scaleY)}px,0)`;
-
     const detectedBox = plinkoDetectorRecognizesBall(slots, ball);
     if (detectedBox) {
       detected = true;
@@ -897,8 +925,6 @@ function animatePlinkoPhysics(board, ball, onComplete, path) {
       if (typeof onComplete === "function") onComplete(detectedBox);
       return;
     }
-    // If the ball has not entered any detector yet, keep following its
-    // physical path; reaching the last sample alone never completes it.
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
