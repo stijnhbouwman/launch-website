@@ -530,3 +530,6 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .plinko-board.dropping .plinko-ball { opacity: 1; will-change: transform; }
 @media (prefers-reduced-motion: reduce) { .slot-machine.spinning .slot-reels span,.fortune-wheel.spinning,.plinko-board.dropping .plinko-ball { animation-duration: .01ms; animation-iteration-count: 1; } }
 
+
+/* Roulette ball pocket-contact detector */
+.roulette-pocket.landed{outline:2px solid #fff1ad;outline-offset:2px;filter:brightness(1.45)}.roulette-wheel-stage.pocket-detected .roulette-ball-orbit,.roulette-wheel-stage.pocket-detected .roulette-ball{animation-play-state:paused}
