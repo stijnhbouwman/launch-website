@@ -640,8 +640,8 @@ function renderRoulette() {
         <div class="table-history">${roulette.history.map((item) => `<span class="history-chip ${item.color}">${item.number}</span>`).join("") || `<span class="activity-empty">Recent results appear here.</span>`}</div>
       </section>
       <aside class="control-panel">
-        <h3>Place your bet</h3><p class="control-copy">Choose a color or select a number on the wheel.</p>
-        <div class="bet-type-row"><button class="bet-type ${selectedBet === "red" ? "selected" : ""}" data-selection="red">Red · 2×</button><button class="bet-type ${selectedBet === "black" ? "selected" : ""}" data-selection="black">Black · 2×</button></div>
+        <h3>Place your bet</h3><p class="control-copy">Choose red, black, odd, even, or a number on the wheel. Zero is neither odd nor even.</p>
+        <div class="bet-type-row"><button class="bet-type ${selectedBet === "red" ? "selected" : ""}" data-selection="red">Red · 2×</button><button class="bet-type ${selectedBet === "black" ? "selected" : ""}" data-selection="black">Black · 2×</button></div><div class="bet-type-row"><button class="bet-type ${selectedBet === "odd" ? "selected" : ""}" data-selection="odd">Odd · 2×</button><button class="bet-type ${selectedBet === "even" ? "selected" : ""}" data-selection="even">Even · 2×</button></div>
         <label class="field-label" for="roulette-amount">Your wager</label>
         <div class="amount-row"><input class="chip-input" id="roulette-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
         <button class="primary-button full-button" id="place-bet" ${roulette.spinning || alreadyBet ? "disabled" : ""}>${alreadyBet ? "Bet placed ✓" : `Place bet · ${selectedBet}`}</button>
