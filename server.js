@@ -1483,19 +1483,25 @@ function handleMessage(socket, message) {
 
   if (message.type === "plinko-drop") {
     const amount = message.amount;
-    if (!validAmount(amount) || amount > chipsFor(room, player)) return sendError(socket, "Choose a wager from 1 chip up to your available balance.");
+    const count = Number.isInteger(message.count) ? message.count : 1;
+    if (!validAmount(amount) || !Number.isInteger(count) || count < 1 || count > 5 || amount * count > chipsFor(room, player)) {
+      return sendError(socket, "Choose 1–5 balls and a wager per ball that fits your available balance.");
+    }
     const cooldown = gameCooldownRemaining(player, "plinko", 2400);
     if (cooldown) return sendError(socket, "Please wait " + Math.ceil(cooldown / 1000) + " seconds before dropping again.");
     const multipliers = [3, 1, 0.75, 0.5, 0, 0.5, 0.75, 1, 3];
-    const drop = simulatePlinkoDrop();
-    const slot = drop.slot;
-    const multiplier = multipliers[slot];
-    setChips(room, player, chipsFor(room, player) - amount);
-    const payout = Math.floor(amount * multiplier);
-    if (payout) addChips(room, player, payout);
-    room.plinko.history.unshift({ playerId: player.id, name: player.name, amount, payout, multiplier, slot, path: drop.path, timestamp: Date.now() });
+    const timestamp = Date.now();
+    const drops = Array.from({length:count},()=>simulatePlinkoDrop());
+    setChips(room, player, chipsFor(room, player) - amount * count);
+    for (const drop of drops) {
+      const slot = drop.slot;
+      const multiplier = multipliers[slot];
+      const payout = Math.floor(amount * multiplier);
+      if (payout) addChips(room, player, payout);
+      room.plinko.history.unshift({ playerId: player.id, name: player.name, amount, payout, multiplier, slot, path: drop.path, timestamp });
+      recordPlayerGame(player, "plinko", room, amount, payout, payout > amount ? "Win" : payout === amount ? "Push" : "Loss", multiplier + "× slot");
+    }
     room.plinko.history = room.plinko.history.slice(0, 20);
-    recordPlayerGame(player, "plinko", room, amount, payout, payout > amount ? "Win" : payout === amount ? "Push" : "Loss", multiplier + "× slot");
     endRoomIfBroke(room); savePlayers(); broadcast(); return;
   }
 
