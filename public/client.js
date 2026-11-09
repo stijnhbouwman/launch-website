@@ -851,11 +851,18 @@ function animatePlinkoPhysics(board, ball, target, onComplete, path) {
   const targetRect = target.getBoundingClientRect();
   const startX = boardRect.left + board.clientLeft + board.clientWidth / 2;
   const startY = boardRect.top + board.clientTop + 19;
-  const landingY = targetRect.top - startY + 7;
   const scaleX = (board.clientWidth - 24) / 0.96;
   const points = Array.isArray(path) && path.length > 1 ? path : [[0,0],[0,1]];
-  const duration = 2600;
-  let started = null, finished = false;
+  // The server records one point every 1/60 second. Play the complete recorded
+  // trajectory instead of forcing it into a short fixed animation window.
+  const duration = (points.length - 1) * (1000 / 60);
+  const ballRadius = (ball.offsetWidth || 14) / 2;
+  const landingX = Math.max(
+    targetRect.left + ballRadius,
+    Math.min(targetRect.right - ballRadius, startX + points[points.length - 1][0] * scaleX)
+  ) - startX;
+  const landingY = targetRect.top + targetRect.height / 2 - ballRadius - startY;
+  let started = null;
   ball.style.opacity = "1";
   ball.style.transform = "translate3d(0,0,0)";
   const frame = now => {
@@ -867,16 +874,23 @@ function animatePlinkoPhysics(board, ball, target, onComplete, path) {
     const a = points[index], b = points[index + 1];
     const nx = a[0] + (b[0] - a[0]) * mix;
     const ny = a[1] + (b[1] - a[1]) * mix;
-    const x = nx * scaleX;
-    const y = Math.min(landingY, Math.max(0, ny * landingY));
+    const x = progress >= 1 ? landingX : nx * scaleX;
+    const y = progress >= 1 ? landingY : Math.max(0, ny * (targetRect.top - startY));
     ball.style.transform = `translate3d(${x}px,${y}px,0)`;
     if (progress < 1) {
       requestAnimationFrame(frame);
       return;
     }
-    // The ball finishes inside the pocket identified by its physical path.
-    // Slot dividers keep it contained; no spring or end-position teleport.
-    finished = true;
+    // Complete only once the ball's center is physically inside its prize box.
+    const ballRect = ball.getBoundingClientRect();
+    const centerX = ballRect.left + ballRect.width / 2;
+    const centerY = ballRect.top + ballRect.height / 2;
+    const landed = centerX >= targetRect.left && centerX <= targetRect.right &&
+      centerY >= targetRect.top && centerY <= targetRect.bottom;
+    if (!landed) {
+      requestAnimationFrame(frame);
+      return;
+    }
     target.classList.add("landed");
     if (typeof onComplete === "function") onComplete();
   };
