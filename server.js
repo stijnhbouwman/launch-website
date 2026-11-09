@@ -499,11 +499,12 @@ function simulatePlinkoDrop() {
   // the board, so the same recorded path can be replayed at any screen size.
   const radius = 0.014, halfWidth = 0.48, gravity = 2.8, restitution = 0.64;
   const pegs = [];
-  // Match the visible square 10-by-10 peg grid exactly.
+  // Square footprint with alternating staggered rows for a zig-zag pattern.
   for (let row = 0; row < 10; row++) {
-    const span = 0.82;
-    for (let col = 0; col < 10; col++) {
-      pegs.push({x: -span / 2 + span * col / 9, y: 0.13 + row * 0.071, r: 0.022 + radius});
+    const span = 0.82, count = row % 2 === 0 ? 10 : 9;
+    for (let col = 0; col < count; col++) {
+      const offset = count === 9 ? 0.5 : 0;
+      pegs.push({x: -span / 2 + span * (col + offset) / 9, y: 0.13 + row * 0.071, r: 0.022 + radius});
     }
   }
   let x = 0, y = 0.015, vx = (Math.random() - 0.5) * 0.62, vy = 0.12;
