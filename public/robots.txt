@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://golden-hour-casino.onrender.com/sitemap.xml
+# The admin page returns noindex, nofollow so crawlers can process that directive.
+# Health and missing URLs return X-Robots-Tag: noindex, nofollow.
 
-# The private dashboard is excluded from search with its noindex meta directive.
+Sitemap: https://golden-hour-casino.onrender.com/sitemap.xml
