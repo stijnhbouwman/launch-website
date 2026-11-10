@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
-Disallow: /admin
 
 Sitemap: https://golden-hour-casino.onrender.com/sitemap.xml
+
+# The private dashboard is excluded from search with its noindex meta directive.
