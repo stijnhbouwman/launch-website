@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const { randomBytes, randomInt, timingSafeEqual } = require("node:crypto");
+const INDEXNOW_KEY = "E1BBACBB7FB426C3835A4662E7F812AB";
 const WebSocket = require("ws");
 
 const port = Number(process.env.PORT) || 3000;
@@ -1796,6 +1797,16 @@ function handleMessage(socket, message) {
 
 const server = http.createServer((request, response) => {
   const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
+  if (pathname === "/index.html") {
+    response.writeHead(301, { location: "/" });
+    response.end();
+    return;
+  }
+  if (pathname === "/admin/") {
+    response.writeHead(301, { location: "/admin" });
+    response.end();
+    return;
+  }
   if (pathname === "/health") {
     response.writeHead(200, { "content-type": "application/json" });
     response.end(JSON.stringify({ status: "ok" }));
@@ -1827,12 +1838,25 @@ const server = http.createServer((request, response) => {
       ".css": "text/css; charset=utf-8",
       ".js": "text/javascript; charset=utf-8",
       ".svg": "image/svg+xml",
+      ".xml": "application/xml; charset=utf-8",
+      ".txt": "text/plain; charset=utf-8",
     };
+    const modified = fs.statSync(filePath).mtime;
+    const etag = `W/"${content.length}-${modified.getTime()}"`;
+    const lastModified = modified.toUTCString();
+    if (request.headers["if-none-match"] === etag || (!request.headers["if-none-match"] && request.headers["if-modified-since"] && new Date(request.headers["if-modified-since"]) >= modified)) {
+      response.writeHead(304, { etag, "last-modified": lastModified });
+      response.end();
+      return;
+    }
     response.writeHead(200, {
       "content-type": contentTypes[extension] || "application/octet-stream",
-      "cache-control": "no-store",
+      "cache-control": "no-cache",
+      etag,
+      "last-modified": lastModified,
+      ...(pathname === "/admin" ? { "x-robots-tag": "noindex, nofollow" } : {}),
     });
-    response.end(content);
+    response.end(request.method === "HEAD" ? undefined : content);
   });
 });
 
@@ -1911,4 +1935,14 @@ webSocketServer.on("connection", (socket) => {
 
 server.listen(port, "0.0.0.0", () => {
   console.log(`Golden Hour Casino is listening on http://localhost:${port}`);
+  const siteUrl = "https://golden-hour-casino.onrender.com/";
+  fetch("https://api.indexnow.org/indexnow", {
+    method: "POST",
+    headers: { "content-type": "application/json; charset=utf-8" },
+    body: JSON.stringify({ host: "golden-hour-casino.onrender.com", key: INDEXNOW_KEY, keyLocation: `${siteUrl}${INDEXNOW_KEY}.txt`, urlList: [siteUrl] }),
+    signal: AbortSignal.timeout(8000),
+  }).then((result) => {
+    if (!result.ok) console.warn(`IndexNow notification returned HTTP ${result.status}`);
+    else console.log("IndexNow notified Bing about the homepage.");
+  }).catch((error) => console.warn("IndexNow notification could not be sent:", error.message));
 });
