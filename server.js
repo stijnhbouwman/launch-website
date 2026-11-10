@@ -1796,64 +1796,87 @@ function handleMessage(socket, message) {
 }
 
 const server = http.createServer((request, response) => {
-  const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
-  if (pathname === "/index.html") {
-    response.writeHead(301, { location: "/" });
-    response.end();
+  let pathname;
+  try {
+    pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
+  } catch {
+    response.writeHead(400, { "x-content-type-options": "nosniff" });
+    response.end("Invalid URL");
     return;
   }
-  if (pathname === "/admin/") {
-    response.writeHead(301, { location: "/admin" });
+  const redirects = new Map([
+    ["/index.html", "/"],
+    ["/about.html", "/about"],
+    ["/about/", "/about"],
+    ["/admin/", "/admin"],
+  ]);
+  if (redirects.has(pathname)) {
+    response.writeHead(301, { location: redirects.get(pathname), "cache-control": "public, max-age=3600" });
     response.end();
     return;
   }
   if (pathname === "/health") {
-    response.writeHead(200, { "content-type": "application/json" });
-    response.end(JSON.stringify({ status: "ok" }));
+    response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex, nofollow", "x-content-type-options": "nosniff" });
+    response.end(request.method === "HEAD" ? undefined : JSON.stringify({ status: "ok" }));
+    return;
+  }
+  if (pathname === "/sitemap.xml") {
+    const urls = ["/", "/about"];
+    const entries = urls.map((url) => {
+      const file = path.join(publicDirectory, url === "/" ? "index.html" : "about.html");
+      const lastmod = fs.existsSync(file) ? fs.statSync(file).mtime.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+      return `  <url><loc>https://golden-hour-casino.onrender.com${url}</loc><lastmod>${lastmod}</lastmod></url>`;
+    }).join("\n");
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
+    const etag = `W/"${Buffer.byteLength(sitemap)}-${Buffer.from(sitemap).toString("base64url").slice(0, 16)}"`;
+    const latest = Math.max(...urls.map((url) => fs.statSync(path.join(publicDirectory, url === "/" ? "index.html" : "about.html")).mtimeMs));
+    response.writeHead(200, { "content-type": "application/xml; charset=utf-8", "cache-control": "no-cache", etag, "last-modified": new Date(latest).toUTCString(), "x-content-type-options": "nosniff" });
+    response.end(request.method === "HEAD" ? undefined : sitemap);
     return;
   }
   let relativePath;
   try {
-    relativePath = pathname === "/" ? "index.html" : pathname === "/admin" || pathname === "/admin/" ? "admin.html" : decodeURIComponent(pathname.slice(1));
+    relativePath = pathname === "/" ? "index.html" : pathname === "/admin" ? "admin.html" : pathname === "/about" ? "about.html" : decodeURIComponent(pathname.slice(1));
   } catch {
-    response.writeHead(400);
+    response.writeHead(400, { "x-content-type-options": "nosniff" });
     response.end("Invalid path");
     return;
   }
   const filePath = path.resolve(publicDirectory, relativePath);
   if (!filePath.startsWith(`${publicDirectory}${path.sep}`)) {
-    response.writeHead(403);
+    response.writeHead(403, { "x-robots-tag": "noindex, nofollow", "x-content-type-options": "nosniff" });
     response.end("Forbidden");
     return;
   }
   fs.readFile(filePath, (error, content) => {
     if (error) {
-      response.writeHead(error.code === "ENOENT" ? 404 : 500);
-      response.end(error.code === "ENOENT" ? "Not found" : "Server error");
+      const status = error.code === "ENOENT" ? 404 : 500;
+      response.writeHead(status, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex, nofollow", "x-content-type-options": "nosniff" });
+      response.end(request.method === "HEAD" ? undefined : status === 404 ? "Not found" : "Server error");
       return;
     }
-    const extension = path.extname(filePath);
+    const extension = path.extname(filePath).toLowerCase();
     const contentTypes = {
-      ".html": "text/html; charset=utf-8",
-      ".css": "text/css; charset=utf-8",
-      ".js": "text/javascript; charset=utf-8",
-      ".svg": "image/svg+xml",
-      ".xml": "application/xml; charset=utf-8",
-      ".txt": "text/plain; charset=utf-8",
+      ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
+      ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml",
+      ".xml": "application/xml; charset=utf-8", ".txt": "text/plain; charset=utf-8",
+      ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+      ".webp": "image/webp", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json; charset=utf-8",
     };
     const modified = fs.statSync(filePath).mtime;
     const etag = `W/"${content.length}-${modified.getTime()}"`;
     const lastModified = modified.toUTCString();
     if (request.headers["if-none-match"] === etag || (!request.headers["if-none-match"] && request.headers["if-modified-since"] && new Date(request.headers["if-modified-since"]) >= modified)) {
-      response.writeHead(304, { etag, "last-modified": lastModified });
+      response.writeHead(304, { etag, "last-modified": lastModified, "x-content-type-options": "nosniff" });
       response.end();
       return;
     }
     response.writeHead(200, {
       "content-type": contentTypes[extension] || "application/octet-stream",
-      "cache-control": "no-cache",
-      etag,
-      "last-modified": lastModified,
+      "cache-control": extension === ".html" || extension === ".xml" ? "no-cache" : "public, max-age=3600",
+      etag, "last-modified": lastModified,
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "strict-origin-when-cross-origin",
       ...(pathname === "/admin" ? { "x-robots-tag": "noindex, nofollow" } : {}),
     });
     response.end(request.method === "HEAD" ? undefined : content);
@@ -1936,13 +1959,14 @@ webSocketServer.on("connection", (socket) => {
 server.listen(port, "0.0.0.0", () => {
   console.log(`Golden Hour Casino is listening on http://localhost:${port}`);
   const siteUrl = "https://golden-hour-casino.onrender.com/";
+  const changedUrls = [siteUrl, "https://golden-hour-casino.onrender.com/about"];
   fetch("https://api.indexnow.org/indexnow", {
     method: "POST",
     headers: { "content-type": "application/json; charset=utf-8" },
-    body: JSON.stringify({ host: "golden-hour-casino.onrender.com", key: INDEXNOW_KEY, keyLocation: `${siteUrl}${INDEXNOW_KEY}.txt`, urlList: [siteUrl] }),
+    body: JSON.stringify({ host: "golden-hour-casino.onrender.com", key: INDEXNOW_KEY, keyLocation: `${siteUrl}${INDEXNOW_KEY}.txt`, urlList: changedUrls }),
     signal: AbortSignal.timeout(8000),
   }).then((result) => {
     if (!result.ok) console.warn(`IndexNow notification returned HTTP ${result.status}`);
-    else console.log("IndexNow notified Bing about the homepage.");
+    else console.log("IndexNow notified Bing about the public pages.");
   }).catch((error) => console.warn("IndexNow notification could not be sent:", error.message));
 });
