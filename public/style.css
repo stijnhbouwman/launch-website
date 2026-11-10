@@ -533,3 +533,19 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 
 /* Roulette ball pocket-contact detector */
 .roulette-pocket.landed{outline:2px solid #fff1ad;outline-offset:2px;filter:brightness(1.45)}.roulette-wheel-stage.pocket-detected .roulette-ball-orbit,.roulette-wheel-stage.pocket-detected .roulette-ball{animation-play-state:paused}
+
+
+/* Crawlable homepage information */
+.seo-content{border-top:1px solid var(--line);background:#151815;padding:56px 28px 64px}
+.seo-content-inner{max-width:920px;margin:0 auto}
+.seo-content h2{font-family:var(--serif);font-size:clamp(26px,4vw,38px);margin:8px 0 14px}
+.seo-content h3{font-size:17px;margin:28px 0 10px;color:var(--gold-bright)}
+.seo-content p,.seo-content li{color:var(--muted);line-height:1.75}
+.seo-game-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px 28px;padding-left:20px}
+.seo-content a{color:var(--gold-bright);text-underline-offset:3px}
+.seo-content a:hover{color:var(--text)}
+.seo-game-descriptions{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.seo-game-descriptions article{border:1px solid var(--line);border-radius:12px;padding:4px 16px 14px}
+.seo-game-descriptions article h3{margin-top:14px}
+.seo-disclaimer{font-size:12px;margin-top:28px}
+@media(max-width:600px){.seo-content{padding:38px 18px 48px}}
