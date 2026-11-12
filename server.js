@@ -1879,7 +1879,7 @@ const server = http.createServer((request, response) => {
     }
     response.writeHead(200, {
       "content-type": contentTypes[extension] || "application/octet-stream",
-      "cache-control": extension === ".html" || extension === ".xml" ? "no-cache" : "public, max-age=3600",
+      "cache-control": [".html", ".xml", ".css", ".js"].includes(extension) ? "no-cache" : "public, max-age=3600",
       etag, "last-modified": lastModified,
       "x-content-type-options": "nosniff",
       "referrer-policy": "strict-origin-when-cross-origin",
