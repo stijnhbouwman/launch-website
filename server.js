@@ -1606,7 +1606,7 @@ function handleMessage(socket, message) {
       endRoomIfBroke(room);
       savePlayers();
       broadcast();
-    }, 4200);
+    }, Math.max(...Object.values(horseRace.raceTimes)) + 250);
     return;
   }
 
