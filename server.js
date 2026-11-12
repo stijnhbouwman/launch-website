@@ -55,7 +55,7 @@ function createRoom(code, isPrivate, ownerId = null) {
     chat: [],
     roulette: { bets: [], lastResult: null, spinningResult: null, history: [], spinning: false },
     slots: { history: [] },
-    horseRace: { phase: "waiting", bets: [], winner: null, history: [] },
+    horseRace: { phase: "waiting", bets: [], winner: null, history: [], raceTimes: null, raceStartedAt: null },
     blackjack: { phase: "waiting", players: [], dealer: [], deck: [], turnIndex: 0 },
     poker: { phase: "waiting", players: [], lastResult: null },
     wheelFortune: { history: [] },
@@ -474,7 +474,9 @@ function snapshot(roomCode) {
       bets: horseRace.bets.map(({ playerId, name, horse, amount }) => ({
         playerId, name, horse, amount,
       })),
-      winner: horseRace.winner,
+      winner: horseRace.phase === "racing" ? null : horseRace.winner,
+      raceTimes: horseRace.phase === "racing" ? horseRace.raceTimes : null,
+      raceStartedAt: horseRace.phase === "racing" ? horseRace.raceStartedAt : null,
       history: horseRace.history,
       readyIds: horseRace.bets.map((bet) => bet.playerId),
     },
@@ -1579,10 +1581,12 @@ function handleMessage(socket, message) {
     }
     horseRace.phase = "racing";
     horseRace.winner = null;
+    horseRace.raceTimes = Object.fromEntries(horseNames.map((horse) => [horse, 8500 + randomInt(4500)]));
+    horseRace.raceStartedAt = Date.now();
+    const winner = horseNames.reduce((best, horse) => horseRace.raceTimes[horse] < horseRace.raceTimes[best] ? horse : best, horseNames[0]);
     broadcast();
     setTimeout(() => {
       const currentRace = room.horseRace;
-      const winner = horseNames[randomInt(horseNames.length)];
       for (const bet of currentRace.bets) {
         if (bet.horse === winner) {
           const winnerPlayer = players.get(bet.playerId);
@@ -1597,6 +1601,8 @@ function handleMessage(socket, message) {
       currentRace.history = currentRace.history.slice(0, 8);
       currentRace.bets = [];
       currentRace.phase = "waiting";
+      currentRace.raceTimes = null;
+      currentRace.raceStartedAt = null;
       endRoomIfBroke(room);
       savePlayers();
       broadcast();
