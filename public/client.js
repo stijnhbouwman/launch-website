@@ -811,17 +811,27 @@ function renderHorseRace() {
   const race = state.horseRace;
   const readiness = roomReadiness(race.readyIds);
   const horses = ["Comet", "Clover", "Sundown", "Goldrush"];
+  const racing = race.phase === "racing";
+  const raceTimes = race.raceTimes || {};
+  const elapsed = racing && race.raceStartedAt ? Math.max(0, Date.now() - race.raceStartedAt) : 0;
   const myBet = race.bets.find((bet) => bet.playerId === playerId);
   content.innerHTML = `
     <span class="eyebrow">THE GRANDSTAND</span><h1>Horse race</h1>
-    <p class="hero-subtitle">Pick a horse, join the shared track, and race your friends. A winning bet pays 3× its wager.</p>
+    <p class="hero-subtitle">Pick a horse and watch one full lap around the circular track. The winner is revealed only at the finish. A winning bet pays 3×.</p>
     <div class="game-layout">
       <section class="table-panel">
-        <div class="table-panel-top"><h2>Golden Hour Stakes</h2><small>${race.phase === "racing" ? "Race in progress" : "Open for bets"}</small></div>
-        <div class="race-track ${race.phase === "racing" ? "racing" : ""}">
-          ${horses.map((horse, index) => `<div class="race-lane"><span class="race-lane-name">${horse}</span><div class="track-line"><span class="horse-runner horse-${index}">♞</span><span class="finish-line"></span></div></div>`).join("")}
+        <div class="table-panel-top"><h2>Golden Hour Stakes</h2><small>${racing ? "One lap in progress" : "Open for bets"}</small></div>
+        <div class="circular-race-track ${racing ? "racing" : ""}" aria-label="One lap circular horse race">
+          <div class="race-finish-arch"><span>FINISH</span></div>
+          <div class="race-inner"><span>GOLDEN HOUR</span><small>ONE LAP</small></div>
+          ${horses.map((horse, index) => {
+            const duration = Number(raceTimes[horse]) || 10000;
+            const delay = racing ? -Math.min(elapsed, duration) : 0;
+            const colors = ["#e5bd67", "#c6d6c3", "#e3a19b", "#c8b7e0"];
+            return `<div class="circular-horse horse-lane-${index}" style="--race-duration:${duration}ms;--race-delay:${delay}ms;--horse-color:${colors[index]}"><span class="horse-runner">♞</span><small>${horse}</small></div>`;
+          }).join("")}
         </div>
-        <div class="race-message">${race.phase === "racing" ? "And they’re off!" : race.winner ? `${escapeHtml(race.winner)} won the last race!` : "Choose your horse before the starting bell."}</div>
+        <div class="race-message">${racing ? "And they’re off! One lap to the finish…" : race.winner ? `${escapeHtml(race.winner)} crossed the finish line first!` : "Choose your horse before the starting bell."}</div>
         ${state.room.isPrivate ? `<p class="bet-progress race-progress">${readiness.ready} of ${readiness.total} room players have placed a bet.</p>` : ""}
         <div class="recent-bets"><h4>On the track</h4>
           ${race.bets.length ? `<div class="activity-list">${race.bets.map((bet) =>
@@ -838,7 +848,7 @@ function renderHorseRace() {
           <div class="amount-row"><input class="chip-input" id="horse-amount" type="number" min="1" max="${currentPlayer()?.chips ?? 0}" step="1" value="${selectedAmount}"><div class="amount-presets">${[10, 25, 50].map((amount) => `<button class="preset ${selectedAmount === amount ? "selected" : ""}" data-amount="${amount}">${amount}</button>`).join("")}</div></div>
           <button class="secondary-button full-button" id="bet-horse" ${race.phase === "racing" ? "disabled" : ""}>Place bet on ${selectedHorse}&nbsp; · &nbsp;3×</button>` : ""}
         <button class="primary-button full-button" id="start-race" ${race.phase === "racing" || race.bets.length === 0 || !roomReadyToStart(readiness) || !canStartRoomGame() ? "disabled" : ""}>${race.phase === "racing" ? "Race in progress…" : race.bets.length === 0 ? "Place a bet to start" : state.room.isPrivate && !readiness.complete ? "Waiting for all room bets…" : !canStartRoomGame() ? "Room host starts the game" : "Start the race ↗"}</button>
-        <div class="table-rules"><div class="rule-row"><span>Winning payout</span><strong>3×</strong></div><div class="rule-row"><span>Horses</span><strong>4</strong></div></div>
+        <div class="table-rules"><div class="rule-row"><span>Winning payout</span><strong>3×</strong></div><div class="rule-row"><span>Race distance</span><strong>1 lap</strong></div><div class="rule-row"><span>Horses</span><strong>4</strong></div></div>
       </aside>
     </div>`;
   content.querySelectorAll("[data-horse]").forEach((button) => {
