@@ -211,6 +211,7 @@ function characterMarkup(character = playerCharacter, className = "character-art
   const c = { ...characterDefaults, ...character };
   const bodyWidth = c.body === "slim" ? 35 : c.body === "broad" ? 49 : 42;
   const bodyX = 50 - bodyWidth / 2;
+  const bodyRight = 100 - bodyX;
   const hair = c.hair === "bald" ? "" : c.hair === "long"
     ? `<path d="M25 35 Q19 8 50 8 Q81 8 75 35 L76 78 L65 83 L63 42 Q50 32 37 42 L35 83 L24 78Z" fill="${c.hairColor}"/>`
     : c.hair === "curls"
@@ -218,7 +219,7 @@ function characterMarkup(character = playerCharacter, className = "character-art
     : `<path d="M25 37 Q19 9 50 9 Q81 9 75 37 Q61 24 48 28 Q36 27 25 37Z" fill="${c.hairColor}"/>`;
   const clothes = c.outfit === "dress"
     ? `<path d="M38 58 L62 58 L78 100 L22 100Z" fill="${c.outfitColor}"/><path d="M40 58 L50 68 L60 58" fill="#e7d6b4"/>`
-    : `<path d="M${bodyX} 59 Q50 48 50 58 Q50 48 100-${bodyX} 59 L76 100 L24 100Z" fill="${c.outfitColor}"/>`;
+    : `<path d="M${bodyX} 59 Q50 48 50 58 Q50 48 ${bodyRight} 59 L76 100 L24 100Z" fill="${c.outfitColor}"/>`;
   const neck = `<rect x="43" y="48" width="14" height="16" rx="5" fill="${c.skin}"/>`;
   const eyes = `<ellipse cx="40" cy="39" rx="2.5" ry="3" fill="${c.eyes}"/><ellipse cx="60" cy="39" rx="2.5" ry="3" fill="${c.eyes}"/><path d="M44 49 Q50 53 56 49" fill="none" stroke="#75483c" stroke-width="1.7" stroke-linecap="round"/>`;
   const accessory = ({glasses:'<g fill="none" stroke="#d9bd79" stroke-width="2"><rect x="31" y="33" width="17" height="12" rx="4"/><rect x="52" y="33" width="17" height="12" rx="4"/><path d="M48 38h4"/></g>',shades:'<g fill="#17191d" stroke="#d9bd79" stroke-width="1.5"><rect x="30" y="33" width="19" height="12" rx="4"/><rect x="51" y="33" width="19" height="12" rx="4"/></g>',earrings:'<g fill="#e1bf67"><circle cx="25" cy="47" r="3"/><circle cx="75" cy="47" r="3"/></g>',chain:'<path d="M39 61 Q50 76 61 61" fill="none" stroke="#e1bf67" stroke-width="3"/>',hat:'<g fill="#26201b" stroke="#d4b36a" stroke-width="2"><path d="M28 23 Q50 -2 72 23 L75 29 L25 29Z"/><path d="M18 30 Q50 25 82 30 L80 35 L20 35Z"/></g>'})[c.accessory] || "";
@@ -363,8 +364,8 @@ function updateHeader() {
     (player?.chips ?? 1000).toLocaleString();
   document.querySelector("#profile-name").textContent = player?.name ?? playerName;
   const avatar = document.querySelector("#avatar");
-  avatar.textContent = player?.avatar || playerAvatar;
-  avatar.style.backgroundColor = player?.avatarColor || playerAvatarColor;
+  avatar.innerHTML = characterMarkup(player?.character || playerCharacter, "profile-character-art");
+  avatar.style.backgroundColor = "transparent";
   document.querySelector("#crumb-current").textContent =
     view === "lobby" ? "OVERVIEW" : view.toUpperCase();
   document.querySelector("#admin-toggle").hidden = !isAdminDisplayName();
