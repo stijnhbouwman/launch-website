@@ -741,3 +741,26 @@ button:disabled { opacity: .48; cursor: not-allowed; }
   .presence-player{font-size:9px}
   .remote-cursor-name{font-size:9px}
 }
+
+
+/* Full character creator */
+.character-creator-shell{width:100%;min-height:100vh;padding:24px clamp(16px,4vw,58px) 48px;background:radial-gradient(ellipse at 22% 45%,#b18b4c18,transparent 38%),#101310;color:#eee8d9}
+.creator-top{max-width:1160px;margin:0 auto 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #c9a65a33;padding-bottom:18px}
+.creator-brand{font:600 13px 'Playfair Display',serif;letter-spacing:2px;color:#e9d39a}.creator-brand span{display:block;margin-top:4px;font:700 8px 'DM Sans',sans-serif;letter-spacing:2px;color:#a99463}
+.creator-step{font-size:9px;letter-spacing:1.4px;color:#8e907f}
+.creator-layout{max-width:1160px;margin:auto;display:grid;grid-template-columns:minmax(280px,.9fr) minmax(360px,1.1fr);gap:clamp(24px,5vw,70px);align-items:start}
+.creator-preview-panel{position:sticky;top:24px;min-height:640px;padding:30px 24px;border:1px solid #c6a45b44;border-radius:12px;background:linear-gradient(155deg,#20251f,#121512 72%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.creator-stage{position:relative;width:min(100%,360px);height:380px;display:grid;place-items:center;margin:20px 0 6px}
+.creator-aura{position:absolute;width:270px;height:270px;border-radius:50%;background:radial-gradient(circle,#d5ad5a26,transparent 70%);box-shadow:0 0 70px #cba24a16}
+.creator-character-art{position:relative;width:250px;height:330px;filter:drop-shadow(0 18px 18px #0009)}
+.creator-preview-panel h2{margin:4px 0 7px;font:500 27px 'Playfair Display',serif;color:#f0dfb5}
+.creator-preview-panel p{color:#9c9d91;font-size:11px}.creator-preview-caption{margin-top:22px;padding-top:14px;border-top:1px solid #c9a65a33;width:100%;text-align:center;color:#a18b59;font-size:8px;letter-spacing:2px}
+.creator-controls{padding:14px 0}.creator-controls h1{font:500 clamp(32px,4vw,46px) 'Playfair Display',serif;margin:9px 0}.creator-intro{color:#a4a697;font-size:12px;line-height:1.7;margin-bottom:25px}
+.creator-name{margin-bottom:22px}.creator-section{padding:17px 0;border-top:1px solid #c9a65a2c}.creator-section h3{font-size:9px;letter-spacing:1.6px;color:#d2b36d;margin:0 0 14px}.creator-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.creator-field{display:grid;gap:7px;color:#b7b5a8;font-size:9px;letter-spacing:.7px}.creator-field select,.creator-field input{width:100%;min-height:40px;padding:9px 11px;border:1px solid #4b4b3e;border-radius:5px;background:#1b201b;color:#eee5d1;font:500 11px 'DM Sans',sans-serif;outline:none}.creator-field select:focus,.creator-field input:focus{border-color:#d0ae63}
+.creator-error{min-height:17px;color:#e3a19b;font-size:10px}.creator-controls #creator-save{display:flex;justify-content:space-between;padding:14px 17px}
+.creator-character-launch{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:17px 0;padding:13px;border:1px solid #c9a65a44;border-radius:7px;background:#171b17}.creator-character-launch>div{display:flex;align-items:center;gap:10px;color:#c7b47e;font-size:8px;letter-spacing:1.2px}.login-character-preview{width:45px;height:54px}.creator-character-launch button{font-size:10px}
+.presence-character-art{width:28px;height:35px;flex:0 0 auto}.remote-cursor-character-art{width:43px;height:50px;flex:0 0 auto;filter:drop-shadow(0 3px 5px #0009)}
+.presence-player{padding:4px 9px 4px 5px}.remote-player-cursor{align-items:flex-start}
+@media(max-width:760px){.creator-layout{grid-template-columns:1fr}.creator-preview-panel{position:relative;top:auto;min-height:360px;padding:18px}.creator-stage{height:235px;margin:5px 0}.creator-character-art{width:165px;height:225px}.creator-preview-panel h2{font-size:22px}.creator-preview-caption{margin-top:10px}.creator-controls{padding-top:10px}.creator-top{gap:10px}.creator-step{display:none}}
+@media(max-width:420px){.creator-fields{grid-template-columns:1fr}.creator-character-launch{align-items:flex-start;flex-direction:column}}
