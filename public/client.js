@@ -193,24 +193,46 @@ function connect() {
 function renderUsernamePicker(message = "") {
   const screen = document.querySelector("#join-screen");
   screen.innerHTML = `
-    <section class="join-card">
-      <a class="brand join-brand" href="#" aria-label="Golden Hour">
-        <span class="brand-mark">G<span>H</span></span>
-        <span class="brand-name">GOLDEN HOUR<small>THE SOCIAL CASINO</small></span>
-      </a>
-      <span class="eyebrow join-eyebrow">YOUR SEAT IS WAITING</span>
-      <h1>Choose a username.</h1>
-      <p class="join-description">Pick a name for the table and jump straight into the lounge. No account or password needed.</p>
-      <form class="join-form" id="join-form">
-        <label class="field-label" for="join-username">Display name</label>
-        <input class="chip-input" id="join-username" name="username" type="text" minlength="1" maxlength="18" pattern="[A-Za-z0-9_]{1,18}" autocomplete="nickname" placeholder="e.g. GoldenAce" value="${escapeHtml(playerName)}" required>
-        <small class="join-hint">1–18 letters, numbers, or underscores</small>
-        <div class="character-picker"><span class="field-label">Choose your character</span><div class="character-options" role="group" aria-label="Choose an avatar">${avatarOptions.map((avatar) => `<button class="character-option ${avatar === playerAvatar ? "selected" : ""}" type="button" data-avatar="${avatar}" aria-label="Choose ${avatar}" aria-pressed="${avatar === playerAvatar}">${avatar}</button>`).join("")}</div><span class="field-label character-color-label">Character color</span><div class="character-colors" role="group" aria-label="Choose character color">${avatarColorOptions.map((color) => `<button class="character-color ${color === playerAvatarColor ? "selected" : ""}" type="button" data-avatar-color="${color}" style="--avatar-color:${color}" aria-label="Choose character color" aria-pressed="${color === playerAvatarColor}"></button>`).join("")}</div></div>
-        <p class="join-error" id="join-error" role="alert">${escapeHtml(message)}</p>
-        <button class="primary-button full-button join-submit" id="join-submit" type="submit">Join the lounge&nbsp; ↗</button>
-      </form>
-      <p class="join-footnote">Everyone starts with 1,000 complimentary chips. Play for fun—chips have no cash value.</p>
-    </section>`;
+    <div class="login-experience">
+      <section class="login-showcase" aria-label="Golden Hour social casino">
+        <div class="login-showcase-glow"></div>
+        <a class="brand join-brand" href="/" aria-label="Golden Hour">
+          <span class="brand-mark">G<span>H</span></span>
+          <span class="brand-name">GOLDEN HOUR<small>THE SOCIAL CASINO</small></span>
+        </a>
+        <div class="showcase-copy">
+          <span class="eyebrow"><i></i> THE TABLE IS YOURS</span>
+          <h1>Good times.<br><em>Great company.</em></h1>
+          <p>Your people, your table, your moment. Step into a private-feeling casino lounge made for playing together.</p>
+        </div>
+        <div class="showcase-art" aria-hidden="true">
+          <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
+          <div class="art-sun"></div>
+          <div class="art-chip chip-back">GH</div><div class="art-chip chip-front">✦</div>
+          <div class="art-playing-card"><span>♠</span><strong>A</strong><small>GOLDEN HOUR</small></div>
+          <span class="art-spark spark-one">✧</span><span class="art-spark spark-two">✦</span>
+        </div>
+        <div class="showcase-footer"><span>ROULETTE · BLACKJACK · POKER · MORE</span><span>01 — 07</span></div>
+      </section>
+      <section class="login-panel">
+        <div class="login-panel-top"><span>WELCOME TO THE LOUNGE</span><span class="login-live"><i></i> OPEN TABLES</span></div>
+        <div class="login-form-wrap">
+          <span class="eyebrow login-eyebrow">YOUR NIGHT STARTS HERE</span>
+          <h2>Take your seat.</h2>
+          <p class="login-intro">Choose how the room knows you. No account, no password — just you and your friends.</p>
+          <form class="join-form" id="join-form">
+            <label class="field-label" for="join-username">YOUR DISPLAY NAME</label>
+            <div class="login-input-wrap"><span>✦</span><input class="chip-input" id="join-username" name="username" type="text" minlength="1" maxlength="18" pattern="[A-Za-z0-9_]{1,18}" autocomplete="nickname" placeholder="e.g. GoldenAce" value="${escapeHtml(playerName)}" required></div>
+            <small class="join-hint">1–18 letters, numbers or underscores</small>
+            <div class="character-picker"><div class="picker-heading"><span class="field-label">PICK YOUR PLAYING CHARACTER</span><span class="picker-note">MAKE IT YOURS</span></div><div class="character-options" role="group" aria-label="Choose an avatar">${avatarOptions.map((avatar) => `<button class="character-option ${avatar === playerAvatar ? "selected" : ""}" type="button" data-avatar="${avatar}" aria-label="Choose ${avatar}" aria-pressed="${avatar === playerAvatar}">${avatar}</button>`).join("")}</div><div class="picker-heading color-heading"><span class="field-label">SIGNATURE COLOUR</span></div><div class="character-colors" role="group" aria-label="Choose character color">${avatarColorOptions.map((color) => `<button class="character-color ${color === playerAvatarColor ? "selected" : ""}" type="button" data-avatar-color="${color}" style="--avatar-color:${color}" aria-label="Choose character color" aria-pressed="${color === playerAvatarColor}"></button>`).join("")}</div></div>
+            <p class="join-error" id="join-error" role="alert">${escapeHtml(message)}</p>
+            <button class="primary-button full-button join-submit" id="join-submit" type="submit"><span>Enter the lounge</span><span>↗</span></button>
+          </form>
+          <div class="login-perks"><span>✧ 1,000 complimentary chips</span><span>✧ Private rooms with friends</span></div>
+        </div>
+        <div class="login-panel-bottom"><span>MADE FOR THE MOMENTS IN BETWEEN</span><span>VIRTUAL CHIPS · NO CASH VALUE</span></div>
+      </section>
+    </div>`;
   screen.querySelectorAll("[data-avatar]").forEach((button) => button.addEventListener("click", () => {
     playerName = screen.querySelector("#join-username")?.value || playerName;
     playerAvatar = button.dataset.avatar;
@@ -238,13 +260,12 @@ function renderUsernamePicker(message = "") {
     localStorage.removeItem(loggedOutKey);
     const submit = screen.querySelector("#join-submit");
     submit.disabled = true;
-    submit.textContent = "Joining…";
+    submit.querySelector("span:first-child").textContent = "Taking your seat…";
     clearTimeout(reconnectTimer);
     if (socket) socket.close();
     connect();
   });
 }
-
 function showToast(message) {
   const toast = document.querySelector("#toast");
   toast.textContent = message;
