@@ -6,8 +6,20 @@ const avatarKey = "golden-hour-avatar";
 const avatarColorKey = "golden-hour-avatar-color";
 const loggedOutKey = "golden-hour-logged-out";
 const roomKey = "golden-hour-room";
-const avatarOptions = ["🦊", "🐼", "🐸", "🦉", "🐯", "🐙", "🦄", "🐲", "🐧", "🐻", "🐱", "🐵", "🦁", "🐺", "🐨", "🐹", "🐰", "🐮", "🐷", "🐻‍❄️", "🦋", "🦚", "🐬", "🐢"];
-const avatarColorOptions = ["#d6b46a", "#78a99a", "#8b9dc3", "#c58b9b", "#a58ac7", "#b9a27b", "#b87333", "#9b4148", "#d8d0b4", "#65715a"];
+const characterDefaults = { body: "average", skin: "#c98f68", hair: "short", hairColor: "#30231f", eyes: "#33251f", outfit: "tuxedo", outfitColor: "#26352c", accessory: "none" };
+const characterChoices = {
+  body: { slim: "Slim", average: "Average", broad: "Broad" },
+  skin: { "#f2c9a5": "Porcelain", "#dfad82": "Light", "#c98f68": "Warm", "#9b6548": "Brown", "#603d30": "Deep" },
+  hair: { short: "Short", swept: "Swept", long: "Long", curls: "Curly", bald: "Shaved" },
+  hairColor: { "#30231f": "Espresso", "#171717": "Black", "#8a5634": "Chestnut", "#d4a64f": "Blonde", "#a84c38": "Auburn", "#d8d4ca": "Silver" },
+  eyes: { "#33251f": "Brown", "#315b78": "Blue", "#47734d": "Green", "#202020": "Dark" },
+  outfit: { tuxedo: "Tuxedo", suit: "Tailored suit", shirt: "Open-collar shirt", dress: "Evening dress", jacket: "Bomber jacket", hoodie: "Street hoodie" },
+  outfitColor: { "#26352c": "Casino green", "#17191d": "Midnight", "#8b3038": "Burgundy", "#b18b4c": "Champagne", "#314c70": "Navy", "#e4d8c3": "Ivory" },
+  accessory: { none: "None", glasses: "Glasses", shades: "Sunglasses", earrings: "Gold earrings", chain: "Gold chain", hat: "Fedora" }
+};
+let playerCharacter = (() => { try { return { ...characterDefaults, ...JSON.parse(localStorage.getItem("golden-hour-character") || "{}") }; } catch { return { ...characterDefaults }; } })();
+const avatarOptions = ["🦊"];
+const avatarColorOptions = ["#d6b46a"];
 const queryRoomCode = new URLSearchParams(location.search).get("room") || "";
 let requestedRoomCode = (queryRoomCode || localStorage.getItem(roomKey) || "").toUpperCase();
 let playerId = localStorage.getItem(playerKey);
@@ -98,7 +110,7 @@ function connect() {
   socket = connection;
   connection.addEventListener("open", () => {
     document.querySelector(".online-pulse")?.classList.remove("offline");
-    send({ type: "register", id: playerId, name: playerName, avatar: playerAvatar, avatarColor: playerAvatarColor, roomCode: requestedRoomCode });
+    send({ type: "register", id: playerId, name: playerName, avatar: playerAvatar, avatarColor: playerAvatarColor, character: playerCharacter, roomCode: requestedRoomCode });
   });
   connection.addEventListener("message", (event) => {
     const message = JSON.parse(event.data);
@@ -195,60 +207,114 @@ function connect() {
   });
 }
 
+function characterMarkup(character = playerCharacter, className = "character-art") {
+  const c = { ...characterDefaults, ...character };
+  const bodyWidth = c.body === "slim" ? 35 : c.body === "broad" ? 49 : 42;
+  const bodyX = 50 - bodyWidth / 2;
+  const hair = c.hair === "bald" ? "" : c.hair === "long"
+    ? `<path d="M25 35 Q19 8 50 8 Q81 8 75 35 L76 78 L65 83 L63 42 Q50 32 37 42 L35 83 L24 78Z" fill="${c.hairColor}"/>`
+    : c.hair === "curls"
+    ? `<path d="M24 37 Q15 18 32 15 Q38 2 50 12 Q66 2 70 16 Q86 22 76 40 Q65 31 50 32 Q35 31 24 37Z" fill="${c.hairColor}"/>`
+    : `<path d="M25 37 Q19 9 50 9 Q81 9 75 37 Q61 24 48 28 Q36 27 25 37Z" fill="${c.hairColor}"/>`;
+  const clothes = c.outfit === "dress"
+    ? `<path d="M38 58 L62 58 L78 100 L22 100Z" fill="${c.outfitColor}"/><path d="M40 58 L50 68 L60 58" fill="#e7d6b4"/>`
+    : `<path d="M${bodyX} 59 Q50 48 50 58 Q50 48 100-${bodyX} 59 L76 100 L24 100Z" fill="${c.outfitColor}"/>`;
+  const neck = `<rect x="43" y="48" width="14" height="16" rx="5" fill="${c.skin}"/>`;
+  const eyes = `<ellipse cx="40" cy="39" rx="2.5" ry="3" fill="${c.eyes}"/><ellipse cx="60" cy="39" rx="2.5" ry="3" fill="${c.eyes}"/><path d="M44 49 Q50 53 56 49" fill="none" stroke="#75483c" stroke-width="1.7" stroke-linecap="round"/>`;
+  const accessory = ({glasses:'<g fill="none" stroke="#d9bd79" stroke-width="2"><rect x="31" y="33" width="17" height="12" rx="4"/><rect x="52" y="33" width="17" height="12" rx="4"/><path d="M48 38h4"/></g>',shades:'<g fill="#17191d" stroke="#d9bd79" stroke-width="1.5"><rect x="30" y="33" width="19" height="12" rx="4"/><rect x="51" y="33" width="19" height="12" rx="4"/></g>',earrings:'<g fill="#e1bf67"><circle cx="25" cy="47" r="3"/><circle cx="75" cy="47" r="3"/></g>',chain:'<path d="M39 61 Q50 76 61 61" fill="none" stroke="#e1bf67" stroke-width="3"/>',hat:'<g fill="#26201b" stroke="#d4b36a" stroke-width="2"><path d="M28 23 Q50 -2 72 23 L75 29 L25 29Z"/><path d="M18 30 Q50 25 82 30 L80 35 L20 35Z"/></g>'})[c.accessory] || "";
+  const collar = c.outfit === "tuxedo" || c.outfit === "suit" ? '<path d="M39 58 L50 71 L61 58 L56 80 L50 75 L44 80Z" fill="#eee5d5"/><path d="M50 70 L54 79 L50 88 L46 79Z" fill="#b68d46"/>' : "";
+  return `<svg class="${className}" viewBox="0 0 100 110" role="img" aria-label="Your custom character"><ellipse cx="50" cy="105" rx="27" ry="4" fill="#000" opacity=".22"/>${clothes}<path d="M${bodyX} 62 Q50 51 100-${bodyX} 62 L80 105 L20 105Z" fill="${c.outfitColor}" opacity=".12"/>${neck}<ellipse cx="50" cy="36" rx="25" ry="29" fill="${c.skin}"/>${hair}<path d="M27 48 Q24 57 31 61" fill="none" stroke="${c.skin}" stroke-width="5" stroke-linecap="round"/><path d="M73 48 Q76 57 69 61" fill="none" stroke="${c.skin}" stroke-width="5" stroke-linecap="round"/>${eyes}${accessory}${collar}</svg>`;
+}
+function characterSelectField(key, title) {
+  const options = characterChoices[key];
+  return `<label class="creator-field"><span>${title}</span><select data-character-field="${key}">${Object.entries(options).map(([value,label]) => `<option value="${value}" ${playerCharacter[key] === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>`;
+}
+function saveCharacter() {
+  localStorage.setItem("golden-hour-character", JSON.stringify(playerCharacter));
+  playerAvatar = "🎭";
+  playerAvatarColor = playerCharacter.skin;
+  localStorage.setItem(avatarKey, playerAvatar);
+  localStorage.setItem(avatarColorKey, playerAvatarColor);
+}
+function renderCharacterCreator(message = "", fromJoin = false) {
+  const screen = document.querySelector("#join-screen");
+  screen.innerHTML = `
+    <div class="character-creator-shell">
+      <header class="creator-top"><button class="quiet-button" id="creator-back" type="button">← Back</button><div class="creator-brand">GOLDEN HOUR <span>CHARACTER STUDIO</span></div><span class="creator-step">YOUR LOOK · YOUR RULES</span></header>
+      <div class="creator-layout">
+        <section class="creator-preview-panel"><span class="eyebrow">LIVE PREVIEW</span><div class="creator-stage"><div class="creator-aura"></div>${characterMarkup(playerCharacter,"creator-character-art")}</div><h2 id="creator-preview-name">${escapeHtml(playerName || "Your character")}</h2><p>Every detail follows you to the tables.</p><div class="creator-preview-caption">GOLDEN HOUR · ORIGINAL CHARACTER</div></section>
+        <section class="creator-controls"><span class="eyebrow">CHARACTER CUSTOMIZATION</span><h1>Make it yours.</h1><p class="creator-intro">Build your own look from the ground up. Changes appear instantly.</p>
+          <label class="creator-field creator-name"><span>DISPLAY NAME</span><input class="chip-input" id="creator-username" maxlength="18" pattern="[A-Za-z0-9_]{1,18}" placeholder="Choose a name" value="${escapeHtml(playerName)}"></label>
+          <div class="creator-section"><h3>01 · BODY</h3><div class="creator-fields">${characterSelectField("body","Build")}${characterSelectField("skin","Skin tone")}</div></div>
+          <div class="creator-section"><h3>02 · FACE & HAIR</h3><div class="creator-fields">${characterSelectField("hair","Hair style")}${characterSelectField("hairColor","Hair colour")}${characterSelectField("eyes","Eye colour")}</div></div>
+          <div class="creator-section"><h3>03 · CLOTHING</h3><div class="creator-fields">${characterSelectField("outfit","Outfit")}${characterSelectField("outfitColor","Clothing colour")}</div></div>
+          <div class="creator-section"><h3>04 · ACCESSORIES</h3><div class="creator-fields">${characterSelectField("accessory","Accessory")}</div></div>
+          <p class="creator-error" id="creator-error" role="alert">${escapeHtml(message)}</p>
+          <button class="primary-button full-button" id="creator-save" type="button">${fromJoin ? "Save character & enter" : "Save character"} <span>→</span></button>
+        </section>
+      </div>
+    </div>`;
+  screen.querySelector("#creator-back").addEventListener("click", () => {
+    if (fromJoin) renderUsernamePicker(message);
+    else { document.body.classList.add("joined"); screen.innerHTML = ""; }
+  });
+  screen.querySelectorAll("[data-character-field]").forEach((select) => select.addEventListener("change", () => {
+    playerCharacter[select.dataset.characterField] = select.value;
+    screen.querySelector(".creator-stage").innerHTML = `<div class="creator-aura"></div>${characterMarkup(playerCharacter,"creator-character-art")}`;
+  }));
+  screen.querySelector("#creator-username").addEventListener("input", (event) => {
+    playerName = event.target.value;
+    screen.querySelector("#creator-preview-name").textContent = playerName || "Your character";
+  });
+  screen.querySelector("#creator-save").addEventListener("click", () => {
+    const nameInput = screen.querySelector("#creator-username");
+    const candidate = nameInput.value.trim();
+    if (!/^[A-Za-z0-9_]{1,18}$/.test(candidate)) {
+      screen.querySelector("#creator-error").textContent = "Choose a name with 1–18 letters, numbers or underscores.";
+      return;
+    }
+    playerName = candidate;
+    localStorage.setItem(nameKey, playerName);
+    saveCharacter();
+    if (joined && socket?.readyState === WebSocket.OPEN) {
+      send({ type: "update-character", character: playerCharacter });
+      document.body.classList.add("joined");
+      screen.innerHTML = "";
+      updateHeader();
+      showToast("Character saved.");
+    } else {
+      loggedOut = false;
+      localStorage.removeItem(loggedOutKey);
+      if (socket) socket.close();
+      connect();
+    }
+  });
+}
 function renderUsernamePicker(message = "") {
   const screen = document.querySelector("#join-screen");
   screen.innerHTML = `
-    <div class="login-experience login-minimal">
-      <section class="login-panel">
-        <a class="brand join-brand" href="/" aria-label="Golden Hour">
-          <span class="brand-mark">G<span>H</span></span>
-          <span class="brand-name">GOLDEN HOUR<small>THE SOCIAL CASINO</small></span>
-        </a>
-        <div class="login-form-wrap">
-          <span class="eyebrow login-eyebrow">WELCOME IN</span>
-          <h2>Pull up a chair.</h2>
-          <p class="login-intro">Pick a name and make yourself at home. No account or password needed.</p>
-          <form class="join-form" id="join-form">
-            <label class="field-label" for="join-username">DISPLAY NAME</label>
-            <div class="login-input-wrap"><input class="chip-input" id="join-username" name="username" type="text" minlength="1" maxlength="18" pattern="[A-Za-z0-9_]{1,18}" autocomplete="nickname" placeholder="Choose a name" value="${escapeHtml(playerName)}" required></div>
-            <small class="join-hint">1–18 letters, numbers or underscores</small>
-            <div class="character-picker">
-              <div class="picker-heading"><span class="field-label">YOUR CHARACTER</span></div>
-              <div class="character-options" role="group" aria-label="Choose an avatar">${avatarOptions.map((avatar) => `<button class="character-option ${avatar === playerAvatar ? "selected" : ""}" type="button" data-avatar="${avatar}" aria-label="Choose ${avatar}" aria-pressed="${avatar === playerAvatar}">${avatar}</button>`).join("")}</div>
-              <div class="picker-heading color-heading"><span class="field-label">AVATAR COLOUR</span></div>
-              <div class="character-colors" role="group" aria-label="Choose character color">${avatarColorOptions.map((color) => `<button class="character-color ${color === playerAvatarColor ? "selected" : ""}" type="button" data-avatar-color="${color}" style="--avatar-color:${color}" aria-label="Choose character color" aria-pressed="${color === playerAvatarColor}"></button>`).join("")}</div>
-            </div>
-            <p class="join-error" id="join-error" role="alert">${escapeHtml(message)}</p>
-            <button class="primary-button full-button join-submit" id="join-submit" type="submit"><span>Enter Golden Hour</span><span>→</span></button>
-          </form>
-          <div class="login-perks"><span>1,000 free virtual chips</span><span>Play with friends in private rooms</span></div>
-        </div>
-        <div class="login-panel-bottom"><span>JUST FOR FUN</span><span>VIRTUAL CHIPS · NO CASH VALUE</span></div>
-      </section>
-    </div>`;
-  screen.querySelectorAll("[data-avatar]").forEach((button) => button.addEventListener("click", () => {
+    <div class="login-experience login-minimal"><section class="login-panel">
+      <a class="brand join-brand" href="/" aria-label="Golden Hour"><span class="brand-mark">G<span>H</span></span><span class="brand-name">GOLDEN HOUR<small>THE SOCIAL CASINO</small></span></a>
+      <div class="login-form-wrap"><span class="eyebrow login-eyebrow">WELCOME IN</span><h2>Pull up a chair.</h2>
+        <p class="login-intro">Choose a name, then create a character that feels like you.</p>
+        <form class="join-form" id="join-form"><label class="field-label" for="join-username">DISPLAY NAME</label>
+          <div class="login-input-wrap"><input class="chip-input" id="join-username" name="username" type="text" minlength="1" maxlength="18" pattern="[A-Za-z0-9_]{1,18}" autocomplete="nickname" placeholder="Choose a name" value="${escapeHtml(playerName)}" required></div>
+          <small class="join-hint">1–18 letters, numbers or underscores</small>
+          <div class="creator-character-launch"><div>${characterMarkup(playerCharacter,"login-character-preview")}<span>YOUR CHARACTER</span></div><button class="secondary-button" id="open-character-creator" type="button">Create character →</button></div>
+          <p class="join-error" id="join-error" role="alert">${escapeHtml(message)}</p>
+          <button class="primary-button full-button join-submit" id="join-submit" type="submit"><span>Enter Golden Hour</span><span>→</span></button>
+        </form><div class="login-perks"><span>1,000 free virtual chips</span><span>Play with friends in private rooms</span></div>
+      </div><div class="login-panel-bottom"><span>JUST FOR FUN</span><span>VIRTUAL CHIPS · NO CASH VALUE</span></div>
+    </section></div>`;
+  screen.querySelector("#open-character-creator").addEventListener("click", () => {
     playerName = screen.querySelector("#join-username")?.value || playerName;
-    playerAvatar = button.dataset.avatar;
-    localStorage.setItem(nameKey, playerName);
-    localStorage.setItem(avatarKey, playerAvatar);
-    renderUsernamePicker(message);
-    screen.querySelector("#join-username")?.focus();
-  }));
-  screen.querySelectorAll("[data-avatar-color]").forEach((button) => button.addEventListener("click", () => {
-    playerName = screen.querySelector("#join-username")?.value || playerName;
-    playerAvatarColor = button.dataset.avatarColor;
-    localStorage.setItem(nameKey, playerName);
-    localStorage.setItem(avatarColorKey, playerAvatarColor);
-    renderUsernamePicker(message);
-    screen.querySelector("#join-username")?.focus();
-  }));
+    renderCharacterCreator("", true);
+  });
   screen.querySelector("#join-form").addEventListener("submit", (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    playerName = String(form.get("username")).trim();
+    playerName = String(new FormData(event.currentTarget).get("username")).trim();
     localStorage.setItem(nameKey, playerName);
-    localStorage.setItem(avatarKey, playerAvatar);
-    localStorage.setItem(avatarColorKey, playerAvatarColor);
+    saveCharacter();
     loggedOut = false;
     localStorage.removeItem(loggedOutKey);
     const submit = screen.querySelector("#join-submit");
@@ -454,7 +520,7 @@ function renderGamePresence() {
   }
   const strip = document.createElement("div");
   strip.className = "game-player-presence";
-  strip.innerHTML = `<div class="presence-heading"><span class="presence-live-dot"></span><span>AT THIS TABLE</span><strong>${players.length}</strong></div><div class="presence-players">${players.map((player) => `<span class="presence-player" title="${escapeHtml(player.name)}"><span class="presence-avatar" style="--player-avatar-color:${escapeHtml(player.avatarColor || "#d6b46a")}">${escapeHtml(player.avatar || "🎭")}</span><span>${escapeHtml(player.name)}</span></span>`).join("")}</div>`;
+  strip.innerHTML = `<div class="presence-heading"><span class="presence-live-dot"></span><span>AT THIS TABLE</span><strong>${players.length}</strong></div><div class="presence-players">${players.map((player) => `<span class="presence-player" title="${escapeHtml(player.name)}">${characterMarkup(player.character || characterDefaults,"presence-character-art")}<span>${escapeHtml(player.name)}</span></span>`).join("")}</div>`;
   content.insertBefore(strip, content.firstChild);
   const layer = document.createElement("div");
   layer.className = "remote-cursor-layer";
@@ -467,7 +533,7 @@ function renderRemoteCursors() {
   const layer = content.querySelector(".remote-cursor-layer");
   if (!layer) return;
   const active = remoteCursors.filter((cursor) => cursor.id !== playerId && cursor.game === view && Date.now() - cursor.updatedAt < 4000);
-  layer.innerHTML = active.map((cursor) => `<div class="remote-player-cursor" style="left:${Math.max(0,Math.min(1,cursor.x))*100}%;top:${Math.max(0,Math.min(1,cursor.y))*100}%"><span class="remote-cursor-avatar" style="--player-avatar-color:${escapeHtml(cursor.avatarColor || "#d6b46a")}">${escapeHtml(cursor.avatar || "🎭")}</span><span class="remote-cursor-name">${escapeHtml(cursor.name)}</span></div>`).join("");
+  layer.innerHTML = active.map((cursor) => `<div class="remote-player-cursor" style="left:${Math.max(0,Math.min(1,cursor.x))*100}%;top:${Math.max(0,Math.min(1,cursor.y))*100}%">${characterMarkup(cursor.character || characterDefaults,"remote-cursor-character-art")}<span class="remote-cursor-name">${escapeHtml(cursor.name)}</span></div>`).join("");
 }
 
 function render() {
@@ -1274,7 +1340,7 @@ document.addEventListener("visibilitychange", () => {
 window.setInterval(renderRemoteCursors, 1000);
 document.querySelector("#customize-character").addEventListener("click", () => {
   document.body.classList.remove("joined");
-  renderUsernamePicker();
+  renderCharacterCreator("", false);
 });
 
 if (playerName && playerName.toLowerCase() !== "guest" && !loggedOut) connect();
