@@ -29,6 +29,21 @@ const slotSymbols = ["✦", "♣", "♦", "♠", "7"];
 const horseNames = ["Comet", "Clover", "Sundown", "Goldrush"];
 const allowedAvatars = new Set(["🦊", "🐼", "🐸", "🦉", "🐯", "🐙", "🦄", "🐲", "🐧", "🐻", "🐱", "🐵", "🦁", "🐺", "🐨", "🐹", "🐰", "🐮", "🐷", "🐻‍❄️", "🦋", "🦚", "🐬", "🐢"]);
 const allowedAvatarColors = new Set(["#d6b46a", "#78a99a", "#8b9dc3", "#c58b9b", "#a58ac7", "#b9a27b", "#b87333", "#9b4148", "#d8d0b4", "#65715a"]);
+const characterOptions = {
+  body: ["slim", "average", "broad"],
+  skin: ["#f2c9a5", "#dfad82", "#c98f68", "#9b6548", "#603d30"],
+  hair: ["short", "swept", "long", "curls", "bald"],
+  hairColor: ["#30231f", "#171717", "#8a5634", "#d4a64f", "#a84c38", "#d8d4ca"],
+  eyes: ["#33251f", "#315b78", "#47734d", "#202020"],
+  outfit: ["tuxedo", "suit", "shirt", "dress", "jacket", "hoodie"],
+  outfitColor: ["#26352c", "#17191d", "#8b3038", "#b18b4c", "#314c70", "#e4d8c3"],
+  accessory: ["none", "glasses", "shades", "earrings", "chain", "hat"],
+};
+const defaultCharacter = { body: "average", skin: "#c98f68", hair: "short", hairColor: "#30231f", eyes: "#33251f", outfit: "tuxedo", outfitColor: "#26352c", accessory: "none" };
+function safeCharacter(value, fallback = defaultCharacter) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(Object.entries(characterOptions).map(([key, allowed]) => [key, allowed.includes(source[key]) ? source[key] : fallback[key] || defaultCharacter[key]]));
+}
 const rooms = new Map();
 const gameActionCooldowns = new Map();
 function gameCooldownRemaining(player, game, durationMs = 5000) {
@@ -234,6 +249,7 @@ function savePlayers() {
       name: player.name,
       avatar: player.avatar || "🦊",
       avatarColor: player.avatarColor || "#d6b46a",
+      character: safeCharacter(player.character),
       chips: player.chips,
       lastGlobalRewardDate: player.lastGlobalRewardDate,
     };
@@ -422,6 +438,7 @@ function snapshot(roomCode) {
         name: player.name,
         avatar: player.avatar || "🦊",
         avatarColor: player.avatarColor || "#d6b46a",
+        character: safeCharacter(player.character),
         chips: chipsFor(room, player),
         currentGame: player.currentGame || null,
       })),
@@ -707,12 +724,14 @@ function handleMessage(socket, message) {
     const saved = savedPlayers[message.id];
     const avatar = safeAvatar(message.avatar, player?.avatar || saved?.avatar || "🦊");
     const avatarColor = safeAvatarColor(message.avatarColor, player?.avatarColor || saved?.avatarColor || "#d6b46a");
+    const character = safeCharacter(message.character || player?.character || saved?.character);
     if (!player) {
       player = {
         id: message.id,
         name,
         avatar,
         avatarColor,
+        character,
         chips: saved && Number.isSafeInteger(saved.chips) && saved.chips >= 0
           ? saved.chips
           : 1000,
@@ -745,6 +764,7 @@ function handleMessage(socket, message) {
     player.name = name;
     player.avatar = avatar;
     player.avatarColor = avatarColor;
+    player.character = character;
     player.connected = true;
     player.sockets.add(socket);
     const registeredRoom = rooms.get(requestedRoom);
@@ -783,6 +803,13 @@ function handleMessage(socket, message) {
 
   const player = players.get(socket.playerId);
   if (!player || !player.sockets.has(socket)) return;
+
+  if (message.type === "update-character") {
+    player.character = safeCharacter(message.character);
+    savePlayers();
+    broadcast();
+    return;
+  }
 
   if (message.type === "cursor-move") {
     const allowedGames = ["roulette", "blackjack", "slots", "horses", "poker", "wheel", "plinko"];
