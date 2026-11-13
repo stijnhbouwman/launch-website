@@ -15,11 +15,11 @@ const characterChoices = {
   eyes: { "#33251f":"Brown", "#315b78":"Blue", "#47734d":"Green", "#6d8b8a":"Hazel", "#202020":"Dark", "#78618c":"Violet" },
   outfit: { tuxedo:"Tuxedo", tailored:"Tailored suit", shirt:"Open-collar shirt", dress:"Evening dress", jacket:"Leather jacket", hoodie:"Street hoodie", varsity:"Varsity jacket", cardigan:"Cardigan", royal:"Royal coat", vest:"Waistcoat" },
   outfitColor: { "#26352c":"Casino green", "#17191d":"Midnight", "#8b3038":"Burgundy", "#b18b4c":"Champagne", "#314c70":"Navy", "#e4d8c3":"Ivory", "#76518b":"Plum", "#b86b42":"Terracotta", "#557b78":"Sage", "#c77c91":"Rose" },
-  accessory: { none:"None", cape:"Full cape", wings:"Wings", backpack:"Backpack", crown:"Crown", glasses:"Glasses", shades:"Sunglasses", earrings:"Earrings", chain:"Gold chain", hat:"Fedora", beanie:"Beanie", headband:"Headband", necklace:"Pendant" },
+  accessory: { cape:"Full cape", wings:"Wings", backpack:"Backpack", crown:"Crown", glasses:"Glasses", shades:"Sunglasses", earrings:"Earrings", chain:"Gold chain", hat:"Fedora", beanie:"Beanie", headband:"Headband", necklace:"Pendant" },
   freckles: { none:"None", light:"Light freckles", many:"Freckles", beauty:"Beauty mark" },
   facialHair: { none:"Clean shaven", stubble:"Stubble", moustache:"Moustache", beard:"Full beard" }
 };
-let playerCharacter = (() => { try { return { ...characterDefaults, ...JSON.parse(localStorage.getItem("golden-hour-character") || "{}") }; } catch { return { ...characterDefaults }; } })();
+let playerCharacter = (() => { try { const saved = JSON.parse(localStorage.getItem("golden-hour-character") || "{}"); const character = { ...characterDefaults, ...saved }; character.accessories = Array.isArray(saved.accessories) ? saved.accessories : (saved.accessory && saved.accessory !== "none" ? [saved.accessory] : []); return character; } catch { return { ...characterDefaults, accessories: [] }; } })();
 const avatarOptions = ["🦊"];
 const avatarColorOptions = ["#d6b46a"];
 const queryRoomCode = new URLSearchParams(location.search).get("room") || "";
@@ -218,6 +218,8 @@ function characterMarkup(character = playerCharacter, className = "character-art
   const width = c.body === "slim" || c.body === "petite" ? 34 : c.body === "broad" || c.body === "athletic" ? 44 : 39;
   const left = 50 - width / 2, right = 50 + width / 2;
   const skin = c.skin, hair = c.hairColor, outfit = c.outfitColor;
+  const accessories = Array.isArray(c.accessories) ? c.accessories : (c.accessory && c.accessory !== "none" ? [c.accessory] : []);
+  const has = (name) => accessories.includes(name);
   const backHair = c.hair === "shaved" ? "" :
     '<path d="M25 40Q18 7 50 7Q82 7 75 40L79 103Q75 119 67 112L64 45Q50 32 36 45L33 112Q25 119 21 103Z" fill="url(#hair3d)"/>';
   const frontHair = c.hair === "shaved" ? "" :
@@ -238,24 +240,24 @@ function characterMarkup(character = playerCharacter, className = "character-art
     royal: '<path d="M'+left+' 68Q50 55 '+right+' 68L78 118L22 118Z" fill="url(#cloth3d)" stroke="#d6b76e"/><path d="M37 64L50 83L63 64L57 110L50 99L43 110Z" fill="#e6d5b4"/>',
     vest: '<path d="M'+left+' 68Q50 58 '+right+' 68L72 111L28 111Z" fill="url(#cloth3d)"/><path d="M40 65L50 80L60 65L56 108L50 97L44 108Z" fill="#d8cdb6"/>'
   };
-  const addonBack = c.accessory === "cape"
+  const addonBack = has("cape")
     ? '<path d="M34 67Q50 58 66 67L84 128Q50 143 16 128Z" fill="url(#addon3d)" stroke="#d6b66d" stroke-width="1.4"/>'
-    : c.accessory === "wings"
+    : has("wings")
     ? '<path d="M34 69Q18 55 7 69Q10 96 36 108Q43 87 34 69ZM66 69Q82 55 93 69Q90 96 64 108Q57 87 66 69Z" fill="url(#addon3d)" stroke="#e6d3a6" stroke-width="1.2"/><path d="M14 73l18 28m54-28-18 28" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>'
-    : c.accessory === "backpack"
+    : has("backpack")
     ? '<path d="M31 71Q50 61 69 71L75 113L25 113Z" fill="url(#addon3d)" stroke="#d6b66d"/>'
     : "";
-  const headwear = c.accessory === "hat" || c.accessory === "crown" || c.accessory === "beanie"
-    ? (c.accessory === "hat"
+  const headwear = has("hat") || has("crown") || has("beanie")
+    ? (has("hat")
       ? '<path d="M28 25Q50 0 72 25L75 34H25Z" fill="url(#addon3d)" stroke="#d6b66d"/><path d="M18 34Q50 28 82 34L79 40H21Z" fill="#25221b" stroke="#d6b66d"/>'
-      : c.accessory === "crown"
+      : has("crown")
       ? '<path d="M29 27l4-13 10 9 7-15 8 15 10-9 4 13Z" fill="url(#addon3d)" stroke="#f1d88d"/><path d="M31 27h38v5H31Z" fill="#d4b15f"/>'
-      : '<path d="M27 31Q30 8 50 8Q70 8 73 31Z" fill="url(#addon3d)" stroke="#d6b66d"/><path d="M27 29h46v7H27Z" fill="#c09b5d"/>')
+      : has("beanie") ? '<path d="M27 31Q30 8 50 8Q70 8 73 31Z" fill="url(#addon3d)" stroke="#d6b66d"/><path d="M27 29h46v7H27Z" fill="#c09b5d"/>' : '<path d="M26 30Q50 18 74 30" fill="none" stroke="#c09b5d" stroke-width="5"/>')
     : "";
-  const faceAccessory = c.accessory === "glasses" || c.accessory === "shades"
-    ? '<g fill="'+(c.accessory === "shades" ? "#17191d" : "none")+'" stroke="#d9bd79" stroke-width="2"><rect x="31" y="34" width="17" height="12" rx="4"/><rect x="52" y="34" width="17" height="12" rx="4"/><path d="M48 39h4"/></g>'
-    : c.accessory === "earrings" ? '<g fill="url(#addon3d)" stroke="#f2d58c"><circle cx="25" cy="49" r="3.5"/><circle cx="75" cy="49" r="3.5"/></g>' : "";
-  const necklace = c.accessory === "chain" || c.accessory === "necklace"
+  const faceAccessory = has("glasses") || has("shades")
+    ? '<g fill="'+(has("shades") ? "#17191d" : "none")+'" stroke="#d9bd79" stroke-width="2"><rect x="31" y="34" width="17" height="12" rx="4"/><rect x="52" y="34" width="17" height="12" rx="4"/><path d="M48 39h4"/></g>'
+    : has("earrings") ? '<g fill="url(#addon3d)" stroke="#f2d58c"><circle cx="25" cy="49" r="3.5"/><circle cx="75" cy="49" r="3.5"/></g>' : "";
+  const necklace = has("chain") || has("necklace")
     ? '<path d="M38 65Q50 82 62 65" fill="none" stroke="#e4c16e" stroke-width="2.5"/><path d="M50 74l4 5-4 5-4-5Z" fill="#d6af5a"/>'
     : "";
   const faceDetails = c.freckles === "light" || c.freckles === "many"
@@ -282,7 +284,11 @@ function characterMarkup(character = playerCharacter, className = "character-art
 function characterOptionField(key, title) {
   const options = characterChoices[key];
   const isColor = key === "skin" || key === "hairColor" || key === "eyes" || key === "outfitColor";
-  return `<section class="creator-option-group"><h4>${title}</h4><div class="creator-options ${isColor ? "creator-swatches" : ""}">${Object.entries(options).map(([value,label]) => `<button type="button" class="creator-option ${playerCharacter[key] === value ? "selected" : ""}" data-character-choice="${key}" data-value="${value}" title="${label}" aria-pressed="${playerCharacter[key] === value}">${isColor ? `<i style="--swatch:${value}"></i><span>${label}</span>` : label}</button>`).join("")}</div></section>`;
+  const multi = key === "accessory";
+  return `<section class="creator-option-group"><h4>${title}${multi ? " · choose as many as you like" : ""}</h4><div class="creator-options ${isColor ? "creator-swatches" : ""}">${Object.entries(options).map(([value,label]) => {
+    const selected = multi ? (playerCharacter.accessories || []).includes(value) : playerCharacter[key] === value;
+    return `<button type="button" class="creator-option ${selected ? "selected" : ""}" ${multi ? "data-character-toggle" : "data-character-choice"}="${key}" data-value="${value}" title="${label}" aria-pressed="${selected}">${isColor ? `<i style="--swatch:${value}"></i><span>${label}</span>` : label}</button>`;
+  }).join("")}</div></section>`;
 }
 function saveCharacter() {
   localStorage.setItem("golden-hour-character", JSON.stringify(playerCharacter));
@@ -324,15 +330,28 @@ function renderCharacterCreator(message = "", fromJoin = false) {
     screen.querySelector("#creator-tab-content").innerHTML = panels[activeTab];
   }));
   screen.querySelector("#creator-tab-content").addEventListener("click", event => {
-    const button = event.target.closest("[data-character-choice]");
+    const button = event.target.closest("[data-character-choice], [data-character-toggle]");
     if (!button) return;
-    playerCharacter[button.dataset.characterChoice] = button.dataset.value;
-    const key = button.dataset.characterChoice;
-    screen.querySelectorAll(`[data-character-choice="${key}"]`).forEach(option => {
-      const selected = option === button;
-      option.classList.toggle("selected", selected);
-      option.setAttribute("aria-pressed", String(selected));
-    });
+    const key = button.dataset.characterChoice || button.dataset.characterToggle;
+    const value = button.dataset.value;
+    if (button.hasAttribute("data-character-toggle")) {
+      const selected = new Set(playerCharacter.accessories || []);
+      selected.has(value) ? selected.delete(value) : selected.add(value);
+      playerCharacter.accessories = [...selected];
+      playerCharacter.accessory = "none";
+      screen.querySelectorAll("[data-character-toggle]").forEach(option => {
+        const active = playerCharacter.accessories.includes(option.dataset.value);
+        option.classList.toggle("selected", active);
+        option.setAttribute("aria-pressed", String(active));
+      });
+    } else {
+      playerCharacter[key] = value;
+      screen.querySelectorAll(`[data-character-choice="${key}"]`).forEach(option => {
+        const active = option === button;
+        option.classList.toggle("selected", active);
+        option.setAttribute("aria-pressed", String(active));
+      });
+    }
     screen.querySelector(".creator-stage").innerHTML = `<div class="creator-aura"></div>${characterMarkup(playerCharacter,"creator-character-art")}`;
   });
   screen.querySelector("#creator-username").addEventListener("input", event => {
