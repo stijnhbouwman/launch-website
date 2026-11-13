@@ -213,73 +213,89 @@ function connect() {
   });
 }
 
+let characterRenderCount = 0;
 function characterMarkup(character = playerCharacter, className = "character-art") {
   const c = { ...characterDefaults, ...character };
-  const width = c.body === "slim" || c.body === "petite" ? 34 : c.body === "broad" || c.body === "athletic" ? 44 : 39;
-  const left = 50 - width / 2, right = 50 + width / 2;
+  const id = "ghchar" + (++characterRenderCount);
   const skin = c.skin, hair = c.hairColor, outfit = c.outfitColor;
   const accessories = Array.isArray(c.accessories) ? c.accessories : (c.accessory && c.accessory !== "none" ? [c.accessory] : []);
-  const has = (name) => accessories.includes(name);
-  const backHair = c.hair === "shaved" ? "" :
-    '<path d="M25 40Q18 7 50 7Q82 7 75 40L79 103Q75 119 67 112L64 45Q50 32 36 45L33 112Q25 119 21 103Z" fill="url(#hair3d)"/>';
+  const has = name => accessories.includes(name);
+  const broad = c.body === "broad" || c.body === "athletic";
+  const slim = c.body === "slim" || c.body === "petite";
+  const l = broad ? 28 : slim ? 35 : 32, r = 100-l;
+  const backHair = c.hair === "long"
+    ? '<path d="M29 35Q25 12 50 11Q75 12 71 35L75 91Q70 104 63 95L64 43Q50 33 36 43L37 95Q30 104 25 91Z" fill="url(#'+id+'-hair)"/>'
+    : c.hair === "bob"
+    ? '<path d="M28 35Q24 11 50 11Q76 11 72 35L69 70Q64 82 59 68L60 42H40L41 68Q36 82 31 70Z" fill="url(#'+id+'-hair)"/>'
+    : c.hair === "braids"
+    ? '<path d="M30 31Q25 13 50 12Q75 13 70 31L75 88Q71 97 66 89L64 40Q50 32 36 40L34 89Q29 97 25 88Z" fill="url(#'+id+'-hair)"/>'
+    : c.hair === "ponytail"
+    ? '<path d="M66 25Q80 26 78 42Q77 53 68 58L65 49Z" fill="url(#'+id+'-hair)"/>'
+    : "";
   const frontHair = c.hair === "shaved" ? "" :
-    (c.hair === "curls"
-      ? '<path d="M24 40Q12 20 27 15Q29 1 42 12Q52 -1 61 12Q77 3 76 19Q89 26 76 42Q67 32 59 35Q49 42 40 34Q31 38 24 40Z" fill="url(#hair3d)"/>'
-      : c.hair === "bob"
-      ? '<path d="M24 39Q18 8 50 8Q82 8 76 39L72 76Q64 83 60 64L58 43Q47 49 37 40L36 66Q28 81 24 70Z" fill="url(#hair3d)"/>'
-      : '<path d="M24 40Q18 8 50 8Q82 8 76 39Q63 27 50 31Q37 28 24 40Z" fill="url(#hair3d)"/>');
+    c.hair === "curls"
+    ? '<path d="M28 36Q22 28 30 22Q28 12 39 16Q45 7 52 15Q63 8 66 19Q78 20 72 34Q66 31 61 34Q54 39 49 33Q40 39 35 33Z" fill="url(#'+id+'-hair)"/>'
+    : c.hair === "pixie" || c.hair === "short"
+    ? '<path d="M28 36Q25 13 50 12Q75 13 72 36Q64 27 56 29Q43 23 28 36Z" fill="url(#'+id+'-hair)"/>'
+    : c.hair === "swept"
+    ? '<path d="M27 37Q24 13 50 12Q75 12 73 34Q61 25 49 29Q39 31 27 37Z" fill="url(#'+id+'-hair)"/>'
+    : '<path d="M28 36Q25 12 50 12Q75 12 72 36Q61 29 53 30Q41 25 28 36Z" fill="url(#'+id+'-hair)"/>';
   const clothes = {
-    tuxedo: '<path d="M'+left+' 68Q50 56 '+right+' 68L73 111L27 111Z" fill="url(#cloth3d)"/><path d="M39 65L50 82L61 65L56 103L50 94L44 103Z" fill="#eee8d9"/><path d="M50 82l4 7-4 7-4-7Z" fill="#c59b50"/>',
-    tailored: '<path d="M'+left+' 68Q50 56 '+right+' 68L73 111L27 111Z" fill="url(#cloth3d)"/><path d="M39 65L50 82L61 65L56 103L50 94L44 103Z" fill="#d9d0bc"/>',
-    shirt: '<path d="M'+left+' 68Q50 58 '+right+' 68L72 111L28 111Z" fill="url(#cloth3d)"/><path d="M40 65L50 80L60 65L56 74L50 85L44 74Z" fill="#e9dfca"/>',
-    dress: '<path d="M39 65L61 65L76 118L24 118Z" fill="url(#cloth3d)"/><path d="M40 65L50 80L60 65" fill="none" stroke="#f3dfbd" stroke-width="2"/>',
-    jacket: '<path d="M'+left+' 68Q50 58 '+right+' 68L74 111L26 111Z" fill="url(#cloth3d)"/><path d="M38 65L50 83L62 65L57 108L50 96L43 108Z" fill="#1d2422"/><path d="M35 83l8 3m22-3-8 3" stroke="#d3b06b" stroke-width="1.4"/>',
-    hoodie: '<path d="M'+left+' 68Q50 55 '+right+' 68L74 111L26 111Z" fill="url(#cloth3d)"/><path d="M39 64Q50 54 61 64L58 80Q50 88 42 80Z" fill="#20251f"/><path d="M43 80v13m14-13v13" stroke="#d5c9ad" stroke-opacity=".55" stroke-width="1.5"/>',
-    varsity: '<path d="M'+left+' 68Q50 57 '+right+' 68L74 111L26 111Z" fill="url(#cloth3d)"/><path d="M50 67v43" stroke="#e8dfc9" stroke-width="3"/><path d="M33 83h10m14 0h10" stroke="#e8dfc9" stroke-width="2"/>',
-    cardigan: '<path d="M'+left+' 68Q50 58 '+right+' 68L72 111L28 111Z" fill="url(#cloth3d)"/><path d="M40 66L50 80L60 66L55 109L50 96L45 109Z" fill="#d8c9aa"/>',
-    royal: '<path d="M'+left+' 68Q50 55 '+right+' 68L78 118L22 118Z" fill="url(#cloth3d)" stroke="#d6b76e"/><path d="M37 64L50 83L63 64L57 110L50 99L43 110Z" fill="#e6d5b4"/>',
-    vest: '<path d="M'+left+' 68Q50 58 '+right+' 68L72 111L28 111Z" fill="url(#cloth3d)"/><path d="M40 65L50 80L60 65L56 108L50 97L44 108Z" fill="#d8cdb6"/>'
+    tuxedo: '<path d="M'+l+' 68Q50 60 '+r+' 68L72 112H28Z" fill="url(#'+id+'-cloth)"/><path d="M39 66L50 83L61 66L56 108L50 97L44 108Z" fill="#e9e2d4"/><path d="M50 83l4 7-4 7-4-7Z" fill="#c7a45e"/>',
+    tailored: '<path d="M'+l+' 68Q50 60 '+r+' 68L72 112H28Z" fill="url(#'+id+'-cloth)"/><path d="M39 66L50 82L61 66L56 108L50 97L44 108Z" fill="#d8cfbb"/>',
+    shirt: '<path d="M'+l+' 68Q50 61 '+r+' 68L70 112H30Z" fill="url(#'+id+'-cloth)"/><path d="M40 66L50 81L60 66L55 74L50 84L45 74Z" fill="#eee5d4"/>',
+    dress: '<path d="M39 66Q50 62 61 66L76 119H24Z" fill="url(#'+id+'-cloth)"/>',
+    jacket: '<path d="M'+l+' 68Q50 60 '+r+' 68L72 112H28Z" fill="url(#'+id+'-cloth)"/><path d="M38 66L50 84L62 66L57 110L50 98L43 110Z" fill="#20231f"/>',
+    hoodie: '<path d="M'+l+' 68Q50 59 '+r+' 68L72 112H28Z" fill="url(#'+id+'-cloth)"/><path d="M39 65Q50 59 61 65L58 82Q50 89 42 82Z" fill="#20251f"/><path d="M44 82v13m12-13v13" stroke="#d8cdb8" stroke-opacity=".65" stroke-width="1.4"/>',
+    varsity: '<path d="M'+l+' 68Q50 60 '+r+' 68L72 112H28Z" fill="url(#'+id+'-cloth)"/><path d="M50 67v44" stroke="#e6deca" stroke-width="2.5"/>',
+    cardigan: '<path d="M'+l+' 68Q50 61 '+r+' 68L70 112H30Z" fill="url(#'+id+'-cloth)"/><path d="M40 66L50 82L60 66L55 110L50 98L45 110Z" fill="#d9cdb4"/>',
+    royal: '<path d="M'+l+' 68Q50 58 '+r+' 68L77 119H23Z" fill="url(#'+id+'-cloth)" stroke="#c9a85f" stroke-width=".8"/><path d="M38 66L50 84L62 66L57 111L50 99L43 111Z" fill="#e6d8bb"/>',
+    vest: '<path d="M'+l+' 68Q50 61 '+r+' 68L70 112H30Z" fill="url(#'+id+'-cloth)"/><path d="M40 66L50 81L60 66L56 110L50 98L44 110Z" fill="#d8cdb6"/>'
   };
-  const addonBack = [
-    has("cape") ? '<path d="M34 67Q50 58 66 67L84 128Q50 143 16 128Z" fill="url(#addon3d)" stroke="#d6b66d" stroke-width="1.4"/>' : "",
-    has("wings") ? '<path d="M34 69Q18 55 7 69Q10 96 36 108Q43 87 34 69ZM66 69Q82 55 93 69Q90 96 64 108Q57 87 66 69Z" fill="url(#addon3d)" stroke="#e6d3a6" stroke-width="1.2"/><path d="M14 73l18 28m54-28-18 28" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>' : "",
-    has("backpack") ? '<path d="M31 71Q50 61 69 71L75 113L25 113Z" fill="url(#addon3d)" stroke="#d6b66d"/>' : ""
+  const backAccessories = [
+    has("wings") ? '<path d="M34 69Q17 52 8 65Q10 92 35 104Q42 87 34 69ZM66 69Q83 52 92 65Q90 92 65 104Q58 87 66 69Z" fill="url(#'+id+'-addon)" stroke="#e7d6ad" stroke-width="1.1"/><path d="M13 68l18 29m56-29L69 97" stroke="#fff" stroke-opacity=".38" stroke-width="1.8"/>' : "",
+    has("cape") ? '<path d="M35 67Q50 62 65 67L79 125Q50 137 21 125Z" fill="url(#'+id+'-addon)" stroke="#c8a45d" stroke-width="1.2"/>' : "",
+    has("backpack") ? '<path d="M34 70Q50 64 66 70L71 108H29Z" fill="url(#'+id+'-addon)" stroke="#b99454"/><path d="M36 76v26m28-26v26" stroke="#e8d5a4" stroke-opacity=".55" stroke-width="2"/>' : ""
   ].join("");
+  const arms = '<path d="M'+(l+3)+' 72Q'+(l-1)+' 78 '+(l+1)+' 101L'+(l+7)+' 104Q'+(l+11)+' 88 '+(l+12)+' 77ZM'+(r-3)+' 72Q'+(r+1)+' 78 '+(r-1)+' 101L'+(r-7)+' 104Q'+(r-11)+' 88 '+(r-12)+' 77Z" fill="url(#'+id+'-cloth)" stroke="#000" stroke-opacity=".08"/><path d="M'+(l+1)+' 99Q'+(l-1)+' 107 '+(l+7)+' 111L'+(l+12)+' 106L'+(l+8)+' 98ZM'+(r-1)+' 99Q'+(r+1)+' 107 '+(r-7)+' 111L'+(r-12)+' 106L'+(r-8)+' 98Z" fill="url(#'+id+'-skin)"/>';
+  const legs = '<path d="M39 110L38 137Q43 140 48 137L49 111ZM51 111L52 137Q57 140 62 137L61 110Z" fill="url(#'+id+'-cloth)"/><path d="M35 134H49V140H34Q31 138 35 134ZM51 134H65V140H51Z" fill="#211e19"/>';
+  const ears = '<path d="M29 37Q23 35 24 45Q25 53 31 54L34 49ZM71 37Q77 35 76 45Q75 53 69 54L66 49Z" fill="url(#'+id+'-skin)" stroke="#9a684d" stroke-opacity=".2"/>';
+  const head = '<path d="M50 13C36 13 28 23 28 39c0 15 9 25 22 25s22-10 22-25C72 23 64 13 50 13Z" fill="url(#'+id+'-skin)" stroke="#553a2b" stroke-opacity=".18"/>';
+  const face = '<path d="M38 36Q42 33 46 36M54 36Q58 33 62 36" fill="none" stroke="#51392d" stroke-width="1.6" stroke-linecap="round"/><ellipse cx="42" cy="42" rx="3.1" ry="3.8" fill="#fff5e9"/><ellipse cx="58" cy="42" rx="3.1" ry="3.8" fill="#fff5e9"/><ellipse cx="42" cy="42" rx="1.8" ry="2.5" fill="'+c.eyes+'"/><ellipse cx="58" cy="42" rx="1.8" ry="2.5" fill="'+c.eyes+'"/><circle cx="42.6" cy="41.2" r=".8" fill="#fff"/><circle cx="58.6" cy="41.2" r=".8" fill="#fff"/><path d="M50 43l-2 5 3 1" fill="none" stroke="#8d604b" stroke-width="1.1"/><path d="M46 53Q50 56 54 53" fill="none" stroke="#995c54" stroke-width="1.5" stroke-linecap="round"/>';
+  const freckles = c.freckles === "light" || c.freckles === "many"
+    ? '<g fill="#8b5945" opacity=".65">'+Array.from({length:c.freckles === "many" ? 10 : 5},(_,i)=>'<circle cx="'+(36+(i%5)*3.5)+'" cy="'+(47+Math.floor(i/5)*3)+'" r=".75"/>').join("")+'</g>'
+    : c.freckles === "beauty" ? '<circle cx="63" cy="48" r="1.2" fill="#684437"/>' : "";
+  const facialHair = c.facialHair === "beard"
+    ? '<path d="M31 49Q50 68 69 49L65 61Q50 75 35 61Z" fill="url(#'+id+'-hair)"/>'
+    : c.facialHair === "moustache"
+    ? '<path d="M40 51Q45 47 50 51Q55 47 60 51Q56 57 50 54Q44 57 40 51Z" fill="'+hair+'"/>'
+    : c.facialHair === "stubble"
+    ? '<path d="M35 55Q50 64 65 55" fill="none" stroke="'+hair+'" stroke-width="2.5" stroke-dasharray="1 2.5"/>' : "";
   const headwear = [
-    has("hat") ? '<path d="M28 25Q50 0 72 25L75 34H25Z" fill="url(#addon3d)" stroke="#d6b66d"/><path d="M18 34Q50 28 82 34L79 40H21Z" fill="#25221b" stroke="#d6b66d"/>' : "",
-    has("crown") ? '<path d="M29 27l4-13 10 9 7-15 8 15 10-9 4 13Z" fill="url(#addon3d)" stroke="#f1d88d"/><path d="M31 27h38v5H31Z" fill="#d4b15f"/>' : "",
-    has("beanie") ? '<path d="M27 31Q30 8 50 8Q70 8 73 31Z" fill="url(#addon3d)" stroke="#d6b66d"/><path d="M27 29h46v7H27Z" fill="#c09b5d"/>' : "",
-    has("headband") ? '<path d="M26 30Q50 18 74 30" fill="none" stroke="#c09b5d" stroke-width="5"/>' : ""
+    has("hat") ? '<path d="M29 20Q50 3 71 20L74 29H26Z" fill="url(#'+id+'-addon)" stroke="#d6b66d"/><path d="M19 29Q50 25 81 29L78 34H22Z" fill="#28231b" stroke="#d6b66d"/>' : "",
+    has("crown") ? '<path d="M30 23l4-12 10 9 6-14 7 14 10-9 4 12Z" fill="url(#'+id+'-addon)" stroke="#f1d88d"/><path d="M31 23h38v4H31Z" fill="#d4b15f"/>' : "",
+    has("beanie") ? '<path d="M28 28Q30 8 50 8Q70 8 72 28Z" fill="url(#'+id+'-addon)" stroke="#d6b66d"/><path d="M28 27h44v5H28Z" fill="#c09b5d"/>' : "",
+    has("headband") ? '<path d="M28 29Q50 18 72 29" fill="none" stroke="#c09b5d" stroke-width="4"/>' : ""
   ].join("");
-  const faceAccessory = [
-    has("glasses") ? '<g fill="none" stroke="#d9bd79" stroke-width="2"><rect x="31" y="34" width="17" height="12" rx="4"/><rect x="52" y="34" width="17" height="12" rx="4"/><path d="M48 39h4"/></g>' : "",
-    has("shades") ? '<g fill="#17191d" stroke="#d9bd79" stroke-width="2"><rect x="30" y="34" width="19" height="12" rx="4"/><rect x="51" y="34" width="19" height="12" rx="4"/></g>' : "",
-    has("earrings") ? '<g fill="url(#addon3d)" stroke="#f2d58c"><circle cx="25" cy="49" r="3.5"/><circle cx="75" cy="49" r="3.5"/></g>' : ""
+  const faceAccessories = [
+    has("glasses") ? '<g fill="none" stroke="#d9bd79" stroke-width="1.7"><rect x="32" y="37" width="16" height="11" rx="4"/><rect x="52" y="37" width="16" height="11" rx="4"/><path d="M48 41h4"/></g>' : "",
+    has("shades") ? '<g fill="#17191d" stroke="#d9bd79" stroke-width="1.5"><rect x="32" y="37" width="16" height="11" rx="4"/><rect x="52" y="37" width="16" height="11" rx="4"/></g>' : "",
+    has("earrings") ? '<g fill="url(#'+id+'-addon)" stroke="#f2d58c"><circle cx="27" cy="50" r="2.6"/><circle cx="73" cy="50" r="2.6"/></g>' : ""
   ].join("");
-  const necklace = [
-    has("chain") ? '<path d="M38 65Q50 82 62 65" fill="none" stroke="#e4c16e" stroke-width="2.5"/>' : "",
-    has("necklace") ? '<path d="M38 65Q50 82 62 65" fill="none" stroke="#e4c16e" stroke-width="2.5"/><path d="M50 74l4 5-4 5-4-5Z" fill="#d6af5a"/>' : ""
+  const neckAccessories = [
+    has("chain") ? '<path d="M39 65Q50 81 61 65" fill="none" stroke="#e4c16e" stroke-width="2.4"/>' : "",
+    has("necklace") ? '<path d="M39 65Q50 82 61 65" fill="none" stroke="#e4c16e" stroke-width="2.4"/><path d="M50 74l3 4-3 4-3-4Z" fill="#d6af5a"/>' : ""
   ].join("");
-  const faceDetails = c.freckles === "light" || c.freckles === "many"
-    ? '<g fill="#8b5945" opacity=".65">'+Array.from({length:c.freckles === "many" ? 10 : 5},(_,i)=>'<circle cx="'+(36+(i%5)*3)+'" cy="'+(43+Math.floor(i/5)*3)+'" r=".8"/>').join("")+'</g>'
-    : c.freckles === "beauty" ? '<circle cx="62" cy="45" r="1.2" fill="#684437"/>' : "";
-  const beard = c.facialHair === "beard" ? '<path d="M29 48Q50 68 71 48L66 64Q50 79 34 64Z" fill="url(#hair3d)"/>'
-    : c.facialHair === "moustache" ? '<path d="M39 49Q44 45 50 50Q56 45 61 49Q57 56 50 52Q43 56 39 49Z" fill="'+hair+'"/>'
-    : c.facialHair === "stubble" ? '<path d="M34 53Q50 64 66 53" fill="none" stroke="'+hair+'" stroke-width="3" stroke-dasharray="1 3"/>' : "";
-  const face = '<ellipse cx="50" cy="37" rx="24" ry="29" fill="url(#skin3d)" stroke="#4c3024" stroke-opacity=".28"/><path d="M27 45Q23 55 31 60M73 45Q77 55 69 60" fill="none" stroke="'+skin+'" stroke-width="5" stroke-linecap="round"/><path d="M50 41l-2 7 3 1" fill="none" stroke="#885c49" stroke-opacity=".6"/><ellipse cx="40" cy="40" rx="3.1" ry="3.7" fill="#fff4e6"/><ellipse cx="60" cy="40" rx="3.1" ry="3.7" fill="#fff4e6"/><ellipse cx="40" cy="40" rx="1.8" ry="2.6" fill="'+c.eyes+'"/><ellipse cx="60" cy="40" rx="1.8" ry="2.6" fill="'+c.eyes+'"/><circle cx="40.7" cy="39.2" r=".8" fill="#fff"/><circle cx="60.7" cy="39.2" r=".8" fill="#fff"/><path d="M35 34Q40 31 45 34M55 34Q60 31 65 34" fill="none" stroke="#51392d" stroke-width="1.8" stroke-linecap="round"/><path d="M46 48Q50 51 54 48" fill="none" stroke="#9c5d53" stroke-width="1.5"/>';
   return '<svg class="'+className+'" viewBox="0 0 100 145" role="img" aria-label="Your custom character"><defs>'+
-    '<linearGradient id="skin3d" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".48"/><stop offset=".42" stop-color="'+skin+'"/><stop offset="1" stop-color="#422719" stop-opacity=".5"/></linearGradient>'+
-    '<linearGradient id="cloth3d" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".32"/><stop offset=".38" stop-color="'+outfit+'"/><stop offset="1" stop-color="#080b0a" stop-opacity=".62"/></linearGradient>'+
-    '<linearGradient id="hair3d" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".35"/><stop offset=".3" stop-color="'+hair+'"/><stop offset="1" stop-color="#090807" stop-opacity=".55"/></linearGradient>'+
-    '<linearGradient id="addon3d" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff4d2" stop-opacity=".7"/><stop offset=".35" stop-color="#b68e4e"/><stop offset="1" stop-color="#342319"/></linearGradient></defs>'+
-    '<ellipse cx="50" cy="139" rx="25" ry="4" fill="#000" opacity=".28"/>'+addonBack+
-    '<path d="M39 108L38 135Q42 140 48 136L49 108ZM51 108L52 136Q58 140 62 135L61 108Z" fill="url(#cloth3d)"/><path d="M35 132h14v5H35zM51 132h14v5H51z" fill="#211d18"/>'+
-    backHair+'<path d="M43 53h14v18H43Z" fill="url(#skin3d)"/>'+
-    '<path d="M'+left+' 68Q50 55 '+right+' 68L72 111Q50 120 28 111Z" fill="url(#cloth3d)"/>'+(clothes[c.outfit] || clothes.tailored)+
-    '<path d="M'+(left+2)+' 70Q'+(left-5)+' 77 '+(left-3)+' 102L'+(left+4)+' 107Q'+(left+8)+' 92 '+(left+10)+' 78ZM'+(right-2)+' 70Q'+(right+5)+' 77 '+(right+3)+' 102L'+(right-4)+' 107Q'+(right-8)+' 92 '+(right-10)+' 78Z" fill="url(#cloth3d)"/>'+
-    '<path d="M'+(left-2)+' 102Q'+(left-5)+' 110 '+(left+2)+' 113L'+(left+8)+' 108L'+(left+5)+' 99ZM'+(right+2)+' 102Q'+(right+5)+' 110 '+(right-2)+' 113L'+(right-8)+' 108L'+(right-5)+' 99Z" fill="url(#skin3d)"/>'+
-    face+faceDetails+beard+frontHair+headwear+faceAccessory+necklace+
-    '<path d="M36 18Q42 9 53 11" fill="none" stroke="#fff" stroke-opacity=".24" stroke-width="2" stroke-linecap="round"/><path d="M32 56Q50 68 68 56" fill="none" stroke="#fff" stroke-opacity=".1" stroke-width="2"/></svg>';
+    '<linearGradient id="'+id+'-skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".42"/><stop offset=".38" stop-color="'+skin+'"/><stop offset="1" stop-color="#422719" stop-opacity=".42"/></linearGradient>'+
+    '<linearGradient id="'+id+'-cloth" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".28"/><stop offset=".4" stop-color="'+outfit+'"/><stop offset="1" stop-color="#080b0a" stop-opacity=".55"/></linearGradient>'+
+    '<linearGradient id="'+id+'-hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".3"/><stop offset=".32" stop-color="'+hair+'"/><stop offset="1" stop-color="#090807" stop-opacity=".5"/></linearGradient>'+
+    '<linearGradient id="'+id+'-addon" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff4d2" stop-opacity=".7"/><stop offset=".35" stop-color="#b68e4e"/><stop offset="1" stop-color="#342319"/></linearGradient></defs>'+
+    '<ellipse cx="50" cy="140" rx="23" ry="3.5" fill="#000" opacity=".26"/>'+backAccessories+legs+backHair+
+    '<path d="M44 57H56V70H44Z" fill="url(#'+id+'-skin)"/>'+
+    '<path d="M'+l+' 70Q50 60 '+r+' 70L71 113Q50 120 29 113Z" fill="url(#'+id+'-cloth)"/>'+
+    (clothes[c.outfit] || clothes.tailored)+arms+ears+head+face+freckles+facialHair+frontHair+headwear+faceAccessories+neckAccessories+
+    '<path d="M34 22Q42 12 54 14" fill="none" stroke="#fff" stroke-opacity=".2" stroke-width="2" stroke-linecap="round"/></svg>';
 }
 function characterOptionField(key, title) {
   const options = characterChoices[key];
