@@ -15,7 +15,7 @@ const characterChoices = {
   eyes: { "#33251f":"Brown", "#315b78":"Blue", "#47734d":"Green", "#6d8b8a":"Hazel", "#202020":"Dark", "#78618c":"Violet" },
   outfit: { tuxedo:"Tuxedo", tailored:"Tailored suit", shirt:"Open-collar shirt", dress:"Evening dress", jacket:"Leather jacket", hoodie:"Street hoodie", varsity:"Varsity jacket", cardigan:"Cardigan", royal:"Royal coat", vest:"Waistcoat" },
   outfitColor: { "#26352c":"Casino green", "#17191d":"Midnight", "#8b3038":"Burgundy", "#b18b4c":"Champagne", "#314c70":"Navy", "#e4d8c3":"Ivory", "#76518b":"Plum", "#b86b42":"Terracotta", "#557b78":"Sage", "#c77c91":"Rose" },
-  accessory: { none:"None", glasses:"Glasses", shades:"Sunglasses", earrings:"Earrings", chain:"Gold chain", hat:"Fedora", beanie:"Beanie", headband:"Headband", necklace:"Pendant", scarf:"Scarf" },
+  accessory: { none:"None", cape:"Full cape", wings:"Wings", backpack:"Backpack", crown:"Crown", glasses:"Glasses", shades:"Sunglasses", earrings:"Earrings", chain:"Gold chain", hat:"Fedora", beanie:"Beanie", headband:"Headband", necklace:"Pendant" },
   freckles: { none:"None", light:"Light freckles", many:"Freckles", beauty:"Beauty mark" },
   facialHair: { none:"Clean shaven", stubble:"Stubble", moustache:"Moustache", beard:"Full beard" }
 };
@@ -215,35 +215,69 @@ function connect() {
 
 function characterMarkup(character = playerCharacter, className = "character-art") {
   const c = { ...characterDefaults, ...character };
-  const bodyWidth = c.body === "slim" || c.body === "petite" ? 35 : c.body === "broad" || c.body === "athletic" ? 49 : 42;
-  const bodyX = 50 - bodyWidth / 2;
-  const bodyRight = 100 - bodyX;
-  const hairBack = c.hair === "shaved" ? "" : ({
-    long: `<path d="M24 38 Q18 5 50 7 Q82 5 76 38 L79 91 Q69 99 65 82 L63 43 Q50 31 37 43 L35 82 Q29 99 21 91Z" fill="${c.hairColor}"/>`,
-    braids: `<path d="M24 38 Q18 5 50 7 Q82 5 76 38 L77 85 Q73 93 69 85 L66 44 Q50 31 34 44 L31 85 Q27 93 23 85Z" fill="${c.hairColor}"/><path d="M24 58 Q12 70 22 92 M76 58 Q88 70 78 92" fill="none" stroke="${c.hairColor}" stroke-width="7" stroke-linecap="round"/>`,
-    ponytail: `<path d="M24 38 Q18 5 50 7 Q82 5 76 38 L80 74 Q91 88 80 99 Q68 91 69 73 L65 43 Q50 31 35 43 L31 73 Q20 91 20 99 Q9 88 20 74Z" fill="${c.hairColor}"/>`
-  }[c.hair] || `<path d="M24 38 Q18 5 50 7 Q82 5 76 38 L76 73 Q68 83 64 70 L63 43 Q50 31 37 43 L36 70 Q32 83 24 73Z" fill="${c.hairColor}"/>`);
-  const hairFront = c.hair === "shaved" ? "" : ({
-    pixie:`<path d="M25 35 Q21 10 50 9 Q78 8 75 34 Q63 27 55 29 Q43 34 34 29 L29 43Z" fill="${c.hairColor}"/>`,
-    bob:`<path d="M24 36 Q18 7 50 8 Q82 7 76 36 Q70 29 67 29 L68 65 Q61 69 60 55 L58 39 Q47 47 37 38 L36 61 Q29 68 26 61 L29 39Z" fill="${c.hairColor}"/>`,
-    curls:`<path d="M24 37 Q13 20 28 15 Q29 3 42 12 Q52 0 61 12 Q77 4 75 18 Q88 25 76 40 Q68 31 59 32 Q49 40 40 32 Q31 35 24 37Z" fill="${c.hairColor}"/>`,
-    braids:`<path d="M24 37 Q18 8 50 8 Q82 8 76 37 Q64 29 54 32 Q43 35 34 31Z" fill="${c.hairColor}"/>`,
-    ponytail:`<path d="M24 37 Q19 8 50 8 Q81 8 76 37 Q64 29 53 32 Q40 35 24 37Z" fill="${c.hairColor}"/>`,
-    swept:`<path d="M24 38 Q18 8 50 8 Q81 8 76 37 Q63 24 49 29 Q37 33 24 38Z" fill="${c.hairColor}"/>`,
-    wavy:`<path d="M24 38 Q18 8 50 8 Q82 8 76 38 Q68 29 62 32 Q54 39 47 32 Q36 27 24 38Z" fill="${c.hairColor}"/>`,
-    long:`<path d="M24 38 Q18 8 50 8 Q82 8 76 38 Q65 29 58 32 Q48 38 40 31 Q32 31 24 38Z" fill="${c.hairColor}"/>`,
-    short:`<path d="M24 38 Q18 8 50 8 Q82 8 76 38 Q63 26 50 30 Q37 27 24 38Z" fill="${c.hairColor}"/>`
-  }[c.hair] || "");
-  const clothes = c.outfit === "dress"
-    ? `<path d="M38 58 L62 58 L78 100 L22 100Z" fill="${c.outfitColor}"/><path d="M40 58 L50 68 L60 58" fill="#e7d6b4"/>`
-    : `<path d="M${bodyX} 59 Q50 48 50 58 Q50 48 ${bodyRight} 59 L76 100 L24 100Z" fill="${c.outfitColor}"/>`;
-  const neck = `<rect x="43" y="48" width="14" height="16" rx="5" fill="${c.skin}"/>`;
-  const eyes = `<ellipse cx="40" cy="39" rx="2.5" ry="3" fill="${c.eyes}"/><ellipse cx="60" cy="39" rx="2.5" ry="3" fill="${c.eyes}"/><path d="M44 49 Q50 53 56 49" fill="none" stroke="#75483c" stroke-width="1.7" stroke-linecap="round"/>`;
-  const facialHair = c.facialHair === "stubble" ? '<path d="M34 52 Q50 64 66 52" fill="none" stroke="#49352c" stroke-width="3" stroke-dasharray="1 3"/>' : c.facialHair === "moustache" ? '<path d="M39 48 Q44 44 50 49 Q56 44 61 48 Q57 55 50 51 Q43 55 39 48Z" fill="#49352c"/>' : c.facialHair === "beard" ? `<path d="M29 48 Q50 67 71 48 L66 62 Q50 77 34 62Z" fill="${c.hairColor}"/>` : "";
-  const faceDetail = c.freckles === "light" || c.freckles === "many" ? `<g fill="#8b5945" opacity=".65">${Array.from({length:c.freckles==="many"?8:4},(_,i)=>`<circle cx="${37+(i%4)*3}" cy="${43+Math.floor(i/4)*3}" r="0.8"/>`).join("")}</g>` : c.freckles === "beauty" ? '<circle cx="62" cy="45" r="1.2" fill="#684437"/>' : "";
-  const accessory = ({glasses:'<g fill="none" stroke="#d9bd79" stroke-width="2"><rect x="31" y="33" width="17" height="12" rx="4"/><rect x="52" y="33" width="17" height="12" rx="4"/><path d="M48 38h4"/></g>',shades:'<g fill="#17191d" stroke="#d9bd79" stroke-width="1.5"><rect x="30" y="33" width="19" height="12" rx="4"/><rect x="51" y="33" width="19" height="12" rx="4"/></g>',earrings:'<g fill="#e1bf67"><circle cx="25" cy="47" r="3"/><circle cx="75" cy="47" r="3"/></g>',chain:'<path d="M39 61 Q50 76 61 61" fill="none" stroke="#e1bf67" stroke-width="3"/>',necklace:'<path d="M39 61 Q50 76 61 61" fill="none" stroke="#e1bf67" stroke-width="2"/><path d="M50 68l3 4-3 4-3-4Z" fill="#e1bf67"/>',hat:'<g fill="#26201b" stroke="#d4b36a" stroke-width="2"><path d="M28 23 Q50 -2 72 23 L75 29 L25 29Z"/><path d="M18 30 Q50 25 82 30 L80 35 L20 35Z"/></g>',beanie:'<path d="M27 29 Q30 8 50 8 Q70 8 73 29Z" fill="#7a4c3c" stroke="#d4b36a" stroke-width="1.5"/><path d="M27 28h46v7H27Z" fill="#b18b4c"/>',headband:'<path d="M26 28 Q50 17 74 28" fill="none" stroke="#b18b4c" stroke-width="5"/>'})[c.accessory] || "";
-  const collar = ["tuxedo","tailored","vest"].includes(c.outfit) ? '<path d="M39 58 L50 71 L61 58 L56 80 L50 75 L44 80Z" fill="#eee5d5"/><path d="M50 70 L54 79 L50 88 L46 79Z" fill="#b68d46"/>' : "";
-  return `<svg class="${className}" viewBox="0 0 100 110" role="img" aria-label="Your custom character"><ellipse cx="50" cy="105" rx="27" ry="4" fill="#000" opacity=".22"/>${clothes}<path d="M${bodyX} 62 Q50 51 100-${bodyX} 62 L80 105 L20 105Z" fill="${c.outfitColor}" opacity=".12"/>${neck}${hairBack}<ellipse cx="50" cy="36" rx="25" ry="29" fill="${c.skin}"/><path d="M27 48 Q24 57 31 61" fill="none" stroke="${c.skin}" stroke-width="5" stroke-linecap="round"/><path d="M73 48 Q76 57 69 61" fill="none" stroke="${c.skin}" stroke-width="5" stroke-linecap="round"/>${eyes}${faceDetail}${facialHair}${hairFront}${accessory}${collar}</svg>`;
+  const width = c.body === "slim" || c.body === "petite" ? 34 : c.body === "broad" || c.body === "athletic" ? 44 : 39;
+  const left = 50 - width / 2, right = 50 + width / 2;
+  const skin = c.skin, hair = c.hairColor, outfit = c.outfitColor;
+  const backHair = c.hair === "shaved" ? "" :
+    '<path d="M25 40Q18 7 50 7Q82 7 75 40L79 103Q75 119 67 112L64 45Q50 32 36 45L33 112Q25 119 21 103Z" fill="url(#hair3d)"/>';
+  const frontHair = c.hair === "shaved" ? "" :
+    (c.hair === "curls"
+      ? '<path d="M24 40Q12 20 27 15Q29 1 42 12Q52 -1 61 12Q77 3 76 19Q89 26 76 42Q67 32 59 35Q49 42 40 34Q31 38 24 40Z" fill="url(#hair3d)"/>'
+      : c.hair === "bob"
+      ? '<path d="M24 39Q18 8 50 8Q82 8 76 39L72 76Q64 83 60 64L58 43Q47 49 37 40L36 66Q28 81 24 70Z" fill="url(#hair3d)"/>'
+      : '<path d="M24 40Q18 8 50 8Q82 8 76 39Q63 27 50 31Q37 28 24 40Z" fill="url(#hair3d)"/>');
+  const clothes = {
+    tuxedo: '<path d="M'+left+' 68Q50 56 '+right+' 68L73 111L27 111Z" fill="url(#cloth3d)"/><path d="M39 65L50 82L61 65L56 103L50 94L44 103Z" fill="#eee8d9"/><path d="M50 82l4 7-4 7-4-7Z" fill="#c59b50"/>',
+    tailored: '<path d="M'+left+' 68Q50 56 '+right+' 68L73 111L27 111Z" fill="url(#cloth3d)"/><path d="M39 65L50 82L61 65L56 103L50 94L44 103Z" fill="#d9d0bc"/>',
+    shirt: '<path d="M'+left+' 68Q50 58 '+right+' 68L72 111L28 111Z" fill="url(#cloth3d)"/><path d="M40 65L50 80L60 65L56 74L50 85L44 74Z" fill="#e9dfca"/>',
+    dress: '<path d="M39 65L61 65L76 118L24 118Z" fill="url(#cloth3d)"/><path d="M40 65L50 80L60 65" fill="none" stroke="#f3dfbd" stroke-width="2"/>',
+    jacket: '<path d="M'+left+' 68Q50 58 '+right+' 68L74 111L26 111Z" fill="url(#cloth3d)"/><path d="M38 65L50 83L62 65L57 108L50 96L43 108Z" fill="#1d2422"/><path d="M35 83l8 3m22-3-8 3" stroke="#d3b06b" stroke-width="1.4"/>',
+    hoodie: '<path d="M'+left+' 68Q50 55 '+right+' 68L74 111L26 111Z" fill="url(#cloth3d)"/><path d="M39 64Q50 54 61 64L58 80Q50 88 42 80Z" fill="#20251f"/><path d="M43 80v13m14-13v13" stroke="#d5c9ad" stroke-opacity=".55" stroke-width="1.5"/>',
+    varsity: '<path d="M'+left+' 68Q50 57 '+right+' 68L74 111L26 111Z" fill="url(#cloth3d)"/><path d="M50 67v43" stroke="#e8dfc9" stroke-width="3"/><path d="M33 83h10m14 0h10" stroke="#e8dfc9" stroke-width="2"/>',
+    cardigan: '<path d="M'+left+' 68Q50 58 '+right+' 68L72 111L28 111Z" fill="url(#cloth3d)"/><path d="M40 66L50 80L60 66L55 109L50 96L45 109Z" fill="#d8c9aa"/>',
+    royal: '<path d="M'+left+' 68Q50 55 '+right+' 68L78 118L22 118Z" fill="url(#cloth3d)" stroke="#d6b76e"/><path d="M37 64L50 83L63 64L57 110L50 99L43 110Z" fill="#e6d5b4"/>',
+    vest: '<path d="M'+left+' 68Q50 58 '+right+' 68L72 111L28 111Z" fill="url(#cloth3d)"/><path d="M40 65L50 80L60 65L56 108L50 97L44 108Z" fill="#d8cdb6"/>'
+  };
+  const addonBack = c.accessory === "cape"
+    ? '<path d="M34 67Q50 58 66 67L84 128Q50 143 16 128Z" fill="url(#addon3d)" stroke="#d6b66d" stroke-width="1.4"/>'
+    : c.accessory === "wings"
+    ? '<path d="M34 69Q18 55 7 69Q10 96 36 108Q43 87 34 69ZM66 69Q82 55 93 69Q90 96 64 108Q57 87 66 69Z" fill="url(#addon3d)" stroke="#e6d3a6" stroke-width="1.2"/><path d="M14 73l18 28m54-28-18 28" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>'
+    : c.accessory === "backpack"
+    ? '<path d="M31 71Q50 61 69 71L75 113L25 113Z" fill="url(#addon3d)" stroke="#d6b66d"/>'
+    : "";
+  const headwear = c.accessory === "hat" || c.accessory === "crown" || c.accessory === "beanie"
+    ? (c.accessory === "hat"
+      ? '<path d="M28 25Q50 0 72 25L75 34H25Z" fill="url(#addon3d)" stroke="#d6b66d"/><path d="M18 34Q50 28 82 34L79 40H21Z" fill="#25221b" stroke="#d6b66d"/>'
+      : c.accessory === "crown"
+      ? '<path d="M29 27l4-13 10 9 7-15 8 15 10-9 4 13Z" fill="url(#addon3d)" stroke="#f1d88d"/><path d="M31 27h38v5H31Z" fill="#d4b15f"/>'
+      : '<path d="M27 31Q30 8 50 8Q70 8 73 31Z" fill="url(#addon3d)" stroke="#d6b66d"/><path d="M27 29h46v7H27Z" fill="#c09b5d"/>')
+    : "";
+  const faceAccessory = c.accessory === "glasses" || c.accessory === "shades"
+    ? '<g fill="'+(c.accessory === "shades" ? "#17191d" : "none")+'" stroke="#d9bd79" stroke-width="2"><rect x="31" y="34" width="17" height="12" rx="4"/><rect x="52" y="34" width="17" height="12" rx="4"/><path d="M48 39h4"/></g>'
+    : c.accessory === "earrings" ? '<g fill="url(#addon3d)" stroke="#f2d58c"><circle cx="25" cy="49" r="3.5"/><circle cx="75" cy="49" r="3.5"/></g>' : "";
+  const necklace = c.accessory === "chain" || c.accessory === "necklace"
+    ? '<path d="M38 65Q50 82 62 65" fill="none" stroke="#e4c16e" stroke-width="2.5"/><path d="M50 74l4 5-4 5-4-5Z" fill="#d6af5a"/>'
+    : "";
+  const faceDetails = c.freckles === "light" || c.freckles === "many"
+    ? '<g fill="#8b5945" opacity=".65">'+Array.from({length:c.freckles === "many" ? 10 : 5},(_,i)=>'<circle cx="'+(36+(i%5)*3)+'" cy="'+(43+Math.floor(i/5)*3)+'" r=".8"/>').join("")+'</g>'
+    : c.freckles === "beauty" ? '<circle cx="62" cy="45" r="1.2" fill="#684437"/>' : "";
+  const beard = c.facialHair === "beard" ? '<path d="M29 48Q50 68 71 48L66 64Q50 79 34 64Z" fill="url(#hair3d)"/>'
+    : c.facialHair === "moustache" ? '<path d="M39 49Q44 45 50 50Q56 45 61 49Q57 56 50 52Q43 56 39 49Z" fill="'+hair+'"/>'
+    : c.facialHair === "stubble" ? '<path d="M34 53Q50 64 66 53" fill="none" stroke="'+hair+'" stroke-width="3" stroke-dasharray="1 3"/>' : "";
+  const face = '<ellipse cx="50" cy="37" rx="24" ry="29" fill="url(#skin3d)" stroke="#4c3024" stroke-opacity=".28"/><path d="M27 45Q23 55 31 60M73 45Q77 55 69 60" fill="none" stroke="'+skin+'" stroke-width="5" stroke-linecap="round"/><path d="M50 41l-2 7 3 1" fill="none" stroke="#885c49" stroke-opacity=".6"/><ellipse cx="40" cy="40" rx="3.1" ry="3.7" fill="#fff4e6"/><ellipse cx="60" cy="40" rx="3.1" ry="3.7" fill="#fff4e6"/><ellipse cx="40" cy="40" rx="1.8" ry="2.6" fill="'+c.eyes+'"/><ellipse cx="60" cy="40" rx="1.8" ry="2.6" fill="'+c.eyes+'"/><circle cx="40.7" cy="39.2" r=".8" fill="#fff"/><circle cx="60.7" cy="39.2" r=".8" fill="#fff"/><path d="M35 34Q40 31 45 34M55 34Q60 31 65 34" fill="none" stroke="#51392d" stroke-width="1.8" stroke-linecap="round"/><path d="M46 48Q50 51 54 48" fill="none" stroke="#9c5d53" stroke-width="1.5"/>';
+  return '<svg class="'+className+'" viewBox="0 0 100 145" role="img" aria-label="Your custom character"><defs>'+
+    '<linearGradient id="skin3d" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".48"/><stop offset=".42" stop-color="'+skin+'"/><stop offset="1" stop-color="#422719" stop-opacity=".5"/></linearGradient>'+
+    '<linearGradient id="cloth3d" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".32"/><stop offset=".38" stop-color="'+outfit+'"/><stop offset="1" stop-color="#080b0a" stop-opacity=".62"/></linearGradient>'+
+    '<linearGradient id="hair3d" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".35"/><stop offset=".3" stop-color="'+hair+'"/><stop offset="1" stop-color="#090807" stop-opacity=".55"/></linearGradient>'+
+    '<linearGradient id="addon3d" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff4d2" stop-opacity=".7"/><stop offset=".35" stop-color="#b68e4e"/><stop offset="1" stop-color="#342319"/></linearGradient></defs>'+
+    '<ellipse cx="50" cy="139" rx="25" ry="4" fill="#000" opacity=".28"/>'+addonBack+
+    '<path d="M39 108L38 135Q42 140 48 136L49 108ZM51 108L52 136Q58 140 62 135L61 108Z" fill="url(#cloth3d)"/><path d="M35 132h14v5H35zM51 132h14v5H51z" fill="#211d18"/>'+
+    backHair+'<path d="M43 53h14v18H43Z" fill="url(#skin3d)"/>'+
+    '<path d="M'+left+' 68Q50 55 '+right+' 68L72 111Q50 120 28 111Z" fill="url(#cloth3d)"/>'+(clothes[c.outfit] || clothes.tailored)+
+    '<path d="M'+(left+2)+' 70Q'+(left-5)+' 77 '+(left-3)+' 102L'+(left+4)+' 107Q'+(left+8)+' 92 '+(left+10)+' 78ZM'+(right-2)+' 70Q'+(right+5)+' 77 '+(right+3)+' 102L'+(right-4)+' 107Q'+(right-8)+' 92 '+(right-10)+' 78Z" fill="url(#cloth3d)"/>'+
+    '<path d="M'+(left-2)+' 102Q'+(left-5)+' 110 '+(left+2)+' 113L'+(left+8)+' 108L'+(left+5)+' 99ZM'+(right+2)+' 102Q'+(right+5)+' 110 '+(right-2)+' 113L'+(right-8)+' 108L'+(right-5)+' 99Z" fill="url(#skin3d)"/>'+
+    face+faceDetails+beard+frontHair+headwear+faceAccessory+necklace+
+    '<path d="M36 18Q42 9 53 11" fill="none" stroke="#fff" stroke-opacity=".24" stroke-width="2" stroke-linecap="round"/><path d="M32 56Q50 68 68 56" fill="none" stroke="#fff" stroke-opacity=".1" stroke-width="2"/></svg>';
 }
 function characterOptionField(key, title) {
   const options = characterChoices[key];
