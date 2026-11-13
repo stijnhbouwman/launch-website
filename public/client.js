@@ -6,8 +6,8 @@ const avatarKey = "golden-hour-avatar";
 const avatarColorKey = "golden-hour-avatar-color";
 const loggedOutKey = "golden-hour-logged-out";
 const roomKey = "golden-hour-room";
-const avatarOptions = ["🦊", "🐼", "🐸", "🦉", "🐯", "🐙", "🦄", "🐲", "🐧", "🐻", "🐱", "🐵"];
-const avatarColorOptions = ["#d6b46a", "#78a99a", "#8b9dc3", "#c58b9b", "#a58ac7", "#b9a27b"];
+const avatarOptions = ["🦊", "🐼", "🐸", "🦉", "🐯", "🐙", "🦄", "🐲", "🐧", "🐻", "🐱", "🐵", "🦁", "🐺", "🐨", "🐹", "🐰", "🐮", "🐷", "🐻‍❄️", "🦋", "🦚", "🐬", "🐢"];
+const avatarColorOptions = ["#d6b46a", "#78a99a", "#8b9dc3", "#c58b9b", "#a58ac7", "#b9a27b", "#b87333", "#9b4148", "#d8d0b4", "#65715a"];
 const queryRoomCode = new URLSearchParams(location.search).get("room") || "";
 let requestedRoomCode = (queryRoomCode || localStorage.getItem(roomKey) || "").toUpperCase();
 let playerId = localStorage.getItem(playerKey);
@@ -20,6 +20,8 @@ let playerAvatar = avatarOptions.includes(localStorage.getItem(avatarKey)) ? loc
 let playerAvatarColor = avatarColorOptions.includes(localStorage.getItem(avatarColorKey)) ? localStorage.getItem(avatarColorKey) : avatarColorOptions[0];
 let loggedOut = localStorage.getItem(loggedOutKey) === "true";
 let state = null;
+let remoteCursors = [];
+let lastCursorSentAt = 0;
 let view = "lobby";
 let selectedBet = "red";
 let selectedAmount = 25;
@@ -100,7 +102,10 @@ function connect() {
   });
   connection.addEventListener("message", (event) => {
     const message = JSON.parse(event.data);
-    if (message.type === "state") {
+    if (message.type === "cursors") {
+      remoteCursors = Array.isArray(message.players) ? message.players : [];
+      renderRemoteCursors();
+    } else if (message.type === "state") {
       const previousRoom = state?.room;
       const previousRoomCode = previousRoom?.code;
       state = message.state;
@@ -431,11 +436,38 @@ function setView(nextView) {
     send({ type: "select-game", game: nextView });
   }
   view = nextView;
+  if (view !== "lobby") send({ type: "cursor-move", game: view, x: 0.5, y: 0.12 });
+  else send({ type: "cursor-hide" });
   document.querySelectorAll(".nav-link").forEach((button) => {
     button.classList.toggle("active", button.dataset.view === view);
   });
   updateHeader();
   render();
+}
+
+function renderGamePresence() {
+  if (!state || view === "lobby" || state.room.ended) return;
+  const players = state.players.filter((player) => player.currentGame === view);
+  if (!players.some((player) => player.id === playerId)) {
+    const me = currentPlayer();
+    if (me) players.unshift(me);
+  }
+  const strip = document.createElement("div");
+  strip.className = "game-player-presence";
+  strip.innerHTML = `<div class="presence-heading"><span class="presence-live-dot"></span><span>AT THIS TABLE</span><strong>${players.length}</strong></div><div class="presence-players">${players.map((player) => `<span class="presence-player" title="${escapeHtml(player.name)}"><span class="presence-avatar" style="--player-avatar-color:${escapeHtml(player.avatarColor || "#d6b46a")}">${escapeHtml(player.avatar || "🎭")}</span><span>${escapeHtml(player.name)}</span></span>`).join("")}</div>`;
+  content.insertBefore(strip, content.firstChild);
+  const layer = document.createElement("div");
+  layer.className = "remote-cursor-layer";
+  layer.setAttribute("aria-hidden", "true");
+  content.append(layer);
+  renderRemoteCursors();
+}
+
+function renderRemoteCursors() {
+  const layer = content.querySelector(".remote-cursor-layer");
+  if (!layer) return;
+  const active = remoteCursors.filter((cursor) => cursor.id !== playerId && cursor.game === view && Date.now() - cursor.updatedAt < 4000);
+  layer.innerHTML = active.map((cursor) => `<div class="remote-player-cursor" style="left:${Math.max(0,Math.min(1,cursor.x))*100}%;top:${Math.max(0,Math.min(1,cursor.y))*100}%"><span class="remote-cursor-avatar" style="--player-avatar-color:${escapeHtml(cursor.avatarColor || "#d6b46a")}">${escapeHtml(cursor.avatar || "🎭")}</span><span class="remote-cursor-name">${escapeHtml(cursor.name)}</span></div>`).join("");
 }
 
 function render() {
@@ -459,6 +491,7 @@ function renderContent() {
   else if (view === "wheel") renderWheelFortune();
   else if (view === "plinko") renderPlinko();
   else renderLobby();
+  if (view !== "lobby" && !state.room.ended) renderGamePresence();
   if (view !== "lobby" && !state.room.ended) {
     const stillInGame = !state.room.isPrivate || (state.room.gameParticipants || []).includes(playerId);
     const controlPanel = content.querySelector(".control-panel");
@@ -1221,6 +1254,23 @@ document.querySelector("#edit-name").addEventListener("click", () => {
   playerName = nextName.trim().slice(0, 18);
   localStorage.setItem(nameKey, playerName);
   send({ type: "set-name", name: playerName });
+});
+
+content.addEventListener("pointermove", (event) => {
+  if (!state || view === "lobby" || !socket || socket.readyState !== WebSocket.OPEN) return;
+  const now = performance.now();
+  if (now - lastCursorSentAt < 85) return;
+  lastCursorSentAt = now;
+  const rect = content.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  send({ type: "cursor-move", game: view, x: Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)), y: Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)) });
+});
+content.addEventListener("pointerleave", () => {
+  if (view !== "lobby") send({ type: "cursor-hide" });
+});
+document.querySelector("#customize-character").addEventListener("click", () => {
+  document.body.classList.remove("joined");
+  renderUsernamePicker();
 });
 
 if (playerName && playerName.toLowerCase() !== "guest" && !loggedOut) connect();
