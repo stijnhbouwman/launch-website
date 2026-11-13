@@ -287,10 +287,10 @@ function characterMarkup(character = playerCharacter, className = "character-art
     has("necklace") ? '<path d="M39 65Q50 82 61 65" fill="none" stroke="#e4c16e" stroke-width="2.4"/><path d="M50 74l3 4-3 4-3-4Z" fill="#d6af5a"/>' : ""
   ].join("");
   return '<svg class="'+className+'" viewBox="0 0 100 145" role="img" aria-label="Your custom character"><defs>'+
-    '<linearGradient id="'+id+'-skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".42"/><stop offset=".38" stop-color="'+skin+'"/><stop offset="1" stop-color="#422719" stop-opacity=".42"/></linearGradient>'+
-    '<linearGradient id="'+id+'-cloth" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".28"/><stop offset=".4" stop-color="'+outfit+'"/><stop offset="1" stop-color="#080b0a" stop-opacity=".55"/></linearGradient>'+
-    '<linearGradient id="'+id+'-hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".3"/><stop offset=".32" stop-color="'+hair+'"/><stop offset="1" stop-color="#090807" stop-opacity=".5"/></linearGradient>'+
-    '<linearGradient id="'+id+'-addon" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff4d2" stop-opacity=".7"/><stop offset=".35" stop-color="#b68e4e"/><stop offset="1" stop-color="#342319"/></linearGradient></defs>'+
+    '<linearGradient id="'+id+'-skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3d8c2"/><stop offset=".38" stop-color="'+skin+'"/><stop offset="1" stop-color="#704b38"/></linearGradient>'+
+    '<linearGradient id="'+id+'-cloth" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d8d5cb"/><stop offset=".4" stop-color="'+outfit+'"/><stop offset="1" stop-color="#17202a"/></linearGradient>'+
+    '<linearGradient id="'+id+'-hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c9bda9"/><stop offset=".32" stop-color="'+hair+'"/><stop offset="1" stop-color="#241b16"/></linearGradient>'+
+    '<linearGradient id="'+id+'-addon" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f2d99b"/><stop offset=".35" stop-color="#b68e4e"/><stop offset="1" stop-color="#342319"/></linearGradient></defs>'+
     '<ellipse cx="50" cy="140" rx="23" ry="3.5" fill="#000" opacity=".26"/>'+backAccessories+legs+backHair+
     '<path d="M44 57H56V70H44Z" fill="url(#'+id+'-skin)"/>'+
     '<path d="M'+l+' 70Q50 60 '+r+' 70L71 113Q50 120 29 113Z" fill="url(#'+id+'-cloth)"/>'+
