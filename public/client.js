@@ -303,7 +303,8 @@ function characterOptionField(key, title) {
   const multi = key === "accessory";
   return `<section class="creator-option-group"><h4>${title}${multi ? " · choose as many as you like" : ""}</h4><div class="creator-options ${isColor ? "creator-swatches" : ""}">${Object.entries(options).map(([value,label]) => {
     const selected = multi ? (playerCharacter.accessories || []).includes(value) : playerCharacter[key] === value;
-    return `<button type="button" class="creator-option ${selected ? "selected" : ""}" ${multi ? "data-character-toggle" : "data-character-choice"}="${key}" data-value="${value}" title="${label}" aria-pressed="${selected}">${isColor ? `<i style="--swatch:${value}"></i><span>${label}</span>` : label}</button>`;
+    const preview = isColor ? `<i style="--swatch:${value}"></i>` : `<span class="creator-option-preview">${characterMarkup({ ...characterDefaults, ...(multi ? { accessories: [value], accessory: "none" } : { [key]: value }), accessories: multi ? [value] : [] }, "creator-option-art")}</span>`;
+    return `<button type="button" class="creator-option ${selected ? "selected" : ""} ${isColor ? "creator-color-option" : "creator-visual-option"}" ${multi ? "data-character-toggle" : "data-character-choice"}="${key}" data-value="${value}" title="${label}" aria-pressed="${selected}">${preview}<span>${label}</span></button>`;
   }).join("")}</div></section>`;
 }
 function saveCharacter() {
