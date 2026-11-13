@@ -27,8 +27,8 @@ const savedPlayers = fs.existsSync(playersFile)
 
 const slotSymbols = ["✦", "♣", "♦", "♠", "7"];
 const horseNames = ["Comet", "Clover", "Sundown", "Goldrush"];
-const allowedAvatars = new Set(["🦊", "🐼", "🐸", "🦉", "🐯", "🐙", "🦄", "🐲", "🐧", "🐻", "🐱", "🐵"]);
-const allowedAvatarColors = new Set(["#d6b46a", "#78a99a", "#8b9dc3", "#c58b9b", "#a58ac7", "#b9a27b"]);
+const allowedAvatars = new Set(["🦊", "🐼", "🐸", "🦉", "🐯", "🐙", "🦄", "🐲", "🐧", "🐻", "🐱", "🐵", "🦁", "🐺", "🐨", "🐹", "🐰", "🐮", "🐷", "🐻‍❄️", "🦋", "🦚", "🐬", "🐢"]);
+const allowedAvatarColors = new Set(["#d6b46a", "#78a99a", "#8b9dc3", "#c58b9b", "#a58ac7", "#b9a27b", "#b87333", "#9b4148", "#d8d0b4", "#65715a"]);
 const rooms = new Map();
 const gameActionCooldowns = new Map();
 function gameCooldownRemaining(player, game, durationMs = 5000) {
@@ -573,6 +573,20 @@ function broadcast() {
     }
   }
 }
+function broadcastCursors(roomCode) {
+  const packet = JSON.stringify({
+    type: "cursors",
+    players: [...players.values()]
+      .filter((player) => player.connected && player.roomCode === roomCode && player.cursor && Date.now() - player.cursor.updatedAt < 4000)
+      .map((player) => ({
+        id: player.id, name: player.name, avatar: player.avatar, avatarColor: player.avatarColor,
+        x: player.cursor.x, y: player.cursor.y, game: player.cursor.game, updatedAt: player.cursor.updatedAt,
+      })),
+  });
+  for (const socket of sockets) {
+    if (socket.readyState === WebSocket.OPEN && socket.playerId && players.get(socket.playerId)?.roomCode === roomCode) socket.send(packet);
+  }
+}
 
 function sendAdminState(socket) {
   const adminPlayer = players.get(socket.playerId);
@@ -707,6 +721,7 @@ function handleMessage(socket, message) {
           : null,
         roomCode: requestedRoom,
         currentGame: null,
+        cursor: null,
         muted: false,
         connected: false,
         sockets: new Set(),
@@ -725,7 +740,7 @@ function handleMessage(socket, message) {
         if (previousRoom.isPrivate) { previousRoom.bankrolls.delete(player.id); previousRoom.gameParticipants.delete(player.id); }
       }
     }
-    if (previousRoomCode && previousRoomCode !== requestedRoom) player.currentGame = null;
+    if (previousRoomCode && previousRoomCode !== requestedRoom) { player.currentGame = null; player.cursor = null; }
     player.roomCode = requestedRoom;
     player.name = name;
     player.avatar = avatar;
@@ -768,6 +783,31 @@ function handleMessage(socket, message) {
 
   const player = players.get(socket.playerId);
   if (!player || !player.sockets.has(socket)) return;
+
+  if (message.type === "cursor-move") {
+    const allowedGames = ["roulette", "blackjack", "slots", "horses", "poker", "wheel", "plinko"];
+    const game = allowedGames.includes(message.game) ? message.game : null;
+    const x = Number(message.x), y = Number(message.y);
+    if (!game || !Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1 || y < 0 || y > 1) return;
+    const room = rooms.get(player.roomCode);
+    if (!room || room.ended || (room.isPrivate && room.selectedGame !== game) || (player.currentGame && player.currentGame !== game)) return;
+    const now = Date.now();
+    if (now - (socket.lastCursorAt || 0) < 75) return;
+    socket.lastCursorAt = now;
+    const changedGame = player.currentGame !== game;
+    player.currentGame = game;
+    player.cursor = { x, y, game, updatedAt: now };
+    if (changedGame) broadcast();
+    broadcastCursors(player.roomCode);
+    return;
+  }
+  if (message.type === "cursor-hide") {
+    if (player.cursor) {
+      player.cursor = null;
+      broadcastCursors(player.roomCode);
+    }
+    return;
+  }
 
   if (message.type === "chat-message") {
     const room = rooms.get(player.roomCode);
