@@ -1335,6 +1335,7 @@ function handleMessage(socket, message) {
       if (room.poker.players.length === 0) room.poker = { phase: "waiting", players: [], lastResult: null };
     }
     player.currentGame = null;
+    player.cursor = null;
     if (room.isPrivate) {
       room.gameParticipants.delete(player.id);
       const remaining = connectedRoomPlayers(room.code).filter((member) => room.gameParticipants.has(member.id));
@@ -1350,6 +1351,7 @@ function handleMessage(socket, message) {
     savePlayers();
     endRoomIfBroke(room);
     broadcast();
+    broadcastCursors(player.roomCode);
     return;
   }
 
@@ -1969,7 +1971,11 @@ webSocketServer.on("connection", (socket) => {
     const player = players.get(socket.playerId);
     if (player && player.sockets.has(socket)) {
       player.sockets.delete(socket);
-      if (player.sockets.size === 0) player.connected = false;
+      if (player.sockets.size === 0) {
+        player.connected = false;
+        player.cursor = null;
+        broadcastCursors(player.roomCode);
+      }
       const room = rooms.get(player.roomCode);
       const blackjack = room?.blackjack;
       const seat = blackjack?.players.find((item) => item.id === player.id);
