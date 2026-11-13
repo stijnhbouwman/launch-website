@@ -857,3 +857,32 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .table-panel>.game-character-dock.character-watching{width:105px!important;height:66px!important;opacity:1!important}
 .table-panel>.game-character-dock.character-watching .game-character-art{width:112px!important;height:170px!important;transform:translateY(100px)!important}
 @media(max-width:760px){.table-panel>.game-character-dock.character-playing{width:112px!important;height:155px!important}.table-panel>.game-character-dock.character-watching{width:82px!important;height:54px!important}}
+
+
+/* Make the avatar pop forward when the player joins or takes a seat */
+.table-panel>.game-character-dock.character-playing{
+  width:196px!important;
+  height:268px!important;
+  right:10px!important;
+  bottom:0!important;
+  transform-origin:bottom center;
+  animation:table-character-pop .62s cubic-bezier(.16,1.35,.38,1) both;
+  filter:drop-shadow(0 9px 16px #000b) drop-shadow(0 0 12px #e8c87955);
+}
+.table-panel>.game-character-dock.character-playing .game-character-art{
+  width:100%;
+  height:100%;
+}
+@keyframes table-character-pop{
+  0%{transform:translateY(42px) scale(.55);opacity:.2}
+  65%{transform:translateY(-9px) scale(1.08);opacity:1}
+  100%{transform:translateY(0) scale(1);opacity:1}
+}
+@media(max-width:760px){
+  .table-panel>.game-character-dock.character-playing{
+    width:150px!important;
+    height:210px!important;
+    right:4px!important;
+    bottom:0!important;
+  }
+}
