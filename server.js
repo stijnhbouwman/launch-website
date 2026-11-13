@@ -457,6 +457,7 @@ function snapshot(roomCode) {
         name: player.name,
         avatar: player.avatar || "🦊",
         avatarColor: player.avatarColor || "#d6b46a",
+        character: safeCharacter(player.character),
         chips: chipsFor(room, player),
       })),
     },
@@ -596,7 +597,7 @@ function broadcastCursors(roomCode) {
     players: [...players.values()]
       .filter((player) => player.connected && player.roomCode === roomCode && player.cursor && Date.now() - player.cursor.updatedAt < 4000)
       .map((player) => ({
-        id: player.id, name: player.name, avatar: player.avatar, avatarColor: player.avatarColor,
+        id: player.id, name: player.name, avatar: player.avatar, avatarColor: player.avatarColor, character: safeCharacter(player.character),
         x: player.cursor.x, y: player.cursor.y, game: player.cursor.game, updatedAt: player.cursor.updatedAt,
       })),
   });
