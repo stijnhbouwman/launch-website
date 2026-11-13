@@ -820,3 +820,9 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .creator-option{transition:transform .16s ease,border-color .16s ease,background .16s ease}
 .creator-option:hover{transform:translateY(-2px)}
 @media(max-width:760px){.creator-character-art{height:235px;width:175px}}
+
+/* Character creator option states and clean live selection preview */
+.creator-option.selected{border-color:#e8c879!important;background:linear-gradient(145deg,#51452b,#29271e)!important;color:#fff2ce!important;box-shadow:0 0 0 2px #e8c87935,inset 0 1px #fff2ce22!important}
+.creator-option[aria-pressed="true"]::after{content:"✓";display:inline-grid;place-items:center;width:13px;height:13px;border-radius:50%;background:#d7b66e;color:#17140e;font-size:9px;font-weight:900;margin-left:3px}
+.creator-option-group h4{margin-bottom:10px}
+.creator-tab-content{min-height:275px}
