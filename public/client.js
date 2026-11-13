@@ -240,26 +240,26 @@ function characterMarkup(character = playerCharacter, className = "character-art
     royal: '<path d="M'+left+' 68Q50 55 '+right+' 68L78 118L22 118Z" fill="url(#cloth3d)" stroke="#d6b76e"/><path d="M37 64L50 83L63 64L57 110L50 99L43 110Z" fill="#e6d5b4"/>',
     vest: '<path d="M'+left+' 68Q50 58 '+right+' 68L72 111L28 111Z" fill="url(#cloth3d)"/><path d="M40 65L50 80L60 65L56 108L50 97L44 108Z" fill="#d8cdb6"/>'
   };
-  const addonBack = has("cape")
-    ? '<path d="M34 67Q50 58 66 67L84 128Q50 143 16 128Z" fill="url(#addon3d)" stroke="#d6b66d" stroke-width="1.4"/>'
-    : has("wings")
-    ? '<path d="M34 69Q18 55 7 69Q10 96 36 108Q43 87 34 69ZM66 69Q82 55 93 69Q90 96 64 108Q57 87 66 69Z" fill="url(#addon3d)" stroke="#e6d3a6" stroke-width="1.2"/><path d="M14 73l18 28m54-28-18 28" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>'
-    : has("backpack")
-    ? '<path d="M31 71Q50 61 69 71L75 113L25 113Z" fill="url(#addon3d)" stroke="#d6b66d"/>'
-    : "";
-  const headwear = has("hat") || has("crown") || has("beanie")
-    ? (has("hat")
-      ? '<path d="M28 25Q50 0 72 25L75 34H25Z" fill="url(#addon3d)" stroke="#d6b66d"/><path d="M18 34Q50 28 82 34L79 40H21Z" fill="#25221b" stroke="#d6b66d"/>'
-      : has("crown")
-      ? '<path d="M29 27l4-13 10 9 7-15 8 15 10-9 4 13Z" fill="url(#addon3d)" stroke="#f1d88d"/><path d="M31 27h38v5H31Z" fill="#d4b15f"/>'
-      : has("beanie") ? '<path d="M27 31Q30 8 50 8Q70 8 73 31Z" fill="url(#addon3d)" stroke="#d6b66d"/><path d="M27 29h46v7H27Z" fill="#c09b5d"/>' : '<path d="M26 30Q50 18 74 30" fill="none" stroke="#c09b5d" stroke-width="5"/>')
-    : "";
-  const faceAccessory = has("glasses") || has("shades")
-    ? '<g fill="'+(has("shades") ? "#17191d" : "none")+'" stroke="#d9bd79" stroke-width="2"><rect x="31" y="34" width="17" height="12" rx="4"/><rect x="52" y="34" width="17" height="12" rx="4"/><path d="M48 39h4"/></g>'
-    : has("earrings") ? '<g fill="url(#addon3d)" stroke="#f2d58c"><circle cx="25" cy="49" r="3.5"/><circle cx="75" cy="49" r="3.5"/></g>' : "";
-  const necklace = has("chain") || has("necklace")
-    ? '<path d="M38 65Q50 82 62 65" fill="none" stroke="#e4c16e" stroke-width="2.5"/><path d="M50 74l4 5-4 5-4-5Z" fill="#d6af5a"/>'
-    : "";
+  const addonBack = [
+    has("cape") ? '<path d="M34 67Q50 58 66 67L84 128Q50 143 16 128Z" fill="url(#addon3d)" stroke="#d6b66d" stroke-width="1.4"/>' : "",
+    has("wings") ? '<path d="M34 69Q18 55 7 69Q10 96 36 108Q43 87 34 69ZM66 69Q82 55 93 69Q90 96 64 108Q57 87 66 69Z" fill="url(#addon3d)" stroke="#e6d3a6" stroke-width="1.2"/><path d="M14 73l18 28m54-28-18 28" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>' : "",
+    has("backpack") ? '<path d="M31 71Q50 61 69 71L75 113L25 113Z" fill="url(#addon3d)" stroke="#d6b66d"/>' : ""
+  ].join("");
+  const headwear = [
+    has("hat") ? '<path d="M28 25Q50 0 72 25L75 34H25Z" fill="url(#addon3d)" stroke="#d6b66d"/><path d="M18 34Q50 28 82 34L79 40H21Z" fill="#25221b" stroke="#d6b66d"/>' : "",
+    has("crown") ? '<path d="M29 27l4-13 10 9 7-15 8 15 10-9 4 13Z" fill="url(#addon3d)" stroke="#f1d88d"/><path d="M31 27h38v5H31Z" fill="#d4b15f"/>' : "",
+    has("beanie") ? '<path d="M27 31Q30 8 50 8Q70 8 73 31Z" fill="url(#addon3d)" stroke="#d6b66d"/><path d="M27 29h46v7H27Z" fill="#c09b5d"/>' : "",
+    has("headband") ? '<path d="M26 30Q50 18 74 30" fill="none" stroke="#c09b5d" stroke-width="5"/>' : ""
+  ].join("");
+  const faceAccessory = [
+    has("glasses") ? '<g fill="none" stroke="#d9bd79" stroke-width="2"><rect x="31" y="34" width="17" height="12" rx="4"/><rect x="52" y="34" width="17" height="12" rx="4"/><path d="M48 39h4"/></g>' : "",
+    has("shades") ? '<g fill="#17191d" stroke="#d9bd79" stroke-width="2"><rect x="30" y="34" width="19" height="12" rx="4"/><rect x="51" y="34" width="19" height="12" rx="4"/></g>' : "",
+    has("earrings") ? '<g fill="url(#addon3d)" stroke="#f2d58c"><circle cx="25" cy="49" r="3.5"/><circle cx="75" cy="49" r="3.5"/></g>' : ""
+  ].join("");
+  const necklace = [
+    has("chain") ? '<path d="M38 65Q50 82 62 65" fill="none" stroke="#e4c16e" stroke-width="2.5"/>' : "",
+    has("necklace") ? '<path d="M38 65Q50 82 62 65" fill="none" stroke="#e4c16e" stroke-width="2.5"/><path d="M50 74l4 5-4 5-4-5Z" fill="#d6af5a"/>' : ""
+  ].join("");
   const faceDetails = c.freckles === "light" || c.freckles === "many"
     ? '<g fill="#8b5945" opacity=".65">'+Array.from({length:c.freckles === "many" ? 10 : 5},(_,i)=>'<circle cx="'+(36+(i%5)*3)+'" cy="'+(43+Math.floor(i/5)*3)+'" r=".8"/>').join("")+'</g>'
     : c.freckles === "beauty" ? '<circle cx="62" cy="45" r="1.2" fill="#684437"/>' : "";
