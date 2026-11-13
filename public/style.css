@@ -849,3 +849,11 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .game-character-dock.character-watching{height:48px;width:84px;bottom:0;opacity:.88}
 .game-character-dock.character-watching .game-character-art{height:170px;width:112px;max-width:none;flex:0 0 auto;transform:translateY(-112px)}
 @media(max-width:760px){.game-character-dock.character-playing{width:98px;height:142px;left:5px;bottom:5px}.game-character-dock.character-watching{width:68px;height:34px}}
+
+/* Ensure the character is visible within the actual felt/table viewport */
+.table-panel{position:relative!important}
+.table-panel>.game-character-dock{display:flex!important;bottom:0!important;left:12px!important;z-index:30!important}
+.table-panel>.game-character-dock.character-playing{width:150px!important;height:205px!important}
+.table-panel>.game-character-dock.character-watching{width:105px!important;height:66px!important;opacity:1!important}
+.table-panel>.game-character-dock.character-watching .game-character-art{width:112px!important;height:170px!important;transform:translateY(100px)!important}
+@media(max-width:760px){.table-panel>.game-character-dock.character-playing{width:112px!important;height:155px!important}.table-panel>.game-character-dock.character-watching{width:82px!important;height:54px!important}}
