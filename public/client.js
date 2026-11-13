@@ -554,7 +554,8 @@ function renderContent() {
     renderPrivateRoomEnded();
     return;
   }
-  if (view === "roulette") renderRoulette();
+  if (view === "games") renderGameSelection();
+  else if (view === "roulette") renderRoulette();
   else if (view === "blackjack") renderBlackjack();
   else if (view === "slots") renderSlots();
   else if (view === "horses") renderHorseRace();
@@ -563,20 +564,59 @@ function renderContent() {
   else if (view === "plinko") renderPlinko();
   else renderLobby();
   if (view !== "lobby" && !state.room.ended) renderGamePresence();
-  if (view !== "lobby" && !state.room.ended) {
-    const stillInGame = Boolean(currentPlayer()?.currentGame) || !state.room.isPrivate;
+  if (!["lobby", "games"].includes(view) && !state.room.ended) {
     const exitBar = document.createElement("div");
     exitBar.className = "game-exit-bar";
-    exitBar.innerHTML = `<span>Finished playing this table?</span><button class="secondary-button" id="quit-current-game" type="button">${state.room.isPrivate ? "Leave game" : "Return to lobby"}</button>`;
+    exitBar.innerHTML = `<span>Finished playing this table?</span><button class="secondary-button" id="quit-current-game" type="button">Exit to game selection</button>`;
     content.insertBefore(exitBar, content.firstChild);
     exitBar.querySelector("#quit-current-game").addEventListener("click", () => {
-      if (!stillInGame && state.room.isPrivate) {
-        setView("lobby");
-        return;
-      }
       send({ type: "quit-game", game: view });
+      view = "games";
+      send({ type: "cursor-hide" });
+      updateHeader();
+      render();
     });
   }
+}
+
+function renderGameSelection() {
+  const available = state.room.isPrivate
+    ? (state.room.selectedGame ? [state.room.selectedGame] : [])
+    : ["roulette", "blackjack", "slots", "horses", "poker", "wheel", "plinko"];
+  const labels = {
+    roulette: ["Roulette", "Place bets on the shared wheel."],
+    blackjack: ["Blackjack", "Take a seat and play for 21."],
+    slots: ["Slots", "Spin the reels for a prize."],
+    horses: ["Horse race", "Pick a horse and watch the race."],
+    poker: ["Poker", "Join the table for a hand."],
+    wheel: ["Wheel of fortune", "Spin for a lucky multiplier."],
+    plinko: ["Plinko", "Drop a chip through the peg board."]
+  };
+  content.innerHTML = `
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">GOLDEN HOUR · TABLE SELECT</span>
+        <h1>Choose your next game.</h1>
+        <p class="hero-subtitle">${state.room.isPrivate ? "You're still in your private room. Rejoin its table whenever you're ready." : "You're out of the last game. Pick any table when you're ready to play again."}</p>
+      </div>
+    </section>
+    <div class="section-heading"><h2>Game selection</h2><p>${state.room.isPrivate ? "This room's game is selected by its host." : "Choose a table to continue."}</p></div>
+    <div class="games-grid">
+      ${available.map((game) => `<article class="game-card game-selection-card">
+        <div class="game-card-content">
+          <div class="game-card-head"><h3>${labels[game][0]}</h3><span class="table-live"><span></span> AVAILABLE</span></div>
+          <p>${labels[game][1]}</p>
+          <div class="game-card-footer"><span class="players-label">${state.room.isPrivate ? "Private room" : "Live table"}</span><button class="primary-button" data-rejoin-game="${game}">Enter game&nbsp; ↗</button></div>
+        </div>
+      </article>`).join("")}
+    </div>`;
+  content.querySelectorAll("[data-rejoin-game]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const game = button.dataset.rejoinGame;
+      if (state.room.isPrivate) send({ type: "rejoin-game", game });
+      setView(game);
+    });
+  });
 }
 
 function renderPrivateRoomEnded() {
