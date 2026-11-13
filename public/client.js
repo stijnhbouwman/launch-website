@@ -261,7 +261,7 @@ function characterMarkup(character = playerCharacter, className = "character-art
   const legs = '<path d="M39 110L38 137Q43 140 48 137L49 111ZM51 111L52 137Q57 140 62 137L61 110Z" fill="url(#'+id+'-cloth)"/><path d="M35 134H49V140H34Q31 138 35 134ZM51 134H65V140H51Z" fill="#211e19"/>';
   const ears = '<path d="M29 37Q23 35 24 45Q25 53 31 54L34 49ZM71 37Q77 35 76 45Q75 53 69 54L66 49Z" fill="url(#'+id+'-skin)" stroke="#9a684d" stroke-opacity=".2"/>';
   const head = '<path d="M50 13C36 13 28 23 28 39c0 15 9 25 22 25s22-10 22-25C72 23 64 13 50 13Z" fill="url(#'+id+'-skin)" stroke="#553a2b" stroke-opacity=".18"/>';
-  const face = '<path d="M38 36Q42 33 46 36M54 36Q58 33 62 36" fill="none" stroke="#51392d" stroke-width="1.6" stroke-linecap="round"/><ellipse cx="42" cy="42" rx="3.1" ry="3.8" fill="#fff5e9"/><ellipse cx="58" cy="42" rx="3.1" ry="3.8" fill="#fff5e9"/><ellipse cx="42" cy="42" rx="1.8" ry="2.5" fill="'+c.eyes+'"/><ellipse cx="58" cy="42" rx="1.8" ry="2.5" fill="'+c.eyes+'"/><circle cx="42.6" cy="41.2" r=".8" fill="#fff"/><circle cx="58.6" cy="41.2" r=".8" fill="#fff"/><path d="M50 43l-2 5 3 1" fill="none" stroke="#8d604b" stroke-width="1.1"/><path d="M46 53Q50 56 54 53" fill="none" stroke="#995c54" stroke-width="1.5" stroke-linecap="round"/>';
+  const face = '<path d="M38 36Q42 33 46 36M54 36Q58 33 62 36" fill="none" stroke="#51392d" stroke-width="1.6" stroke-linecap="round"/><ellipse cx="42" cy="42" rx="3.1" ry="3.8" fill="#fff5e9"/><ellipse cx="58" cy="42" rx="3.1" ry="3.8" fill="#fff5e9"/><g class="character-eye-pupil"><ellipse cx="42" cy="42" rx="1.8" ry="2.5" fill="'+c.eyes+'"/><circle cx="42.6" cy="41.2" r=".8" fill="#fff"/></g><g class="character-eye-pupil"><ellipse cx="58" cy="42" rx="1.8" ry="2.5" fill="'+c.eyes+'"/><circle cx="58.6" cy="41.2" r=".8" fill="#fff"/></g><path d="M50 43l-2 5 3 1" fill="none" stroke="#8d604b" stroke-width="1.1"/><path d="M46 53Q50 56 54 53" fill="none" stroke="#995c54" stroke-width="1.5" stroke-linecap="round"/>';
   const freckles = c.freckles === "light" || c.freckles === "many"
     ? '<g fill="#8b5945" opacity=".65">'+Array.from({length:c.freckles === "many" ? 10 : 5},(_,i)=>'<circle cx="'+(36+(i%5)*3.5)+'" cy="'+(47+Math.floor(i/5)*3)+'" r=".75"/>').join("")+'</g>'
     : c.freckles === "beauty" ? '<circle cx="63" cy="48" r="1.2" fill="#684437"/>' : "";
@@ -297,6 +297,31 @@ function characterMarkup(character = playerCharacter, className = "character-art
     (clothes[c.outfit] || clothes.tailored)+arms+ears+head+face+freckles+facialHair+frontHair+headwear+faceAccessories+neckAccessories+
     '<path d="M34 22Q42 12 54 14" fill="none" stroke="#fff" stroke-opacity=".2" stroke-width="2" stroke-linecap="round"/></svg>';
 }
+
+function renderGameCharacterDock() {
+  const existing = document.getElementById("game-character-dock");
+  if (existing) existing.remove();
+  if (!state || !state.players?.some(p => p.id === playerId) || ["lobby","games"].includes(view) || state.room?.ended) return;
+  const dock = document.createElement("div");
+  dock.id = "game-character-dock";
+  dock.className = "game-character-dock";
+  dock.setAttribute("aria-label", "Your character");
+  dock.innerHTML = characterMarkup(playerCharacter, "game-character-art");
+  document.body.appendChild(dock);
+  document.onpointermove = event => {
+    const rect = dock.getBoundingClientRect();
+    const svg = dock.querySelector("svg");
+    if (!svg) return;
+    const x = (event.clientX - (rect.left + rect.width * .5)) / Math.max(1, rect.width * .5);
+    const y = (event.clientY - (rect.top + rect.height * .29)) / Math.max(1, rect.height * .29);
+    const dx = Math.max(-1.15, Math.min(1.15, x * 1.15));
+    const dy = Math.max(-.85, Math.min(.85, y * .65));
+    svg.querySelectorAll(".character-eye-pupil").forEach(pupil => {
+      pupil.setAttribute("transform", "translate(" + dx.toFixed(2) + " " + dy.toFixed(2) + ")");
+    });
+  };
+}
+
 function characterOptionField(key, title) {
   const options = characterChoices[key];
   const isColor = key === "skin" || key === "hairColor" || key === "eyes" || key === "outfitColor";
@@ -667,6 +692,7 @@ function renderContent() {
   else if (view === "plinko") renderPlinko();
   else renderLobby();
   if (view !== "lobby" && !state.room.ended) renderGamePresence();
+  renderGameCharacterDock();
   if (!["lobby", "games"].includes(view) && !state.room.ended) {
     const exitBar = document.createElement("div");
     exitBar.className = "game-exit-bar";
