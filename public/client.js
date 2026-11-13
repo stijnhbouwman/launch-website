@@ -302,12 +302,14 @@ function renderGameCharacterDock() {
   const existing = document.getElementById("game-character-dock");
   if (existing) existing.remove();
   if (!state || !state.players?.some(p => p.id === playerId) || ["lobby","games"].includes(view) || state.room?.ended) return;
+  const table = content.querySelector(".table-panel") || content.querySelector(".game-layout") || content;
+  const playing = (state.room?.gameParticipants || []).includes(playerId);
   const dock = document.createElement("div");
   dock.id = "game-character-dock";
-  dock.className = "game-character-dock";
-  dock.setAttribute("aria-label", "Your character");
+  dock.className = "game-character-dock " + (playing ? "character-playing" : "character-watching");
+  dock.setAttribute("aria-label", playing ? "Your character at the table" : "Your character watching the table");
   dock.innerHTML = characterMarkup(playerCharacter, "game-character-art");
-  document.body.appendChild(dock);
+  table.appendChild(dock);
   document.onpointermove = event => {
     const rect = dock.getBoundingClientRect();
     const svg = dock.querySelector("svg");
