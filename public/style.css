@@ -826,3 +826,12 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .creator-option[aria-pressed="true"]::after{content:"✓";display:inline-grid;place-items:center;width:13px;height:13px;border-radius:50%;background:#d7b66e;color:#17140e;font-size:9px;font-weight:900;margin-left:3px}
 .creator-option-group h4{margin-bottom:10px}
 .creator-tab-content{min-height:275px}
+
+/* Small live object previews inside each character option */
+.creator-options .creator-visual-option{min-width:66px;min-height:83px;padding:5px 6px 6px;flex-direction:column;justify-content:center;gap:3px}
+.creator-option-preview{display:grid;place-items:center;width:48px;height:55px;overflow:hidden;border-radius:4px;background:radial-gradient(ellipse at 50% 45%,#77704a22,transparent 72%)}
+.creator-option-art{display:block;width:43px;height:53px;overflow:visible}
+.creator-visual-option span:not(.creator-option-preview){font-size:8px;line-height:1.1;text-align:center;white-space:normal}
+.creator-options .creator-color-option{min-height:34px}
+.creator-options .creator-color-option span{font-size:8px}
+@media(max-width:420px){.creator-visual-option span:not(.creator-option-preview){display:block}.creator-options .creator-visual-option{min-width:60px}}
