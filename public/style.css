@@ -764,3 +764,5 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .presence-player{padding:4px 9px 4px 5px}.remote-player-cursor{align-items:flex-start}
 @media(max-width:760px){.creator-layout{grid-template-columns:1fr}.creator-preview-panel{position:relative;top:auto;min-height:360px;padding:18px}.creator-stage{height:235px;margin:5px 0}.creator-character-art{width:165px;height:225px}.creator-preview-panel h2{font-size:22px}.creator-preview-caption{margin-top:10px}.creator-controls{padding-top:10px}.creator-top{gap:10px}.creator-step{display:none}}
 @media(max-width:420px){.creator-fields{grid-template-columns:1fr}.creator-character-launch{align-items:flex-start;flex-direction:column}}
+
+.profile-character-art{width:34px;height:40px;display:block}.avatar{overflow:visible;background:transparent!important;border:0!important}
