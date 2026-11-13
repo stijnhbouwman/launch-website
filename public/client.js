@@ -1268,6 +1268,10 @@ content.addEventListener("pointermove", (event) => {
 content.addEventListener("pointerleave", () => {
   if (view !== "lobby") send({ type: "cursor-hide" });
 });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && view !== "lobby") send({ type: "cursor-hide" });
+});
+window.setInterval(renderRemoteCursors, 1000);
 document.querySelector("#customize-character").addEventListener("click", () => {
   document.body.classList.remove("joined");
   renderUsernamePicker();
