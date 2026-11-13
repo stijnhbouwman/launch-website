@@ -6,16 +6,18 @@ const avatarKey = "golden-hour-avatar";
 const avatarColorKey = "golden-hour-avatar-color";
 const loggedOutKey = "golden-hour-logged-out";
 const roomKey = "golden-hour-room";
-const characterDefaults = { body: "average", skin: "#c98f68", hair: "short", hairColor: "#30231f", eyes: "#33251f", outfit: "tuxedo", outfitColor: "#26352c", accessory: "none" };
+const characterDefaults = { body: "average", skin: "#c98f68", hair: "wavy", hairColor: "#30231f", eyes: "#33251f", outfit: "tailored", outfitColor: "#26352c", accessory: "none", freckles: "none", facialHair: "none" };
 const characterChoices = {
-  body: { slim: "Slim", average: "Average", broad: "Broad" },
-  skin: { "#f2c9a5": "Porcelain", "#dfad82": "Light", "#c98f68": "Warm", "#9b6548": "Brown", "#603d30": "Deep" },
-  hair: { short: "Short", swept: "Swept", long: "Long", curls: "Curly", bald: "Shaved" },
-  hairColor: { "#30231f": "Espresso", "#171717": "Black", "#8a5634": "Chestnut", "#d4a64f": "Blonde", "#a84c38": "Auburn", "#d8d4ca": "Silver" },
-  eyes: { "#33251f": "Brown", "#315b78": "Blue", "#47734d": "Green", "#202020": "Dark" },
-  outfit: { tuxedo: "Tuxedo", suit: "Tailored suit", shirt: "Open-collar shirt", dress: "Evening dress", jacket: "Bomber jacket", hoodie: "Street hoodie" },
-  outfitColor: { "#26352c": "Casino green", "#17191d": "Midnight", "#8b3038": "Burgundy", "#b18b4c": "Champagne", "#314c70": "Navy", "#e4d8c3": "Ivory" },
-  accessory: { none: "None", glasses: "Glasses", shades: "Sunglasses", earrings: "Gold earrings", chain: "Gold chain", hat: "Fedora" }
+  body: { slim: "Slim", average: "Average", broad: "Broad", petite: "Petite", athletic: "Athletic" },
+  skin: { "#f7d9bd":"Porcelain", "#f2c9a5":"Fair", "#dfad82":"Light", "#c98f68":"Warm", "#b77b58":"Olive", "#9b6548":"Brown", "#7c503b":"Deep", "#603d30":"Rich" },
+  hair: { pixie:"Pixie", short:"Short", bob:"Bob", swept:"Swept", wavy:"Wavy", long:"Long", curls:"Curly", braids:"Braids", ponytail:"Ponytail", shaved:"Shaved" },
+  hairColor: { "#171717":"Black", "#30231f":"Espresso", "#60402f":"Dark brown", "#8a5634":"Chestnut", "#b86e3d":"Copper", "#a84c38":"Auburn", "#d4a64f":"Blonde", "#ead29a":"Honey", "#d8d4ca":"Silver", "#8d8ba8":"Lilac" },
+  eyes: { "#33251f":"Brown", "#315b78":"Blue", "#47734d":"Green", "#6d8b8a":"Hazel", "#202020":"Dark", "#78618c":"Violet" },
+  outfit: { tuxedo:"Tuxedo", tailored:"Tailored suit", shirt:"Open-collar shirt", dress:"Evening dress", jacket:"Leather jacket", hoodie:"Street hoodie", varsity:"Varsity jacket", cardigan:"Cardigan", royal:"Royal coat", vest:"Waistcoat" },
+  outfitColor: { "#26352c":"Casino green", "#17191d":"Midnight", "#8b3038":"Burgundy", "#b18b4c":"Champagne", "#314c70":"Navy", "#e4d8c3":"Ivory", "#76518b":"Plum", "#b86b42":"Terracotta", "#557b78":"Sage", "#c77c91":"Rose" },
+  accessory: { none:"None", glasses:"Glasses", shades:"Sunglasses", earrings:"Earrings", chain:"Gold chain", hat:"Fedora", beanie:"Beanie", headband:"Headband", necklace:"Pendant", scarf:"Scarf" },
+  freckles: { none:"None", light:"Light freckles", many:"Freckles", beauty:"Beauty mark" },
+  facialHair: { none:"Clean shaven", stubble:"Stubble", moustache:"Moustache", beard:"Full beard" }
 };
 let playerCharacter = (() => { try { return { ...characterDefaults, ...JSON.parse(localStorage.getItem("golden-hour-character") || "{}") }; } catch { return { ...characterDefaults }; } })();
 const avatarOptions = ["🦊"];
@@ -213,26 +215,40 @@ function connect() {
 
 function characterMarkup(character = playerCharacter, className = "character-art") {
   const c = { ...characterDefaults, ...character };
-  const bodyWidth = c.body === "slim" ? 35 : c.body === "broad" ? 49 : 42;
+  const bodyWidth = c.body === "slim" || c.body === "petite" ? 35 : c.body === "broad" || c.body === "athletic" ? 49 : 42;
   const bodyX = 50 - bodyWidth / 2;
   const bodyRight = 100 - bodyX;
-  const hair = c.hair === "bald" ? "" : c.hair === "long"
-    ? `<path d="M25 35 Q19 8 50 8 Q81 8 75 35 L76 78 L65 83 L63 42 Q50 32 37 42 L35 83 L24 78Z" fill="${c.hairColor}"/>`
-    : c.hair === "curls"
-    ? `<path d="M24 37 Q15 18 32 15 Q38 2 50 12 Q66 2 70 16 Q86 22 76 40 Q65 31 50 32 Q35 31 24 37Z" fill="${c.hairColor}"/>`
-    : `<path d="M25 37 Q19 9 50 9 Q81 9 75 37 Q61 24 48 28 Q36 27 25 37Z" fill="${c.hairColor}"/>`;
+  const hairBack = c.hair === "shaved" ? "" : ({
+    long: `<path d="M24 38 Q18 5 50 7 Q82 5 76 38 L79 91 Q69 99 65 82 L63 43 Q50 31 37 43 L35 82 Q29 99 21 91Z" fill="${c.hairColor}"/>`,
+    braids: `<path d="M24 38 Q18 5 50 7 Q82 5 76 38 L77 85 Q73 93 69 85 L66 44 Q50 31 34 44 L31 85 Q27 93 23 85Z" fill="${c.hairColor}"/><path d="M24 58 Q12 70 22 92 M76 58 Q88 70 78 92" fill="none" stroke="${c.hairColor}" stroke-width="7" stroke-linecap="round"/>`,
+    ponytail: `<path d="M24 38 Q18 5 50 7 Q82 5 76 38 L80 74 Q91 88 80 99 Q68 91 69 73 L65 43 Q50 31 35 43 L31 73 Q20 91 20 99 Q9 88 20 74Z" fill="${c.hairColor}"/>`
+  }[c.hair] || `<path d="M24 38 Q18 5 50 7 Q82 5 76 38 L76 73 Q68 83 64 70 L63 43 Q50 31 37 43 L36 70 Q32 83 24 73Z" fill="${c.hairColor}"/`);
+  const hairFront = c.hair === "shaved" ? "" : ({
+    pixie:`<path d="M25 35 Q21 10 50 9 Q78 8 75 34 Q63 27 55 29 Q43 34 34 29 L29 43Z" fill="${c.hairColor}"/>`,
+    bob:`<path d="M24 36 Q18 7 50 8 Q82 7 76 36 Q70 29 67 29 L68 65 Q61 69 60 55 L58 39 Q47 47 37 38 L36 61 Q29 68 26 61 L29 39Z" fill="${c.hairColor}"/>`,
+    curls:`<path d="M24 37 Q13 20 28 15 Q29 3 42 12 Q52 0 61 12 Q77 4 75 18 Q88 25 76 40 Q68 31 59 32 Q49 40 40 32 Q31 35 24 37Z" fill="${c.hairColor}"/>`,
+    braids:`<path d="M24 37 Q18 8 50 8 Q82 8 76 37 Q64 29 54 32 Q43 35 34 31Z" fill="${c.hairColor}"/>`,
+    ponytail:`<path d="M24 37 Q19 8 50 8 Q81 8 76 37 Q64 29 53 32 Q40 35 24 37Z" fill="${c.hairColor}"/>`,
+    swept:`<path d="M24 38 Q18 8 50 8 Q81 8 76 37 Q63 24 49 29 Q37 33 24 38Z" fill="${c.hairColor}"/>`,
+    wavy:`<path d="M24 38 Q18 8 50 8 Q82 8 76 38 Q68 29 62 32 Q54 39 47 32 Q36 27 24 38Z" fill="${c.hairColor}"/>`,
+    long:`<path d="M24 38 Q18 8 50 8 Q82 8 76 38 Q65 29 58 32 Q48 38 40 31 Q32 31 24 38Z" fill="${c.hairColor}"/>`,
+    short:`<path d="M24 38 Q18 8 50 8 Q82 8 76 38 Q63 26 50 30 Q37 27 24 38Z" fill="${c.hairColor}"/`
+  }[c.hair] || "");
   const clothes = c.outfit === "dress"
     ? `<path d="M38 58 L62 58 L78 100 L22 100Z" fill="${c.outfitColor}"/><path d="M40 58 L50 68 L60 58" fill="#e7d6b4"/>`
     : `<path d="M${bodyX} 59 Q50 48 50 58 Q50 48 ${bodyRight} 59 L76 100 L24 100Z" fill="${c.outfitColor}"/>`;
   const neck = `<rect x="43" y="48" width="14" height="16" rx="5" fill="${c.skin}"/>`;
   const eyes = `<ellipse cx="40" cy="39" rx="2.5" ry="3" fill="${c.eyes}"/><ellipse cx="60" cy="39" rx="2.5" ry="3" fill="${c.eyes}"/><path d="M44 49 Q50 53 56 49" fill="none" stroke="#75483c" stroke-width="1.7" stroke-linecap="round"/>`;
-  const accessory = ({glasses:'<g fill="none" stroke="#d9bd79" stroke-width="2"><rect x="31" y="33" width="17" height="12" rx="4"/><rect x="52" y="33" width="17" height="12" rx="4"/><path d="M48 38h4"/></g>',shades:'<g fill="#17191d" stroke="#d9bd79" stroke-width="1.5"><rect x="30" y="33" width="19" height="12" rx="4"/><rect x="51" y="33" width="19" height="12" rx="4"/></g>',earrings:'<g fill="#e1bf67"><circle cx="25" cy="47" r="3"/><circle cx="75" cy="47" r="3"/></g>',chain:'<path d="M39 61 Q50 76 61 61" fill="none" stroke="#e1bf67" stroke-width="3"/>',hat:'<g fill="#26201b" stroke="#d4b36a" stroke-width="2"><path d="M28 23 Q50 -2 72 23 L75 29 L25 29Z"/><path d="M18 30 Q50 25 82 30 L80 35 L20 35Z"/></g>'})[c.accessory] || "";
-  const collar = c.outfit === "tuxedo" || c.outfit === "suit" ? '<path d="M39 58 L50 71 L61 58 L56 80 L50 75 L44 80Z" fill="#eee5d5"/><path d="M50 70 L54 79 L50 88 L46 79Z" fill="#b68d46"/>' : "";
-  return `<svg class="${className}" viewBox="0 0 100 110" role="img" aria-label="Your custom character"><ellipse cx="50" cy="105" rx="27" ry="4" fill="#000" opacity=".22"/>${clothes}<path d="M${bodyX} 62 Q50 51 100-${bodyX} 62 L80 105 L20 105Z" fill="${c.outfitColor}" opacity=".12"/>${neck}<ellipse cx="50" cy="36" rx="25" ry="29" fill="${c.skin}"/>${hair}<path d="M27 48 Q24 57 31 61" fill="none" stroke="${c.skin}" stroke-width="5" stroke-linecap="round"/><path d="M73 48 Q76 57 69 61" fill="none" stroke="${c.skin}" stroke-width="5" stroke-linecap="round"/>${eyes}${accessory}${collar}</svg>`;
+  const facialHair = c.facialHair === "stubble" ? '<path d="M34 52 Q50 64 66 52" fill="none" stroke="#49352c" stroke-width="3" stroke-dasharray="1 3"/>' : c.facialHair === "moustache" ? '<path d="M39 48 Q44 44 50 49 Q56 44 61 48 Q57 55 50 51 Q43 55 39 48Z" fill="#49352c"/>' : c.facialHair === "beard" ? '<path d="M29 48 Q50 67 71 48 L66 62 Q50 77 34 62Z" fill="${c.hairColor}"/>' : "";
+  const faceDetail = c.freckles === "light" || c.freckles === "many" ? `<g fill="#8b5945" opacity=".65">${Array.from({length:c.freckles==="many"?8:4},(_,i)=>`<circle cx="${37+(i%4)*3}" cy="${43+Math.floor(i/4)*3}" r="0.8"/>`).join("")}</g>` : c.freckles === "beauty" ? '<circle cx="62" cy="45" r="1.2" fill="#684437"/>' : "";
+  const accessory = ({glasses:'<g fill="none" stroke="#d9bd79" stroke-width="2"><rect x="31" y="33" width="17" height="12" rx="4"/><rect x="52" y="33" width="17" height="12" rx="4"/><path d="M48 38h4"/></g>',shades:'<g fill="#17191d" stroke="#d9bd79" stroke-width="1.5"><rect x="30" y="33" width="19" height="12" rx="4"/><rect x="51" y="33" width="19" height="12" rx="4"/></g>',earrings:'<g fill="#e1bf67"><circle cx="25" cy="47" r="3"/><circle cx="75" cy="47" r="3"/></g>',chain:'<path d="M39 61 Q50 76 61 61" fill="none" stroke="#e1bf67" stroke-width="3"/>',necklace:'<path d="M39 61 Q50 76 61 61" fill="none" stroke="#e1bf67" stroke-width="2"/><path d="M50 68l3 4-3 4-3-4Z" fill="#e1bf67"/>',hat:'<g fill="#26201b" stroke="#d4b36a" stroke-width="2"><path d="M28 23 Q50 -2 72 23 L75 29 L25 29Z"/><path d="M18 30 Q50 25 82 30 L80 35 L20 35Z"/></g>',beanie:'<path d="M27 29 Q30 8 50 8 Q70 8 73 29Z" fill="#7a4c3c" stroke="#d4b36a" stroke-width="1.5"/><path d="M27 28h46v7H27Z" fill="#b18b4c"/>',headband:'<path d="M26 28 Q50 17 74 28" fill="none" stroke="#b18b4c" stroke-width="5"/>'})[c.accessory] || "";
+  const collar = ["tuxedo","tailored","vest"].includes(c.outfit) ? '<path d="M39 58 L50 71 L61 58 L56 80 L50 75 L44 80Z" fill="#eee5d5"/><path d="M50 70 L54 79 L50 88 L46 79Z" fill="#b68d46"/>' : "";
+  return `<svg class="${className}" viewBox="0 0 100 110" role="img" aria-label="Your custom character"><ellipse cx="50" cy="105" rx="27" ry="4" fill="#000" opacity=".22"/>${clothes}<path d="M${bodyX} 62 Q50 51 100-${bodyX} 62 L80 105 L20 105Z" fill="${c.outfitColor}" opacity=".12"/>${neck}${hairBack}<ellipse cx="50" cy="36" rx="25" ry="29" fill="${c.skin}"/><path d="M27 48 Q24 57 31 61" fill="none" stroke="${c.skin}" stroke-width="5" stroke-linecap="round"/><path d="M73 48 Q76 57 69 61" fill="none" stroke="${c.skin}" stroke-width="5" stroke-linecap="round"/>${eyes}${faceDetail}${facialHair}${hairFront}${accessory}${collar}</svg>`;
 }
-function characterSelectField(key, title) {
+function characterOptionField(key, title) {
   const options = characterChoices[key];
-  return `<label class="creator-field"><span>${title}</span><select data-character-field="${key}">${Object.entries(options).map(([value,label]) => `<option value="${value}" ${playerCharacter[key] === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>`;
+  const isColor = key === "skin" || key === "hairColor" || key === "eyes" || key === "outfitColor";
+  return `<section class="creator-option-group"><h4>${title}</h4><div class="creator-options ${isColor ? "creator-swatches" : ""}">${Object.entries(options).map(([value,label]) => `<button type="button" class="creator-option ${playerCharacter[key] === value ? "selected" : ""}" data-character-choice="${key}" data-value="${value}" title="${label}" aria-pressed="${playerCharacter[key] === value}">${isColor ? `<i style="--swatch:${value}"></i><span>${label}</span>` : label}</button>`).join("")}</div></section>`;
 }
 function saveCharacter() {
   localStorage.setItem("golden-hour-character", JSON.stringify(playerCharacter));
@@ -243,37 +259,54 @@ function saveCharacter() {
 }
 function renderCharacterCreator(message = "", fromJoin = false) {
   const screen = document.querySelector("#join-screen");
+  const panels = {
+    hair: characterOptionField("hair","Hairstyle") + characterOptionField("hairColor","Hair colour"),
+    face: characterOptionField("skin","Skin tone") + characterOptionField("eyes","Eye colour") + characterOptionField("freckles","Face details") + characterOptionField("facialHair","Facial hair"),
+    outfit: characterOptionField("outfit","Outfit") + characterOptionField("outfitColor","Outfit colour") + characterOptionField("body","Body shape"),
+    extras: characterOptionField("accessory","Accessories")
+  };
   screen.innerHTML = `
     <div class="character-creator-shell">
-      <header class="creator-top"><button class="quiet-button" id="creator-back" type="button">← Back</button><div class="creator-brand">GOLDEN HOUR <span>CHARACTER STUDIO</span></div><span class="creator-step">YOUR LOOK · YOUR RULES</span></header>
+      <header class="creator-top"><button class="quiet-button" id="creator-back" type="button">← Back</button><div class="creator-brand">GOLDEN HOUR <span>CHARACTER STUDIO</span></div><span class="creator-step">BUILD YOUR LOOK</span></header>
       <div class="creator-layout">
-        <section class="creator-preview-panel"><span class="eyebrow">LIVE PREVIEW</span><div class="creator-stage"><div class="creator-aura"></div>${characterMarkup(playerCharacter,"creator-character-art")}</div><h2 id="creator-preview-name">${escapeHtml(playerName || "Your character")}</h2><p>Every detail follows you to the tables.</p><div class="creator-preview-caption">GOLDEN HOUR · ORIGINAL CHARACTER</div></section>
-        <section class="creator-controls"><span class="eyebrow">CHARACTER CUSTOMIZATION</span><h1>Make it yours.</h1><p class="creator-intro">Build your own look from the ground up. Changes appear instantly.</p>
+        <section class="creator-preview-panel"><span class="eyebrow">LIVE PREVIEW</span><div class="creator-stage"><div class="creator-aura"></div>${characterMarkup(playerCharacter,"creator-character-art")}</div><h2 id="creator-preview-name">${escapeHtml(playerName || "Your character")}</h2><p>Your look goes with you to every table.</p><div class="creator-preview-caption">GOLDEN HOUR · CHARACTER STUDIO</div></section>
+        <section class="creator-controls"><div class="creator-panel-heading"><span class="eyebrow">CHARACTER CUSTOMIZATION</span><h1>Create your character</h1><p>Choose a feature, then pick your style.</p></div>
           <label class="creator-field creator-name"><span>DISPLAY NAME</span><input class="chip-input" id="creator-username" maxlength="18" pattern="[A-Za-z0-9_]{1,18}" placeholder="Choose a name" value="${escapeHtml(playerName)}"></label>
-          <div class="creator-section"><h3>01 · BODY</h3><div class="creator-fields">${characterSelectField("body","Build")}${characterSelectField("skin","Skin tone")}</div></div>
-          <div class="creator-section"><h3>02 · FACE & HAIR</h3><div class="creator-fields">${characterSelectField("hair","Hair style")}${characterSelectField("hairColor","Hair colour")}${characterSelectField("eyes","Eye colour")}</div></div>
-          <div class="creator-section"><h3>03 · CLOTHING</h3><div class="creator-fields">${characterSelectField("outfit","Outfit")}${characterSelectField("outfitColor","Clothing colour")}</div></div>
-          <div class="creator-section"><h3>04 · ACCESSORIES</h3><div class="creator-fields">${characterSelectField("accessory","Accessory")}</div></div>
+          <nav class="creator-tabs" aria-label="Character categories">${[["hair","✦","Hair"],["face","◉","Face"],["outfit","♢","Outfit"],["extras","✧","Extras"]].map(([id,icon,label],i)=>`<button type="button" class="creator-tab ${i===0?"active":""}" data-creator-tab="${id}"><span>${icon}</span>${label}</button>`).join("")}</nav>
+          <div class="creator-tab-content" id="creator-tab-content">${panels.hair}</div>
           <p class="creator-error" id="creator-error" role="alert">${escapeHtml(message)}</p>
           <button class="primary-button full-button" id="creator-save" type="button">${fromJoin ? "Save character & enter" : "Save character"} <span>→</span></button>
         </section>
       </div>
     </div>`;
+  let activeTab = "hair";
   screen.querySelector("#creator-back").addEventListener("click", () => {
     if (fromJoin) renderUsernamePicker(message);
     else { document.body.classList.add("joined"); screen.innerHTML = ""; }
   });
-  screen.querySelectorAll("[data-character-field]").forEach((select) => select.addEventListener("change", () => {
-    playerCharacter[select.dataset.characterField] = select.value;
-    screen.querySelector(".creator-stage").innerHTML = `<div class="creator-aura"></div>${characterMarkup(playerCharacter,"creator-character-art")}`;
+  screen.querySelectorAll("[data-creator-tab]").forEach(button => button.addEventListener("click", () => {
+    activeTab = button.dataset.creatorTab;
+    screen.querySelectorAll("[data-creator-tab]").forEach(tab => tab.classList.toggle("active", tab === button));
+    screen.querySelector("#creator-tab-content").innerHTML = panels[activeTab];
   }));
-  screen.querySelector("#creator-username").addEventListener("input", (event) => {
+  screen.querySelector("#creator-tab-content").addEventListener("click", event => {
+    const button = event.target.closest("[data-character-choice]");
+    if (!button) return;
+    playerCharacter[button.dataset.characterChoice] = button.dataset.value;
+    const key = button.dataset.characterChoice;
+    screen.querySelectorAll(`[data-character-choice="${key}"]`).forEach(option => {
+      const selected = option === button;
+      option.classList.toggle("selected", selected);
+      option.setAttribute("aria-pressed", String(selected));
+    });
+    screen.querySelector(".creator-stage").innerHTML = `<div class="creator-aura"></div>${characterMarkup(playerCharacter,"creator-character-art")}`;
+  });
+  screen.querySelector("#creator-username").addEventListener("input", event => {
     playerName = event.target.value;
     screen.querySelector("#creator-preview-name").textContent = playerName || "Your character";
   });
   screen.querySelector("#creator-save").addEventListener("click", () => {
-    const nameInput = screen.querySelector("#creator-username");
-    const candidate = nameInput.value.trim();
+    const candidate = screen.querySelector("#creator-username").value.trim();
     if (!/^[A-Za-z0-9_]{1,18}$/.test(candidate)) {
       screen.querySelector("#creator-error").textContent = "Choose a name with 1–18 letters, numbers or underscores.";
       return;
