@@ -580,9 +580,10 @@ function renderContent() {
 }
 
 function renderGameSelection() {
+  const allGames = ["roulette", "blackjack", "slots", "horses", "poker", "wheel", "plinko"];
   const available = state.room.isPrivate
-    ? (state.room.selectedGame ? [state.room.selectedGame] : [])
-    : ["roulette", "blackjack", "slots", "horses", "poker", "wheel", "plinko"];
+    ? (state.room.selectedGame ? [state.room.selectedGame] : state.room.ownerId === playerId ? allGames : [])
+    : allGames;
   const labels = {
     roulette: ["Roulette", "Place bets on the shared wheel."],
     blackjack: ["Blackjack", "Take a seat and play for 21."],
@@ -613,7 +614,9 @@ function renderGameSelection() {
   content.querySelectorAll("[data-rejoin-game]").forEach((button) => {
     button.addEventListener("click", () => {
       const game = button.dataset.rejoinGame;
-      if (state.room.isPrivate) send({ type: "rejoin-game", game });
+      if (state.room.isPrivate) {
+        send({ type: state.room.selectedGame ? "rejoin-game" : "select-game", game });
+      }
       setView(game);
     });
   });
