@@ -1336,12 +1336,6 @@ function handleMessage(socket, message) {
     const game = room.selectedGame || message.game;
     const validGames = ["roulette", "blackjack", "slots", "horses", "poker", "wheel", "plinko"];
     if (!validGames.includes(game)) return sendError(socket, "There is no active game to quit.");
-    if (
-      (game === "roulette" && room.roulette.spinning) ||
-      (game === "horses" && room.horseRace.phase === "racing") ||
-      (game === "blackjack" && room.blackjack.phase === "playing") ||
-      (game === "poker" && room.poker.phase === "playing")
-    ) return sendError(socket, "Finish the current round before quitting this game.");
     const refund = (amount) => {
       if (Number.isSafeInteger(amount) && amount > 0) addChips(room, player, amount);
     };
@@ -1380,6 +1374,17 @@ function handleMessage(socket, message) {
     endRoomIfBroke(room);
     broadcast();
     broadcastCursors(player.roomCode);
+    return;
+  }
+
+  if (message.type === "rejoin-game") {
+    if (!room.isPrivate || !room.selectedGame || message.game !== room.selectedGame) {
+      return sendError(socket, "This room's game is not available to rejoin.");
+    }
+    room.gameParticipants.add(player.id);
+    player.currentGame = room.selectedGame;
+    player.cursor = null;
+    broadcast();
     return;
   }
 
