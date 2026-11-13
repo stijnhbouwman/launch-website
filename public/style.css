@@ -766,3 +766,47 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 @media(max-width:420px){.creator-fields{grid-template-columns:1fr}.creator-character-launch{align-items:flex-start;flex-direction:column}}
 
 .profile-character-art{width:34px;height:40px;display:block}.avatar{overflow:visible;background:transparent!important;border:0!important}
+
+
+/* Character Studio: illustrated creator inspired by the supplied reference */
+.character-creator-shell{background:#171813;color:#eee4cf;padding:18px clamp(12px,3vw,38px) 34px}
+.creator-top{max-width:980px;margin:0 auto 18px;padding-bottom:12px}
+.creator-layout{max-width:980px;grid-template-columns:minmax(220px,.82fr) minmax(330px,1.18fr);gap:18px;align-items:stretch}
+.creator-preview-panel{position:relative;top:auto;min-height:540px;padding:20px 14px;border:1px solid #a78b563f;border-radius:8px;background:#20251f;justify-content:center}
+.creator-stage{width:100%;height:360px;margin:10px 0 2px}
+.creator-aura{width:240px;height:240px}
+.creator-character-art{width:min(100%,285px);height:350px;filter:drop-shadow(0 10px 12px #0008)}
+.creator-preview-panel h2{font-size:23px;margin:6px 0}
+.creator-preview-panel p{font-size:10px}
+.creator-preview-caption{font-size:7px;margin-top:14px;padding-top:10px}
+.creator-controls{padding:4px 0 10px;border:1px solid #a78b563f;border-radius:8px;background:#25261f;padding:18px}
+.creator-panel-heading h1{font:500 clamp(23px,3vw,32px) 'Playfair Display',serif;margin:5px 0}
+.creator-panel-heading p{font-size:10px;color:#aaa995;margin:0 0 15px}
+.creator-name{margin-bottom:13px}
+.creator-name span{font-size:8px}
+.creator-name input{min-height:34px!important}
+.creator-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:10px 0 15px;padding:5px;border-radius:7px;background:#171a16}
+.creator-tab{border:1px solid transparent;border-radius:5px;background:transparent;color:#aaa995;padding:8px 4px;font:600 10px 'DM Sans',sans-serif;cursor:pointer}
+.creator-tab span{display:block;font-size:15px;margin-bottom:3px;color:#d5b66f}
+.creator-tab.active{background:#35392d;border-color:#b89a5b;color:#f1dfb8}
+.creator-tab-content{min-height:275px}
+.creator-option-group{margin:0 0 14px}
+.creator-option-group h4{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#d4b978;margin:0 0 8px}
+.creator-options{display:flex;flex-wrap:wrap;gap:6px}
+.creator-option{border:1px solid #4d4d3d;border-radius:5px;background:#1c201a;color:#d5d0c2;padding:7px 9px;font:500 9px 'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px}
+.creator-option.selected{border-color:#d0ae63;background:#3a3829;color:#fff0c9;box-shadow:inset 0 0 0 1px #d0ae6333}
+.creator-swatches .creator-option{padding:5px 7px}
+.creator-option i{width:15px;height:15px;display:block;flex:0 0 15px;border-radius:50%;background:var(--swatch);border:1px solid #ffffff55}
+.creator-option span{font-size:8px}
+.creator-error{font-size:9px}
+.creator-controls #creator-save{padding:12px 15px}
+@media(max-width:760px){
+ .creator-layout{grid-template-columns:minmax(0,1fr);gap:12px}
+ .creator-preview-panel{min-height:290px;padding:12px}
+ .creator-stage{height:205px;margin:0}
+ .creator-character-art{width:160px;height:210px}
+ .creator-preview-caption{margin-top:6px}
+ .creator-controls{padding:14px}
+ .creator-tab-content{min-height:220px}
+}
+@media(max-width:420px){.creator-fields{grid-template-columns:1fr}.creator-option{padding:7px}.creator-option span{display:none}}
