@@ -1917,7 +1917,7 @@ const server = http.createServer((request, response) => {
   }
   let relativePath;
   try {
-    relativePath = pathname === "/" ? "index.html" : pathname === "/admin" ? "admin.html" : pathname === "/about" ? "about.html" : decodeURIComponent(pathname.slice(1));
+    relativePath = pathname === "/" ? "index.html" : pathname === "/admin" ? "admin.html" : pathname === "/about" ? "about.html" : (pathname === "/first-person-casino" || pathname === "/first-person-casino/") ? "first-person-casino/index.html" : decodeURIComponent(pathname.slice(1));
   } catch {
     response.writeHead(400, { "x-content-type-options": "nosniff" });
     response.end("Invalid path");
