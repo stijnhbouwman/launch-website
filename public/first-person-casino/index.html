@@ -53,64 +53,100 @@ for(let x=-27;x<=27;x+=3) {slot(x,-45);slot(x,28)}
 box(20,.5,5,dark,0,.2,31);box(18,.12,5,gold,0,.5,30.8);for(let x=-8;x<=8;x+=4)point(0xd9a64e,2,10,x,3,28);
 // Chandeliers
 for(let z=-42;z<=26;z+=12){for(let x of [-18,0,18]){cyl(.8,.95,.18,gold,x,7,z);for(let a=0;a<10;a++){const ang=a*Math.PI/5;const bulb=new THREE.Mesh(new THREE.SphereGeometry(.12,12,12),mat(0xffd58a));bulb.position.set(x+Math.cos(ang)*.72,6.7,z+Math.sin(ang)*.72);scene.add(bulb)}point(0xffc16b,4.8,17,x,6.4,z)}}
-// A small, curated crowd of detailed guests. No cloned groups parked at every table.
+// Full casino crowd: preserve the original 36 guests and table-side placement.
 const npcs=[];
-const npcNames=['Mia','Oliver','Ava','Noah','Sofia','Leo','Isabella','Lucas'];
-const npcSkin=[0xe8b995,0x9a654b,0xf0c9a5,0x704735,0xc98d6b,0xd9a27c,0x8b5844,0xf1d0b2];
-const npcOutfits=[0x263c50,0x442d39,0x293d30,0x34343c,0x7d3c35,0x403329,0x263348,0x57412f];
+const npcSkin=[0xe8b995,0x9a654b,0xf0c9a5,0x704735,0xc98d6b,0xd9a27c,0x8b5844,0xf1d0b2,0xb87959,0xdba985,0x80563f,0xf3cdb0];
+const npcOutfits=[0x263c50,0x442d39,0x293d30,0x34343c,0x7d3c35,0x403329,0x263348,0x57412f,0x765b38,0x263f42,0x593b32,0x4a405c];
+const npcHair=[0x211915,0x543321,0x171717,0x9b7045,0x38251e,0xb18b58,0x292329,0x5b3827,0x30201a,0x765033,0x171b25,0x4a3028];
+const sharedGeo={
+ head:new THREE.SphereGeometry(1,20,16), small:new THREE.SphereGeometry(1,12,10),
+ torso:new THREE.CapsuleGeometry(.29,.52,5,10), limb:new THREE.CapsuleGeometry(.095,.30,4,9),
+ leg:new THREE.CapsuleGeometry(.115,.38,4,9), shoe:new THREE.BoxGeometry(.2,.13,.34),
+ finger:new THREE.CapsuleGeometry(.018,.065,3,6)
+};
 function makeNPC(i,x,z){
  const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
- const skin=mat(npcSkin[i%npcSkin.length],0,.72), outfit=mat(npcOutfits[i%npcOutfits.length],.12,.48);
- const shirtMat=mat(i%2?0xf0e5d2:0xd9dce2,0,.62), pantsMat=mat(i%3?0x242832:0x302b2a,.05,.7);
- const hairMat=mat([0x211915,0x543321,0x171717,0x9b7045,0x38251e,0xb18b58,0x292329,0x5b3827][i%8],.02,.82);
- const shoeMat=mat(0x171719,.18,.32),goldTrim=mat(0xb68a4a,.62,.3);
- // Tailored silhouette: waistcoat/jacket, shirt front, lapels and collar.
- const pelvis=new THREE.Mesh(new THREE.BoxGeometry(.48,.34,.3),outfit);pelvis.position.y=.88;g.add(pelvis);
- const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.31,.56,6,12),outfit);
- torso.position.y=1.25;g.add(torso);
- const shirt=new THREE.Mesh(new THREE.BoxGeometry(.17,.58,.035),shirtMat);shirt.position.set(0,1.27,-.295);g.add(shirt);
+ const skin=mat(npcSkin[i%npcSkin.length],0,.68), outfit=mat(npcOutfits[i%npcOutfits.length],.08,.52);
+ const shirtMat=mat(i%3===0?0xf2e8d8:i%3===1?0xd8dce5:0xe8d5c1,0,.58);
+ const pantsMat=mat([0x242832,0x302b2a,0x34323b,0x262d2a][i%4],.03,.68);
+ const hairMat=mat(npcHair[i%npcHair.length],0,.82), shoeMat=mat(i%3===0?0x171719:0x33251e,.12,.34);
+ const accent=mat(i%4===0?0xc6a05d:i%4===1?0x9d293b:0x566b78,.35,.38);
+ const eyeWhite=mat(0xf8f1e8,0,.45),iris=mat([0x493329,0x304c55,0x493d2b,0x24242b][i%4],0,.35),brow=mat(npcHair[i%npcHair.length],0,.8);
+ const sphere=(material,sx,sy,sz,px,py,pz)=>{const m=new THREE.Mesh(sharedGeo.head,material);m.scale.set(sx,sy,sz);m.position.set(px,py,pz);g.add(m);return m};
+ const add=(geo,material,parent,pos,scale)=>{const m=new THREE.Mesh(geo,material);m.position.set(...pos);if(scale)m.scale.set(...scale);parent.add(m);return m};
+ // Natural, tapered body silhouette with layered formal clothing.
+ const pelvis=add(new THREE.CapsuleGeometry(.245,.22,4,10),pantsMat,g,[0,.88,0]);
+ const torso=add(sharedGeo.torso,outfit,g,[0,1.29,0],[1,1,1]);
+ const shirt=add(new THREE.CapsuleGeometry(.105,.39,4,8),shirtMat,g,[0,1.31,-.255],[1,1,.22]);
+ const collar=add(new THREE.CylinderGeometry(.105,.13,.105,12),shirtMat,g,[0,1.62,-.015]);
  for(const side of [-1,1]){
-  const lapel=new THREE.Mesh(new THREE.BufferGeometry(),outfit);
-  const shape=new THREE.Shape();shape.moveTo(0,.27);shape.lineTo(side*.15,.02);shape.lineTo(side*.1,-.28);shape.lineTo(-side*.02,-.08);shape.closePath();
-  const lapelMesh=new THREE.Mesh(new THREE.ShapeGeometry(shape),goldTrim);lapelMesh.position.set(side*.04,1.48,-.326);g.add(lapelMesh);
+   const lapelShape=new THREE.Shape();lapelShape.moveTo(0,.19);lapelShape.lineTo(side*.13,.02);lapelShape.lineTo(side*.09,-.22);lapelShape.lineTo(-side*.025,-.04);lapelShape.closePath();
+   const lapel=new THREE.Mesh(new THREE.ShapeGeometry(lapelShape),outfit);lapel.position.set(side*.035,1.53,-.278);g.add(lapel);
  }
- if(i%3!==1){const tie=new THREE.Mesh(new THREE.BoxGeometry(.055,.32,.025),mat(i%2?0x9d293b:0xb18a43));tie.position.set(0,1.25,-.326);g.add(tie)}
- const neck=new THREE.Mesh(new THREE.CylinderGeometry(.095,.11,.2,12),skin);neck.position.y=1.68;g.add(neck);
- const head=new THREE.Mesh(new THREE.SphereGeometry(.235,24,20),skin);head.scale.set(.92,1.12,.94);head.position.y=1.91;g.add(head);
- // Hair cap plus a swept fringe; alternate styles keep the crowd from looking cloned.
- const cap=new THREE.Mesh(new THREE.SphereGeometry(.242,20,14,0,Math.PI*2,0,Math.PI*.57),hairMat);cap.scale.set(1.03,1.08,1);cap.position.set(0,2.015,.005);g.add(cap);
- if(i%3===0){const fringe=new THREE.Mesh(new THREE.SphereGeometry(.13,16,10),hairMat);fringe.scale.set(1.3,.55,.8);fringe.position.set(-.07,2.02,-.16);g.add(fringe)}
- if(i%3===1){const bun=new THREE.Mesh(new THREE.SphereGeometry(.12,14,10),hairMat);bun.position.set(0,2.02,.19);g.add(bun)}
- const eyeWhite=mat(0xf5eee4),iris=mat(0x493329),brow=mat(0x30231e);
+ if(i%4!==1){const tie=add(new THREE.CylinderGeometry(.018,.034,.29,8),accent,g,[0,1.34,-.291]);tie.rotation.z=.025}
+ for(let b=0;b<3;b++)add(sharedGeo.small,gold,[0,1.39-b*.12,-.29],[.018,.018,.009]);
+ if(i%4===0){add(new THREE.BoxGeometry(.1,.09,.018),accent,g,[.19,1.39,-.25]);}
+ const neck=add(new THREE.CylinderGeometry(.075,.09,.19,14),skin,g,[0,1.69,0]);
+ sphere(skin,.19,.245,.185,0,1.94,-.015);
+ // Ears, inset eyes, eyelids, eyebrows, sculpted nose and mouth.
  for(const side of [-1,1]){
-  const ear=new THREE.Mesh(new THREE.SphereGeometry(.052,12,10),skin);ear.position.set(side*.226,1.9,0);g.add(ear);
-  const eye=new THREE.Mesh(new THREE.SphereGeometry(.032,12,10),eyeWhite);eye.position.set(side*.085,1.93,-.207);g.add(eye);
-  const pupil=new THREE.Mesh(new THREE.SphereGeometry(.017,10,8),iris);pupil.position.set(side*.085,1.93,-.235);g.add(pupil);
-  const browMesh=new THREE.Mesh(new THREE.BoxGeometry(.075,.018,.025),brow);browMesh.position.set(side*.085,1.985,-.208);browMesh.rotation.z=side*-.08;g.add(browMesh);
+   sphere(skin,.045,.065,.04,side*.185,1.94,-.015);
+   sphere(eyeWhite,.052,.031,.018,side*.071,1.967,-.181);
+   sphere(iris,.022,.023,.012,side*.071,1.966,-.198);
+   sphere(mat(0x151515),.01,.014,.008,side*.071,1.966,-.207);
+   const browMesh=add(new THREE.CapsuleGeometry(.012,.065,3,6),brow,g,[side*.072,2.018,-.18]);browMesh.rotation.z=side*.1;
  }
- const nose=new THREE.Mesh(new THREE.SphereGeometry(.038,12,10),skin);nose.scale.set(.72,.85,.8);nose.position.set(0,1.86,-.235);g.add(nose);
- const mouth=new THREE.Mesh(new THREE.BoxGeometry(.075,.012,.018),mat(0x804c45));mouth.position.set(0,1.785,-.218);g.add(mouth);
+ sphere(skin,.035,.064,.043,0,1.91,-.196);
+ sphere(skin,.043,.031,.036,0,1.875,-.211);
+ const mouth=add(new THREE.CapsuleGeometry(.009,.052,3,6),mat(i%3===0?0x874c4a:0x75433d),g,[0,1.82,-.187]);mouth.rotation.z=Math.PI/2;
+ // Hairstyle silhouette and individual locks: cropped, swept, long, tied-back and textured.
+ const hairStyle=i%6;
+ const cap=sphere(hairMat,.198,.105,.19,0,2.105,-.005);
+ if(hairStyle===0||hairStyle===3){sphere(hairMat,.20,.055,.19,-.015,2.065,-.105);for(let k=0;k<3;k++)sphere(hairMat,.045,.095,.055,-.12+k*.1,2.07,-.14)}
+ if(hairStyle===1){sphere(hairMat,.205,.09,.20,0,2.105,.015);sphere(hairMat,.105,.12,.11,.12,2.04,.08)}
+ if(hairStyle===2){sphere(hairMat,.205,.12,.19,0,2.11,0);for(let k=0;k<4;k++)sphere(hairMat,.035,.11,.045,-.14+k*.09,2.04,-.13)}
+ if(hairStyle===4){sphere(hairMat,.09,.16,.09,0,2.12,.15);sphere(hairMat,.16,.045,.12,0,2.04,-.09)}
+ if(hairStyle===5){sphere(hairMat,.21,.12,.19,0,2.12,0);sphere(hairMat,.105,.07,.08,0,2.05,.16)}
+ if(i%7===4){const beard=sphere(hairMat,.14,.095,.09,0,1.79,-.12);}
+ // Optional glasses, earrings and hair accessories.
+ if(i%7===2){for(const side of [-1,1]){const lens=add(new THREE.TorusGeometry(.052,.008,6,16),gold,g,[side*.071,1.966,-.203]);lens.scale.set(1,.72,1)}add(new THREE.BoxGeometry(.055,.01,.01),gold,g,[0,1.967,-.205]);}
+ if(i%9===5){for(const side of [-1,1])sphere(gold,.014,.025,.014,side*.19,1.87,-.025);}
  const legs=[],arms=[];
  for(const side of [-1,1]){
-  const leg=new THREE.Group();leg.position.set(side*.145,.79,0);g.add(leg);
-  const thigh=new THREE.Mesh(new THREE.CapsuleGeometry(.115,.36,5,10),pantsMat);thigh.position.y=-.2;leg.add(thigh);
-  const shoe=new THREE.Mesh(new THREE.BoxGeometry(.2,.13,.34),shoeMat);shoe.position.set(0,-.48,-.075);leg.add(shoe);
-  legs.push(leg);
-  const arm=new THREE.Group();arm.position.set(side*.36,1.49,0);g.add(arm);
-  const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.105,.39,5,10),outfit);sleeve.position.y=-.22;arm.add(sleeve);
-  const cuff=new THREE.Mesh(new THREE.CylinderGeometry(.105,.105,.09,12),shirtMat);cuff.position.y=-.43;arm.add(cuff);
-  const hand=new THREE.Mesh(new THREE.SphereGeometry(.085,12,10),skin);hand.position.set(0,-.51,-.01);arm.add(hand);
-  arms.push(arm);
+   const hip=new THREE.Group();hip.position.set(side*.135,.79,0);g.add(hip);
+   add(sharedGeo.leg,pantsMat,hip,[0,-.205,0]);
+   add(new THREE.CylinderGeometry(.116,.105,.055,12),pantsMat,hip,[0,-.39,0]);
+   add(sharedGeo.shoe,shoeMat,hip,[0,-.47,-.07]);
+   add(new THREE.BoxGeometry(.205,.025,.08),gold,hip,[0,-.48,-.205]);
+   legs.push(hip);
+   const arm=new THREE.Group();arm.position.set(side*.31,1.49,0);g.add(arm);
+   const upper=add(sharedGeo.limb,outfit,arm,[0,-.18,0]);
+   const elbow=new THREE.Group();elbow.position.set(0,-.34,-.005);arm.add(elbow);
+   add(sharedGeo.limb,shirtMat,elbow,[0,-.12,-.005],[.78,.88,.9]);
+   add(new THREE.CylinderGeometry(.075,.075,.045,12),accent,elbow,[0,-.27,-.005]);
+   sphere(skin,.075,.085,.065,0,-.34,-.015);
+   for(let f=0;f<4;f++)add(sharedGeo.finger,skin,elbow,[-.045+f*.03,-.405,-.025],[1,1,1]);
+   arms.push(arm);
  }
- // A restrained accessory unique to some guests.
- if(i%4===0){const pocket=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.025),shirtMat);pocket.position.set(.2,1.37,-.31);g.add(pocket)}
- if(i%5===2){for(const side of [-1,1]){const lens=new THREE.Mesh(new THREE.TorusGeometry(.052,.009,6,16),goldTrim);lens.position.set(side*.085,1.94,-.238);g.add(lens)}const bridge=new THREE.Mesh(new THREE.BoxGeometry(.07,.012,.012),goldTrim);bridge.position.set(0,1.94,-.24);g.add(bridge)}
+ // Shoulder seam, jacket buttons and cufflinks add readable detail at normal camera distance.
+ for(const side of [-1,1]){
+   const seam=add(new THREE.SphereGeometry(.105,10,8),outfit,g,[side*.29,1.48,0]);seam.scale.set(1,.85,1);
+ }
  const path=[new THREE.Vector3(x,0,z),new THREE.Vector3(x>0?25:-25,0,z>0?24:-45),new THREE.Vector3(x>0?-25:25,0,z>0?24:-45),new THREE.Vector3(x,0,z)];
  npcs.push({g,path,index:1,speed:.48+(i%4)*.09,phase:i*.83,homeX:x,homeZ:z,seated:false,legs,arms,playing:false,gameTimer:Math.random()*8,stuck:0});
 }
-// Eight guests circulate around the perimeter lanes instead of forming three-person rings at tables.
-const guestStarts=[[-24,-45],[-8,-45],[8,-45],[24,-45],[-24,24],[-8,24],[8,24],[24,24]];
-guestStarts.forEach(([x,z],i)=>makeNPC(i,x,z));
+// Restore the full original population grid; do not thin the crowd.
+for(let i=0;i<36;i++){const x=-26+(i%6)*10.2,z=-36+Math.floor(i/6)*12;makeNPC(i,x,z)}
+// Restore guests around the eight lounge-table positions: three per table, same NPC pool.
+const loungeSpots=[[-24,-28],[-8,-28],[8,-28],[24,-28],[-24,12],[-8,12],[8,12],[24,12]];
+for(let i=0;i<loungeSpots.length;i++){
+ const [tx,tz]=loungeSpots[i];
+ const lounge=new THREE.Group();lounge.position.set(tx,0,tz);scene.add(lounge);
+ const top=new THREE.Mesh(new THREE.CylinderGeometry(.72,.78,.13,28),dark);top.position.y=.88;lounge.add(top);
+ const edge=new THREE.Mesh(new THREE.TorusGeometry(.72,.045,8,28),gold);edge.rotation.x=Math.PI/2;edge.position.y=.96;lounge.add(edge);
+ const stem=new THREE.Mesh(new THREE.CylinderGeometry(.13,.2,.78,16),gold);stem.position.y=.43;lounge.add(stem);
+ for(let j=0;j<3;j++){const n=npcs[(i*3+j)%24];const a=(j/3)*Math.PI*2+Math.PI/6;n.g.position.set(tx+Math.cos(a)*1.42,0,tz+Math.sin(a)*1.42);n.g.rotation.y=-a+Math.PI/2;n.seated=false;n.index=0;n.path=[new THREE.Vector3(n.g.position.x,0,n.g.position.z),new THREE.Vector3(n.g.position.x+Math.cos(a)*2.5,0,n.g.position.z+Math.sin(a)*2.5),new THREE.Vector3(n.g.position.x,0,n.g.position.z)];}
+}
 const keys={};let yaw=0,pitch=0,locked=false,verticalVelocity=0,onGround=true,seated=false;const clock=new THREE.Clock();const ray=new THREE.Raycaster(),hint=document.querySelector('#hint'),toast=document.querySelector('#toast');let chips=50;let gameState={};
 const balanceEl=document.querySelector('#balance');function updateBalance(){balanceEl.textContent=chips.toLocaleString('en-US');if(chips>=10000){document.querySelector('#wallet').innerHTML='🏆 GOAL COMPLETE · 10,000 CHIPS';say('JACKPOT! You reached 10,000 chips!')}}
 let drunkUntil=0,drunkLevel=0;
