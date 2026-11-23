@@ -84,7 +84,7 @@ function makeNPC(i,x,z){
    const lapel=new THREE.Mesh(new THREE.ShapeGeometry(lapelShape),outfit);lapel.position.set(side*.035,1.53,-.278);g.add(lapel);
  }
  if(i%4!==1){const tie=add(new THREE.CylinderGeometry(.018,.034,.29,8),accent,g,[0,1.34,-.291]);tie.rotation.z=.025}
- for(let b=0;b<3;b++)add(sharedGeo.small,gold,[0,1.39-b*.12,-.29],[.018,.018,.009]);
+ for(let b=0;b<3;b++)add(sharedGeo.small,gold,g,[0,1.39-b*.12,-.29],[.018,.018,.009]);
  if(i%4===0){add(new THREE.BoxGeometry(.1,.09,.018),accent,g,[.19,1.39,-.25]);}
  const neck=add(new THREE.CylinderGeometry(.075,.09,.19,14),skin,g,[0,1.69,0]);
  sphere(skin,.19,.245,.185,0,1.94,-.015);
@@ -124,7 +124,7 @@ function makeNPC(i,x,z){
    const elbow=new THREE.Group();elbow.position.set(0,-.34,-.005);arm.add(elbow);
    add(sharedGeo.limb,shirtMat,elbow,[0,-.12,-.005],[.78,.88,.9]);
    add(new THREE.CylinderGeometry(.075,.075,.045,12),accent,elbow,[0,-.27,-.005]);
-   sphere(skin,.075,.085,.065,0,-.34,-.015);
+   add(sharedGeo.head,skin,elbow,[0,-.34,-.015],[.075,.085,.065]);
    for(let f=0;f<4;f++)add(sharedGeo.finger,skin,elbow,[-.045+f*.03,-.405,-.025],[1,1,1]);
    arms.push(arm);
  }
