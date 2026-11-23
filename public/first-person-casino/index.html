@@ -230,34 +230,60 @@ function lobbySay(message){lobbyMessage.textContent=message}
 function connectLobby(room='global',action=null){
   const name=(nameInput.value||'Guest').trim();
   if(!/^[a-zA-Z0-9_]{1,18}$/.test(name)){lobbySay('Use 1–18 letters, numbers or underscores as your name.');return}
-  if(lobbySocket&&lobbySocket.readyState===WebSocket.OPEN){
+  if(lobbySocket&&lobbySocket.readyState===WebSocket.OPEN&&lobbyReady){
     if(action)lobbySocket.send(JSON.stringify(action));
-    else lobbySocket.send(JSON.stringify({type:'join-room',roomCode:room}));
+    else if(room!=='global')lobbySocket.send(JSON.stringify({type:'join-room',roomCode:room}));
     return;
   }
-  lobbySay('Connecting to multiplayer…');
+  if(lobbySocket&&(lobbySocket.readyState===WebSocket.CONNECTING||lobbySocket.readyState===WebSocket.OPEN)){
+    lobbySocket.close();
+  }
+  lobbyReady=false;
+  lobbySay('Connecting to casino network…');
   const protocol=location.protocol==='https:'?'wss:':'ws:';
-  lobbySocket=new WebSocket(protocol+'//'+location.host+'/live');
-  lobbySocket.addEventListener('open',()=>{lobbySocket.send(JSON.stringify({type:'register',id:playerId,name,roomCode:'global'}));});
-  lobbySocket.addEventListener('message',event=>{
+  const socket=new WebSocket(protocol+'//'+location.host+'/live');
+  lobbySocket=socket;
+  let registered=false, finished=false;
+  const fail=(message)=>{
+    if(finished)return;
+    finished=true;lobbyReady=false;
+    lobbySay(message);
+    try{socket.close()}catch{}
+  };
+  const timeout=setTimeout(()=>fail('The casino server is not responding. Please try again.'),10000);
+  socket.addEventListener('open',()=>{
+    if(socket!==lobbySocket)return;
+    socket.send(JSON.stringify({type:'register',id:playerId,name,roomCode:'global'}));
+  });
+  socket.addEventListener('message',event=>{
+    if(socket!==lobbySocket)return;
     let packet;try{packet=JSON.parse(event.data)}catch{return}
-    if(packet.type==='error'){lobbySay(packet.message);return}
+    if(packet.type==='error'){clearTimeout(timeout);fail(packet.message||'Could not join the casino.');return}
     if(packet.type==='state'){
       lobbyState=packet.state;
       const members=packet.state?.room?.members||[];
       document.querySelector('#globalPlayers').textContent=members.length+' player'+(members.length===1?'':'s')+' in this lobby';
       document.querySelector('#onlineCount').textContent='● '+members.length+' ONLINE';
       if(packet.state?.room?.code){activeRoom=packet.state.room.code;if(activeRoom!=='global')document.querySelector('#roomCode').value=activeRoom;}
-      if(lobbyReady){lobbySay('Joined '+(activeRoom==='global'?'Global Lobby':'Private Lobby '+activeRoom)+' · '+members.length+' online');}
+      if(!registered){
+        registered=true;finished=true;clearTimeout(timeout);lobbyReady=true;
+        if(action)socket.send(JSON.stringify(action));
+        else if(room!=='global')socket.send(JSON.stringify({type:'join-room',roomCode:room}));
+        else lobbySay('Connected to Global Lobby · '+members.length+' online');
+      }else if(lobbyReady){
+        lobbySay('Joined '+(activeRoom==='global'?'Global Lobby':'Private Lobby '+activeRoom)+' · '+members.length+' online');
+      }
     }
-    if(packet.type==='room-created'||packet.type==='room-joined'){lobbySay('Lobby ready.');}
+    if(packet.type==='room-created'||packet.type==='room-joined')lobbySay('Lobby ready.');
   });
-  lobbySocket.addEventListener('close',()=>{lobbyReady=false;lobbySay('Disconnected from multiplayer. Refresh to reconnect.')});
-  lobbySocket.addEventListener('error',()=>lobbySay('Could not connect to the casino network.'));
-  let didRegister=false;const onRegistered=event=>{if(didRegister)return;let packet;try{packet=JSON.parse(event.data)}catch{return}
-    if(packet.type==='state'){didRegister=true;lobbyReady=true;lobbySocket.removeEventListener('message',onRegistered);if(action)lobbySocket.send(JSON.stringify(action));else if(room!=='global')lobbySocket.send(JSON.stringify({type:'join-room',roomCode:room}));}
-  };
-  lobbySocket.addEventListener('message',onRegistered);
+  socket.addEventListener('close',()=>{
+    clearTimeout(timeout);
+    if(socket!==lobbySocket)return;
+    lobbyReady=false;
+    if(!finished)lobbySay('Connection closed before joining. Please try again.');
+    else lobbySay('Disconnected from multiplayer. Please reconnect.');
+  });
+  socket.addEventListener('error',()=>{clearTimeout(timeout);if(socket===lobbySocket)fail('Could not connect to the casino network. Check your connection and try again.')});
 }
 function enterWorld(){if(!lobbySocket||lobbySocket.readyState!==WebSocket.OPEN){connectLobby();setTimeout(()=>{if(lobbyReady)renderer.domElement.requestPointerLock()},900);return}renderer.domElement.requestPointerLock()}
 document.querySelector('#globalLobby').onclick=()=>{document.querySelector('#globalPanel').style.display='block';document.querySelector('#privatePanel').style.display='none'};
