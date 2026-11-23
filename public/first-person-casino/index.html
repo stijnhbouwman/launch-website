@@ -48,7 +48,56 @@ const reelCanvas=document.createElement('canvas');reelCanvas.width=512;reelCanva
 function paintReels(symbols=['🍒','⭐','7']){reelCtx.fillStyle='#07101a';reelCtx.fillRect(0,0,512,256);reelCtx.strokeStyle='#d9ad62';reelCtx.lineWidth=10;reelCtx.strokeRect(6,6,500,244);reelCtx.fillStyle='#fff1ce';reelCtx.font='bold 112px system-ui';reelCtx.textAlign='center';symbols.forEach((symbol,i)=>reelCtx.fillText(symbol,86+i*170,168));reelCtx.fillStyle='#b48a4b';reelCtx.fillRect(0,216,512,8)}
 paintReels();const reelTexture=new THREE.CanvasTexture(reelCanvas);reelTexture.colorSpace=THREE.SRGBColorSpace;const display=new THREE.Mesh(new THREE.PlaneGeometry(.94,.72),new THREE.MeshBasicMaterial({map:reelTexture}));display.position.set(0,1.55,-.592);g.add(display);g.userData.paintReels=paintReels;g.userData.reelTexture=reelTexture;const trim=new THREE.Mesh(new THREE.BoxGeometry(1.15,.06,.08),gold);trim.position.set(0,2.08,-.55);g.add(trim);interactables.push({pos:new THREE.Vector3(x,1.3,z),label:'Slot machine',type:'slots',group:g})}
 for(let x=-27;x<=27;x+=3) {slot(x,-45);slot(x,28)}
-// No bar props or drink interaction: keep the floor focused on casino play.
+// Central circular cocktail bar with a continuous counter, brass trim, stools and visible drinks.
+const barX=0,barZ=-10,barOuter=4.25,barInner=3.22;
+const barShape=new THREE.Shape();
+barShape.absarc(0,0,barOuter,0,Math.PI*2,false);
+const barHole=new THREE.Path();
+barHole.absarc(0,0,barInner,0,Math.PI*2,true);
+barShape.holes.push(barHole);
+const barShellGeo=new THREE.ExtrudeGeometry(barShape,{depth:1.12,bevelEnabled:false,curveSegments:72});
+barShellGeo.rotateX(-Math.PI/2);
+const barShell=new THREE.Mesh(barShellGeo,mat(0x3b2023,.38,.3));
+barShell.position.set(barX,.06,barZ);barShell.castShadow=true;barShell.receiveShadow=true;scene.add(barShell);
+const barTopGeo=new THREE.ShapeGeometry(barShape,72);barTopGeo.rotateX(-Math.PI/2);
+const barTop=new THREE.Mesh(barTopGeo,mat(0x171d25,.62,.22));barTop.position.set(barX,1.19,barZ);barTop.receiveShadow=true;scene.add(barTop);
+for(const [radius,tube,y,material] of [[barOuter,.075,1.12,gold],[barOuter-.12,.035,.22,wallGold],[barInner,.055,1.2,gold],[barInner+.1,.025,.18,wallGold]]){
+ const trim=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,10,96),material);trim.rotation.x=Math.PI/2;trim.position.set(barX,y,barZ);scene.add(trim);
+}
+// Warm brass foot rail around the guest side.
+const footRail=new THREE.Mesh(new THREE.TorusGeometry(4.72,.055,10,96),gold);footRail.rotation.x=Math.PI/2;footRail.position.set(barX,.42,barZ);scene.add(footRail);
+// Stools are arranged around the guest-facing side, leaving the blackjack table approach clear.
+const stoolAngles=[-.15,.55,1.25,1.95,2.65,3.95,4.65,5.35];
+for(const a of stoolAngles){
+ const x=barX+Math.sin(a)*5.35,z=barZ+Math.cos(a)*5.35;
+ const stool=new THREE.Group();stool.position.set(x,0,z);stool.rotation.y=a;scene.add(stool);
+ const base=new THREE.Mesh(new THREE.CylinderGeometry(.28,.34,.12,24),gold);base.position.y=.08;stool.add(base);
+ const stem=new THREE.Mesh(new THREE.CylinderGeometry(.075,.11,.72,16),dark);stem.position.y=.48;stool.add(stem);
+ const foot=new THREE.Mesh(new THREE.TorusGeometry(.24,.035,8,24),gold);foot.rotation.x=Math.PI/2;foot.position.y=.35;stool.add(foot);
+ const cushion=new THREE.Mesh(new THREE.CylinderGeometry(.43,.43,.18,28),red);cushion.position.y=.91;stool.add(cushion);
+ const piping=new THREE.Mesh(new THREE.TorusGeometry(.4,.035,8,28),gold);piping.rotation.x=Math.PI/2;piping.position.y=.98;stool.add(piping);
+}
+// Bottles, tumblers and small warm lamps placed directly on the circular countertop.
+const bottleGlass=mat(0x39765e,.18,.2),bottleAmber=mat(0x9b5c27,.22,.2),clearGlass=new THREE.MeshPhysicalMaterial({color:0xc9e5e8,metalness:.05,roughness:.08,transparent:true,opacity:.48});
+for(let i=0;i<12;i++){
+ const a=i*Math.PI*2/12+.12,x=barX+Math.cos(a)*3.72,z=barZ+Math.sin(a)*3.72;
+ const bottle=new THREE.Group();bottle.position.set(x,1.22,z);bottle.rotation.y=-a;scene.add(bottle);
+ const body=new THREE.Mesh(new THREE.CylinderGeometry(.105,.14,.48,16),i%2?bottleAmber:bottleGlass);body.position.y=.25;bottle.add(body);
+ const neck=new THREE.Mesh(new THREE.CylinderGeometry(.045,.07,.2,12),i%2?bottleAmber:bottleGlass);neck.position.y=.58;bottle.add(neck);
+ const cap=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.055,12),gold);cap.position.y=.71;bottle.add(cap);
+ const label=new THREE.Mesh(new THREE.BoxGeometry(.19,.13,.012),cream);label.position.set(0,.26,.137);bottle.add(label);
+ if(i%2===0){const glass=new THREE.Mesh(new THREE.CylinderGeometry(.075,.065,.19,16,1,true),clearGlass);glass.position.set(x+Math.cos(a+1)*.32,1.34,z+Math.sin(a+1)*.32);scene.add(glass)}
+}
+for(let i=0;i<6;i++){const a=i*Math.PI/3+.3,x=barX+Math.cos(a)*3.7,z=barZ+Math.sin(a)*3.7;const lamp=new THREE.Mesh(new THREE.SphereGeometry(.11,14,10),warm);lamp.position.set(x,1.48,z);scene.add(lamp);const glow=new THREE.PointLight(0xffbd70,.55,3);glow.position.set(x,1.8,z);scene.add(glow)}
+// A bartender behind the counter, facing the casino floor.
+const bartender=new THREE.Group();bartender.position.set(barX,0,barZ);scene.add(bartender);
+const bartenderBody=new THREE.Mesh(new THREE.CapsuleGeometry(.22,.58,5,10),mat(0x171d28));bartenderBody.position.set(0,1.55,0);bartender.add(bartenderBody);
+const bartenderHead=new THREE.Mesh(new THREE.SphereGeometry(.2,18,14),mat(0xc98d6b));bartenderHead.position.set(0,2.02,0);bartender.add(bartenderHead);
+const bartenderVest=new THREE.Mesh(new THREE.BoxGeometry(.42,.48,.3),mat(0xeee4d2));bartenderVest.position.set(0,1.57,.015);bartender.add(bartenderVest);
+const bartenderTie=new THREE.Mesh(new THREE.BoxGeometry(.055,.32,.025),red);bartenderTie.position.set(0,1.57,.18);bartender.add(bartenderTie);
+const bartenderHair=new THREE.Mesh(new THREE.SphereGeometry(.205,18,10,0,Math.PI*2,0,Math.PI/2),dark);bartenderHair.position.set(0,2.1,0);bartender.add(bartenderHair);
+const barSign=box(2.5,.55,.12,gold,0,2.35,barZ-4.05);barSign.material=mat(0x241b17,.55,.25);
+const barGlow=new THREE.PointLight(0xffbd70,2.4,12);barGlow.position.set(0,2.5,barZ);scene.add(barGlow);
 
 box(20,.5,5,dark,0,.2,31);box(18,.12,5,gold,0,.5,30.8);for(let x=-8;x<=8;x+=4)point(0xd9a64e,2,10,x,3,28);
 // Chandeliers
