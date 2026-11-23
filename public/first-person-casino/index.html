@@ -53,20 +53,64 @@ for(let x=-27;x<=27;x+=3) {slot(x,-45);slot(x,28)}
 box(20,.5,5,dark,0,.2,31);box(18,.12,5,gold,0,.5,30.8);for(let x=-8;x<=8;x+=4)point(0xd9a64e,2,10,x,3,28);
 // Chandeliers
 for(let z=-42;z<=26;z+=12){for(let x of [-18,0,18]){cyl(.8,.95,.18,gold,x,7,z);for(let a=0;a<10;a++){const ang=a*Math.PI/5;const bulb=new THREE.Mesh(new THREE.SphereGeometry(.12,12,12),mat(0xffd58a));bulb.position.set(x+Math.cos(ang)*.72,6.7,z+Math.sin(ang)*.72);scene.add(bulb)}point(0xffc16b,4.8,17,x,6.4,z)}}
-// NPCs: animated guests wander through the public floor and sit around decorative tables.
-const npcs=[];const npcNames=['Mia','Oliver','Ava','Noah','Sofia','Leo','Isabella','Lucas','Amelia','Mason','Chloe','Ethan','Grace','Liam','Zoe','Jack','Lily','Theo','Ruby','Finn','Aria','Max'];
-function makeNPC(i,x,z){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);const skin=mat(skinTones[i%skinTones.length]),clothes=mat(suits[i%suits.length]),hair=mat([0x211915,0x543321,0x171717,0x9b7045][i%4]);const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.34,.62,6,12),clothes);torso.position.y=1.08;g.add(torso);
-// Tailored jacket panels, shirt, lapels and tie give each guest a distinct formal silhouette.
-const shirt=new THREE.Mesh(new THREE.BoxGeometry(.19,.57,.045),cream);shirt.position.set(0,1.12,-.305);g.add(shirt);const lapelMat=mat(suits[(i+2)%suits.length]);for(const side of [-1,1]){const lapel=new THREE.Mesh(new THREE.BoxGeometry(.13,.42,.055),lapelMat);lapel.position.set(side*.12,1.2,-.33);lapel.rotation.z=side*.24;g.add(lapel)}if(i%3!==1){const tie=new THREE.Mesh(new THREE.BoxGeometry(.055,.35,.035),mat(i%2?0x9c293b:0xb18a43));tie.position.set(0,1.1,-.36);g.add(tie)}
-const head=new THREE.Mesh(new THREE.SphereGeometry(.25,20,16),skin);head.position.y=1.83;g.add(head);const haircap=new THREE.Mesh(new THREE.SphereGeometry(.26,20,12,0,Math.PI*2,0,Math.PI*.58),hair);haircap.position.y=1.93;g.add(haircap);
-// Facial features face toward the guest's forward (-Z) direction.
-const eyeMat=mat(0x201a19),eyeWhite=mat(0xf2e8d9);for(const side of [-1,1]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.035,10,8),eyeWhite);eye.position.set(side*.09,1.84,-.222);g.add(eye);const pupil=new THREE.Mesh(new THREE.SphereGeometry(.018,8,8),eyeMat);pupil.position.set(side*.09,1.84,-.252);g.add(pupil)}const nose=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),skin);nose.scale.set(.7,.8,.8);nose.position.set(0,1.77,-.25);g.add(nose);const smile=new THREE.Mesh(new THREE.BoxGeometry(.09,.018,.018),mat(0x78433c));smile.position.set(0,1.69,-.238);g.add(smile);
-const legs=[],arms=[];for(let side of [-1,1]){const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.12,.58,4,8),mat(i%4===0?0x17191e:0x25242a));leg.position.set(side*.17,.43,0);g.add(leg);legs.push(leg);const shoe=new THREE.Mesh(new THREE.SphereGeometry(.14,12,8),mat(0x171313,.15,.3));shoe.scale.set(.8,.48,1.35);shoe.position.set(side*.17,.12,-.08);g.add(shoe);const arm=new THREE.Group();arm.position.set(side*.4,1.37,0);g.add(arm);const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.12,.43,4,8),clothes);sleeve.position.y=-.19;arm.add(sleeve);const hand=new THREE.Mesh(new THREE.SphereGeometry(.105,12,10),skin);hand.position.set(0,-.48,-.015);arm.add(hand);arms.push(arm)}
-// Individual accessories: earrings, pocket squares, glasses and evening bags.
-if(i%4===0){for(const side of [-1,1]){const earring=new THREE.Mesh(new THREE.SphereGeometry(.035,10,8),gold);earring.position.set(side*.25,1.72,0);g.add(earring)}}if(i%5===2){const pocket=new THREE.Mesh(new THREE.BoxGeometry(.1,.12,.025),cream);pocket.position.set(.2,1.32,-.33);g.add(pocket)}if(i%7===3){for(const side of [-1,1]){const lens=new THREE.Mesh(new THREE.BoxGeometry(.09,.055,.025),gold);lens.position.set(side*.09,1.85,-.25);g.add(lens)}const bridge=new THREE.Mesh(new THREE.BoxGeometry(.07,.018,.02),gold);bridge.position.set(0,1.85,-.26);g.add(bridge)}const path=[new THREE.Vector3(x,0,z),new THREE.Vector3(Math.max(-27,Math.min(27,x+(i%2?8:-8))),0,z+(i%3?7:-7)),new THREE.Vector3(Math.max(-27,Math.min(27,x+(i%2?-6:6))),0,z+(i%3?-8:8))];npcs.push({g,path,index:1,speed:.55+(i%5)*.13,phase:i*.8,homeX:x,homeZ:z,seated:false,legs,arms,playing:false,gameTimer:Math.random()*8,stuck:0})}
-for(let i=0;i<36;i++){const x=-26+(i%6)*10.2,z=-36+Math.floor(i/6)*12;makeNPC(i,x,z)}
-// NPC-only tables with guests arranged around them; these cannot be selected by the player.
-for(let i=0;i<8;i++){const x=(i%4)*14-21,z=-30+Math.floor(i/4)*43;const t=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.6,.22,32),i%2?red:felt);t.position.set(x,.95,z);scene.add(t);solidObstacles.push({x,z,r:1.8});const stem=new THREE.Mesh(new THREE.CylinderGeometry(.2,.35,.9,16),gold);stem.position.set(x,.43,z);scene.add(stem);for(let j=0;j<3;j++){const a=j*Math.PI*2/3;const n=(i*3+j)%24;npcs[n].g.position.set(x+Math.cos(a)*2.1,0,z+Math.sin(a)*2.1);npcs[n].seated=false;npcs[n].g.rotation.y=-a}}
+// A small, curated crowd of detailed guests. No cloned groups parked at every table.
+const npcs=[];
+const npcNames=['Mia','Oliver','Ava','Noah','Sofia','Leo','Isabella','Lucas'];
+const npcSkin=[0xe8b995,0x9a654b,0xf0c9a5,0x704735,0xc98d6b,0xd9a27c,0x8b5844,0xf1d0b2];
+const npcOutfits=[0x263c50,0x442d39,0x293d30,0x34343c,0x7d3c35,0x403329,0x263348,0x57412f];
+function makeNPC(i,x,z){
+ const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
+ const skin=mat(npcSkin[i%npcSkin.length],0,.72), outfit=mat(npcOutfits[i%npcOutfits.length],.12,.48);
+ const shirtMat=mat(i%2?0xf0e5d2:0xd9dce2,0,.62), pantsMat=mat(i%3?0x242832:0x302b2a,.05,.7);
+ const hairMat=mat([0x211915,0x543321,0x171717,0x9b7045,0x38251e,0xb18b58,0x292329,0x5b3827][i%8],.02,.82);
+ const shoeMat=mat(0x171719,.18,.32),goldTrim=mat(0xb68a4a,.62,.3);
+ // Tailored silhouette: waistcoat/jacket, shirt front, lapels and collar.
+ const pelvis=new THREE.Mesh(new THREE.BoxGeometry(.48,.34,.3),outfit);pelvis.position.y=.88;g.add(pelvis);
+ const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.31,.56,6,12),outfit);
+ torso.position.y=1.25;g.add(torso);
+ const shirt=new THREE.Mesh(new THREE.BoxGeometry(.17,.58,.035),shirtMat);shirt.position.set(0,1.27,-.295);g.add(shirt);
+ for(const side of [-1,1]){
+  const lapel=new THREE.Mesh(new THREE.BufferGeometry(),outfit);
+  const shape=new THREE.Shape();shape.moveTo(0,.27);shape.lineTo(side*.15,.02);shape.lineTo(side*.1,-.28);shape.lineTo(-side*.02,-.08);shape.closePath();
+  const lapelMesh=new THREE.Mesh(new THREE.ShapeGeometry(shape),goldTrim);lapelMesh.position.set(side*.04,1.48,-.326);g.add(lapelMesh);
+ }
+ if(i%3!==1){const tie=new THREE.Mesh(new THREE.BoxGeometry(.055,.32,.025),mat(i%2?0x9d293b:0xb18a43));tie.position.set(0,1.25,-.326);g.add(tie)}
+ const neck=new THREE.Mesh(new THREE.CylinderGeometry(.095,.11,.2,12),skin);neck.position.y=1.68;g.add(neck);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.235,24,20),skin);head.scale.set(.92,1.12,.94);head.position.y=1.91;g.add(head);
+ // Hair cap plus a swept fringe; alternate styles keep the crowd from looking cloned.
+ const cap=new THREE.Mesh(new THREE.SphereGeometry(.242,20,14,0,Math.PI*2,0,Math.PI*.57),hairMat);cap.scale.set(1.03,1.08,1);cap.position.set(0,2.015,.005);g.add(cap);
+ if(i%3===0){const fringe=new THREE.Mesh(new THREE.SphereGeometry(.13,16,10),hairMat);fringe.scale.set(1.3,.55,.8);fringe.position.set(-.07,2.02,-.16);g.add(fringe)}
+ if(i%3===1){const bun=new THREE.Mesh(new THREE.SphereGeometry(.12,14,10),hairMat);bun.position.set(0,2.02,.19);g.add(bun)}
+ const eyeWhite=mat(0xf5eee4),iris=mat(0x493329),brow=mat(0x30231e);
+ for(const side of [-1,1]){
+  const ear=new THREE.Mesh(new THREE.SphereGeometry(.052,12,10),skin);ear.position.set(side*.226,1.9,0);g.add(ear);
+  const eye=new THREE.Mesh(new THREE.SphereGeometry(.032,12,10),eyeWhite);eye.position.set(side*.085,1.93,-.207);g.add(eye);
+  const pupil=new THREE.Mesh(new THREE.SphereGeometry(.017,10,8),iris);pupil.position.set(side*.085,1.93,-.235);g.add(pupil);
+  const browMesh=new THREE.Mesh(new THREE.BoxGeometry(.075,.018,.025),brow);browMesh.position.set(side*.085,1.985,-.208);browMesh.rotation.z=side*-.08;g.add(browMesh);
+ }
+ const nose=new THREE.Mesh(new THREE.SphereGeometry(.038,12,10),skin);nose.scale.set(.72,.85,.8);nose.position.set(0,1.86,-.235);g.add(nose);
+ const mouth=new THREE.Mesh(new THREE.BoxGeometry(.075,.012,.018),mat(0x804c45));mouth.position.set(0,1.785,-.218);g.add(mouth);
+ const legs=[],arms=[];
+ for(const side of [-1,1]){
+  const leg=new THREE.Group();leg.position.set(side*.145,.79,0);g.add(leg);
+  const thigh=new THREE.Mesh(new THREE.CapsuleGeometry(.115,.36,5,10),pantsMat);thigh.position.y=-.2;leg.add(thigh);
+  const shoe=new THREE.Mesh(new THREE.BoxGeometry(.2,.13,.34),shoeMat);shoe.position.set(0,-.48,-.075);leg.add(shoe);
+  legs.push(leg);
+  const arm=new THREE.Group();arm.position.set(side*.36,1.49,0);g.add(arm);
+  const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.105,.39,5,10),outfit);sleeve.position.y=-.22;arm.add(sleeve);
+  const cuff=new THREE.Mesh(new THREE.CylinderGeometry(.105,.105,.09,12),shirtMat);cuff.position.y=-.43;arm.add(cuff);
+  const hand=new THREE.Mesh(new THREE.SphereGeometry(.085,12,10),skin);hand.position.set(0,-.51,-.01);arm.add(hand);
+  arms.push(arm);
+ }
+ // A restrained accessory unique to some guests.
+ if(i%4===0){const pocket=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.025),shirtMat);pocket.position.set(.2,1.37,-.31);g.add(pocket)}
+ if(i%5===2){for(const side of [-1,1]){const lens=new THREE.Mesh(new THREE.TorusGeometry(.052,.009,6,16),goldTrim);lens.position.set(side*.085,1.94,-.238);g.add(lens)}const bridge=new THREE.Mesh(new THREE.BoxGeometry(.07,.012,.012),goldTrim);bridge.position.set(0,1.94,-.24);g.add(bridge)}
+ const path=[new THREE.Vector3(x,0,z),new THREE.Vector3(x>0?25:-25,0,z>0?24:-45),new THREE.Vector3(x>0?-25:25,0,z>0?24:-45),new THREE.Vector3(x,0,z)];
+ npcs.push({g,path,index:1,speed:.48+(i%4)*.09,phase:i*.83,homeX:x,homeZ:z,seated:false,legs,arms,playing:false,gameTimer:Math.random()*8,stuck:0});
+}
+// Eight guests circulate around the perimeter lanes instead of forming three-person rings at tables.
+const guestStarts=[[-24,-45],[-8,-45],[8,-45],[24,-45],[-24,24],[-8,24],[8,24],[24,24]];
+guestStarts.forEach(([x,z],i)=>makeNPC(i,x,z));
 const keys={};let yaw=0,pitch=0,locked=false,verticalVelocity=0,onGround=true,seated=false;const clock=new THREE.Clock();const ray=new THREE.Raycaster(),hint=document.querySelector('#hint'),toast=document.querySelector('#toast');let chips=50;let gameState={};
 const balanceEl=document.querySelector('#balance');function updateBalance(){balanceEl.textContent=chips.toLocaleString('en-US');if(chips>=10000){document.querySelector('#wallet').innerHTML='🏆 GOAL COMPLETE · 10,000 CHIPS';say('JACKPOT! You reached 10,000 chips!')}}
 let drunkUntil=0,drunkLevel=0;
