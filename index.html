@@ -3,58 +3,113 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A fresh place to start something great.">
-  <meta name="theme-color" content="#101522">
-  <title>New Horizons — Make something happen</title>
+  <meta name="description" content="Kind, practical guidance to help older adults find support for everyday challenges.">
+  <meta name="theme-color" content="#f7f8f4">
+  <title>KindPath — A little help, a clearer next step</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="script.js" defer></script>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to main content</a>
   <header class="site-header">
-    <a class="brand" href="#" aria-label="New Horizons home"><span class="brand-mark">N</span> new horizons</a>
-    <button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
-    <nav class="nav-links" aria-label="Main navigation">
-      <a href="#about">About</a><a href="#features">What’s inside</a><a class="nav-cta" href="#contact">Get in touch <span>↗</span></a>
+    <a class="brand" href="#" aria-label="KindPath home"><span class="brand-icon">k</span><span>kindpath</span></a>
+    <nav aria-label="Main navigation" class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#topics">Browse topics</a>
+      <a class="nav-button" href="#finder">Find support <span aria-hidden="true">→</span></a>
     </nav>
+    <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="navigation">☰</button>
   </header>
-  <main>
+
+  <main id="main">
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow"><span></span> A fresh start begins here</p>
-        <h1>Make room for<br><span>what’s next.</span></h1>
-        <p class="hero-text">A new idea deserves a bold beginning. This is your space to share what you do, show what matters, and invite people along for the journey.</p>
-        <div class="hero-actions"><a class="button button-primary" href="#about">Discover more <span>↗</span></a><a class="text-link" href="#features">Explore the site <span>↓</span></a></div>
-        <div class="hero-note"><span class="note-line"></span> BUILT FOR YOUR NEXT BIG THING</div>
+        <p class="eyebrow"><span class="eyebrow-dot"></span> SUPPORT THAT STARTS WITH LISTENING</p>
+        <h1>Whatever’s on your mind, <em>let’s find a way.</em></h1>
+        <p class="hero-lead">Everyday life can bring unexpected challenges. Tell us what’s troubling you and we’ll help you explore practical next steps and places to turn.</p>
+        <a class="primary-button" href="#finder">Tell us what’s happening <span aria-hidden="true">→</span></a>
+        <p class="privacy-note"><span aria-hidden="true">♡</span> No account needed. Your search stays in this browser.</p>
       </div>
-      <div class="hero-art" aria-label="Abstract colorful geometric artwork">
-        <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
-        <div class="art-sun"></div><div class="art-card"><span>IDEAS INTO</span><strong>REALITY.</strong><small>ONE STEP AT A TIME</small></div>
-        <div class="art-dot dot-one"></div><div class="art-dot dot-two"></div><div class="art-star">✳</div>
-      </div>
-      <div class="scroll-cue">SCROLL TO EXPLORE <span>↓</span></div>
-    </section>
-    <section class="intro section" id="about">
-      <div class="section-label">01 / THE BEGINNING</div>
-      <div><h2>Every great thing<br>starts <em>somewhere.</em></h2><p class="section-copy">Use this website to introduce your project, business, portfolio, or next big idea. Make it yours by replacing this starter copy with your own story, images, and links.</p><a class="under-link" href="#contact">Let’s make it happen <span>↗</span></a></div>
-    </section>
-    <section class="features section" id="features">
-      <div class="section-label">02 / WHAT YOU’LL FIND</div>
-      <div class="feature-heading"><h2>A simple start.<br><em>Endless possibilities.</em></h2><p>Everything is ready for you to shape into something uniquely yours.</p></div>
-      <div class="feature-grid">
-        <article class="feature-card"><span class="feature-number">01</span><div class="feature-icon">✳</div><h3>Your story</h3><p>Tell visitors who you are, what you do, and why it matters.</p></article>
-        <article class="feature-card"><span class="feature-number">02</span><div class="feature-icon">↗</div><h3>Your work</h3><p>Showcase your services, projects, products, or best ideas.</p></article>
-        <article class="feature-card"><span class="feature-number">03</span><div class="feature-icon">◎</div><h3>Your next step</h3><p>Give people a clear way to connect, follow, or get started.</p></article>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="sun-shape"></div>
+        <div class="hero-illustration">
+          <div class="illustration-window"><div class="window-sun"></div><div class="window-hill hill-one"></div><div class="window-hill hill-two"></div></div>
+          <div class="plant plant-one"><i></i><i></i><b></b></div>
+          <div class="plant plant-two"><i></i><i></i><b></b></div>
+          <div class="welcome-note"><span>ONE STEP AT A TIME</span><strong>You’re not<br>on your own.</strong><small>✳ KINDNESS LIVES HERE</small></div>
+        </div>
+        <span class="floating-heart">♡</span>
+        <span class="floating-spark">✳</span>
       </div>
     </section>
-    <section class="contact section" id="contact">
-      <div class="section-label">03 / SAY HELLO</div>
-      <div class="contact-content"><h2>Ready to make<br>some <em>noise?</em></h2><p>Have a question or want to work together? Get in touch and let’s start a conversation.</p><a class="button button-light" href="mailto:hello@example.com">Email us <span>↗</span></a></div>
-      <div class="contact-decoration">LET’S<br>GO<span>✳</span></div>
+
+    <section class="trust-strip" aria-label="Our approach">
+      <div><span class="trust-icon">◎</span><p><strong>Easy to use</strong><small>Clear words and simple steps</small></p></div>
+      <div><span class="trust-icon">♡</span><p><strong>Kind and respectful</strong><small>Your concerns matter</small></p></div>
+      <div><span class="trust-icon">⌂</span><p><strong>Practical next steps</strong><small>Ideas for where to get help</small></p></div>
+    </section>
+
+    <section class="finder-section" id="finder">
+      <div class="section-heading">
+        <p class="eyebrow">LET’S START WITH YOU</p>
+        <h2>What would you like help with?</h2>
+        <p>You can write it in your own words. A few details can help us find more relevant guidance.</p>
+      </div>
+      <form class="search-panel" id="support-form">
+        <label for="issue">Describe what’s happening</label>
+        <textarea id="issue" name="issue" rows="4" maxlength="700" placeholder="For example: I feel lonely since I stopped driving, and I would like to meet people nearby." required></textarea>
+        <div class="form-bottom">
+          <span class="input-hint">Please don’t include your full name, address, passwords, or other private details.</span>
+          <button class="primary-button search-button" type="submit">Find helpful ideas <span aria-hidden="true">⌕</span></button>
+        </div>
+        <div class="quick-prompts" aria-label="Example searches">
+          <span>Not sure what to write?</span>
+          <button type="button" data-prompt="I have been feeling lonely and would like to meet people.">Feeling lonely</button>
+          <button type="button" data-prompt="I am worried about falling or moving around safely at home.">Staying safe at home</button>
+          <button type="button" data-prompt="I need help understanding my bills or managing money.">Bills and money</button>
+        </div>
+      </form>
+      <div id="results" class="results" aria-live="polite" aria-atomic="true"></div>
+    </section>
+
+    <section class="topics-section" id="topics">
+      <div class="section-heading topics-heading">
+        <p class="eyebrow">A PLACE TO BEGIN</p>
+        <h2>Explore common concerns</h2>
+        <p>Choose a topic to see some starting points. It’s okay if your concern fits more than one.</p>
+      </div>
+      <div class="topic-grid">
+        <button class="topic-card" data-topic="mobility"><span class="topic-icon">⌂</span><strong>Moving around safely</strong><small>Balance, falls and getting about</small><span class="topic-arrow">→</span></button>
+        <button class="topic-card" data-topic="health"><span class="topic-icon">＋</span><strong>Health and medicines</strong><small>Appointments and medication questions</small><span class="topic-arrow">→</span></button>
+        <button class="topic-card" data-topic="connection"><span class="topic-icon">♡</span><strong>Feeling connected</strong><small>Loneliness, friends and community</small><span class="topic-arrow">→</span></button>
+        <button class="topic-card" data-topic="home"><span class="topic-icon">⌂</span><strong>Help at home</strong><small>Daily tasks and home support</small><span class="topic-arrow">→</span></button>
+        <button class="topic-card" data-topic="money"><span class="topic-icon">€</span><strong>Money and bills</strong><small>Budgeting, benefits and scams</small><span class="topic-arrow">→</span></button>
+        <button class="topic-card" data-topic="digital"><span class="topic-icon">▤</span><strong>Technology and transport</strong><small>Using devices and getting around</small><span class="topic-arrow">→</span></button>
+      </div>
+    </section>
+
+    <section class="how-section" id="how-it-works">
+      <div class="how-intro"><p class="eyebrow">A CLEARER NEXT STEP</p><h2>Small steps can make a big difference.</h2></div>
+      <div class="steps">
+        <article><span>01</span><div><h3>Tell us what’s going on</h3><p>Write a short description, just as you would explain it to a helpful person.</p></div></article>
+        <article><span>02</span><div><h3>Explore ideas that fit</h3><p>We look for relevant topics in our starter guide and show practical suggestions.</p></div></article>
+        <article><span>03</span><div><h3>Choose your next step</h3><p>Use the ideas to prepare for a conversation with a trusted person or professional.</p></div></article>
+      </div>
+    </section>
+
+    <section class="safety-section">
+      <div class="safety-icon" aria-hidden="true">!</div>
+      <div><h2>Need urgent help?</h2><p>KindPath is not an emergency service and cannot assess medical symptoms. If someone may be in immediate danger, has chest pain, severe difficulty breathing, signs of a stroke, or another life-threatening problem, contact your local emergency service now. For urgent health concerns that are not immediately life-threatening, contact a doctor or local medical advice service.</p></div>
     </section>
   </main>
-  <footer class="site-footer"><a class="brand" href="#"><span class="brand-mark">N</span> new horizons</a><span>© <span id="year"></span> New Horizons. Your story starts here.</span><a href="#top">Back to top ↑</a></footer>
+
+  <footer class="site-footer" id="about">
+    <a class="brand" href="#"><span class="brand-icon">k</span><span>kindpath</span></a>
+    <p>A little help. A clearer next step.</p>
+    <span>© <span id="year"></span> KindPath</span>
+  </footer>
 </body>
 </html>
