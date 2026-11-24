@@ -268,3 +268,29 @@ async function showResults(query){
  }));
  results.scrollIntoView({behavior:"smooth",block:"start"});
 }
+
+
+// Searchable directories on the care resource pages.
+const directorySearch = document.querySelector("#directory-search");
+const directoryGrid = document.querySelector("#directory-grid");
+if (directorySearch && directoryGrid) {
+  const directoryCards = [...directoryGrid.querySelectorAll(".directory-card")];
+  directorySearch.addEventListener("input", () => {
+    const term = directorySearch.value.trim().toLocaleLowerCase("nl");
+    let visible = 0;
+    directoryCards.forEach(card => {
+      const match = card.textContent.toLocaleLowerCase("nl").includes(term);
+      card.hidden = !match;
+      if (match) visible++;
+    });
+    let notice = directoryGrid.querySelector(".directory-empty");
+    if (!notice) {
+      notice = document.createElement("p");
+      notice.className = "directory-empty no-results";
+      notice.setAttribute("role", "status");
+      directoryGrid.appendChild(notice);
+    }
+    notice.hidden = visible !== 0;
+    notice.textContent = "Geen resultaten gevonden. Probeer een ander zoekwoord of bekijk alle organisaties.";
+  });
+}
