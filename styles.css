@@ -96,3 +96,47 @@
 .course-finish strong{font:700 15px Manrope;color:var(--green-dark)}
 .course-finish p{font-size:13px;line-height:1.6;color:#56675c;margin:5px 0 0}
 @media(max-width:520px){.course-lesson{grid-template-columns:1fr;gap:4px;padding:15px}.course-header h4{font-size:21px}.guided-course{padding:16px}}
+
+
+/* Original KindPath animated lesson player — no third-party video embeds */
+.original-video-player{margin:22px 0 12px;overflow:hidden;border:1px solid #d5e1d5;border-radius:16px;background:#20382d;box-shadow:0 12px 30px #20382d18}
+.original-video-screen{display:grid;grid-template-columns:.82fr 1.18fr;min-height:330px;color:#fff;background:linear-gradient(135deg,#20382d,#345442 65%,#52765b)}
+.original-video-art{position:relative;display:grid;place-items:center;min-height:280px;overflow:hidden;background:radial-gradient(circle at 50% 45%,#789879 0 8%,#456b50 9% 34%,#304f3c 35% 68%,#294334 69%)}
+.video-art-orbit{position:absolute;width:210px;height:210px;border:1px solid #d9ead45c;border-radius:50%;animation:kindpathOrbit 14s linear infinite}
+.orbit-two{width:270px;height:270px;border-style:dashed;animation-direction:reverse;animation-duration:22s}
+.video-art-symbol{display:grid;place-items:center;width:104px;height:104px;border:1px solid #ffffff70;border-radius:30px;background:#eaf2e7;color:#42664a;font-size:58px;box-shadow:0 12px 30px #14291d55;animation:kindpathFloat 4s ease-in-out infinite}
+.video-art-caption{position:absolute;bottom:22px;left:20px;font-size:10px;letter-spacing:2px;font-weight:800;color:#e0ebdd}
+.original-video-copy{align-self:center;padding:34px clamp(22px,4vw,48px)}
+.original-video-copy>span{font-size:11px;font-weight:800;letter-spacing:1.4px;color:#c9ddc8}
+.original-video-copy h5{font:800 clamp(23px,3vw,34px)/1.2 Manrope,sans-serif;color:#fff;margin:13px 0}
+.original-video-copy p{font-size:16px;line-height:1.75;color:#eef4ec;margin:0;max-width:610px}
+.original-video-copy small{display:block;margin-top:20px;color:#c9ddc8;font-size:11px;letter-spacing:1px}
+.video-timeline{height:5px;background:#ffffff30}
+.video-timeline span{display:block;width:11.11%;height:100%;background:#d6e7c9;transition:width .25s}
+.video-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px;background:#172a20}
+.video-controls>div{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.video-controls button{border:1px solid #ffffff4a;border-radius:24px;padding:10px 15px;background:#294635;color:#fff;font:700 12px "DM Sans",sans-serif;cursor:pointer}
+.video-controls button:hover:not(:disabled){background:#3b6148}
+.video-controls button:disabled{opacity:.35;cursor:not-allowed}
+.video-controls [data-video-speak]{background:#e5eee0;color:#284532;border-color:#e5eee0}
+.video-status{padding:0 18px 13px;margin:0;background:#172a20;color:#c5d6c7;font-size:12px;line-height:1.5}
+.scene-enter .video-art-symbol{animation:kindpathFloat .7s ease-out,kindpathGlow 2.8s ease-in-out infinite}
+@keyframes kindpathOrbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes kindpathFloat{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-9px) rotate(3deg)}}
+@keyframes kindpathGlow{0%,100%{box-shadow:0 12px 30px #14291d55}50%{box-shadow:0 12px 42px #d8eadc55}}
+@media(max-width:680px){
+ .original-video-screen{grid-template-columns:1fr}
+ .original-video-art{min-height:190px}
+ .video-art-orbit{width:150px;height:150px}
+ .orbit-two{width:195px;height:195px}
+ .video-art-symbol{width:78px;height:78px;font-size:43px;border-radius:23px}
+ .original-video-copy{padding:23px 20px 26px}
+ .original-video-copy h5{font-size:25px}
+ .original-video-copy p{font-size:15px}
+ .video-controls{flex-wrap:wrap}
+ .video-controls>div{order:3;width:100%}
+ .video-controls>button{flex:1}
+}
+@media(prefers-reduced-motion:reduce){
+ .video-art-orbit,.video-art-symbol,.scene-enter .video-art-symbol{animation:none}
+}
