@@ -76,7 +76,7 @@ async function showResults(query) {
       note: await translateText(guide.note,"en",language)
     })));
     results.innerHTML = '<h3 class="result-heading">'+escapeHTML(labels[0])+'</h3>' + localized.map(guide =>
-      '<article class="result-card"><span class="result-tag">'+escapeHTML(guide.tag)+'</span><h3>'+escapeHTML(guide.title)+'</h3><p>'+escapeHTML(guide.intro)+'</p><strong>'+labels[1]+'</strong><ul>'+guide.steps.map(step=>'<li>'+escapeHTML(step)+'</li>').join("")+'</ul><p><strong>'+labels[2]+'</strong> '+escapeHTML(guide.note)+'</p></article>'
+      '<article class="result-card"><span class="result-tag">'+escapeHTML(guide.tag)+'</span><h3>'+escapeHTML(guide.title)+'</h3><p>'+escapeHTML(guide.intro)+'</p><strong>'+escapeHTML(labels[1])+'</strong><ul>'+guide.steps.map(step=>'<li>'+escapeHTML(step)+'</li>').join("")+'</ul><p><strong>'+escapeHTML(labels[2])+'</strong> '+escapeHTML(guide.note)+'</p></article>'
     ).join("");
     results.scrollIntoView({behavior:"smooth",block:"nearest"});
   } catch (error) {
