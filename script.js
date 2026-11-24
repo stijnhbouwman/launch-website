@@ -20,6 +20,41 @@ const guides = [
  {id:"money",title:"Geldzaken, rekeningen en oplichting",tag:"Geld en veiligheid",keys:["geld","rekening","rekeningen","huur","schuld","pensioen","uitkering","toeslag","kosten","budget","bank","oplichting","fraude","gestolen","betaling","financiën"],intro:"Onafhankelijk advies kan helpen rekeningen te begrijpen, beschikbare steun te vinden en fraude te voorkomen.",steps:["Verzamel brieven of rekeningen waarover u vragen hebt, maar houd rekeningnummers en wachtwoorden privé.","Neem contact op via het telefoonnummer op een officiële brief of de geverifieerde website.","Vraag een lokale adviesorganisatie of maatschappelijk werker naar toeslagen, uitkeringen en hulp bij budgetteren.","Deel nooit een eenmalige code, pincode of wachtwoord met iemand die onverwacht contact met u opneemt."],note:"Denkt u dat er geld is gestolen? Bel direct uw bank via het officiële nummer. Meld vermoedelijke fraude bij de bevoegde instantie in uw land."},
  {id:"digital",title:"Technologie en vervoer",tag:"Zelfstandig blijven",keys:["telefoon","computer","internet","online","e-mail","videobellen","technologie","tablet","wachtwoord","bus","trein","vervoer","rijden","reizen","reis"],intro:"Met rustige, praktische hulp worden technologie en vervoer vaak minder ingewikkeld.",steps:["Vraag bij een bibliotheek, buurthuis of ouderenorganisatie naar digitale cursussen voor beginners.","Vraag iemand die u vertrouwt om één handeling tegelijk uit te leggen en de stappen groot op te schrijven.","Kijk of uw vervoersbedrijf informatie biedt over toegankelijk reizen of reisbegeleiding.","Wees voorzichtig met onverwachte berichten waarin u op een link moet klikken, geld moet betalen of een wachtwoord moet delen."],note:"Geef een onverwachte beller nooit toegang op afstand tot uw apparaat of uw bankgegevens."}
 ];
+
+const resourcesByTopic = {
+ mobility:[
+ {name:"VeiligheidNL – valpreventie",kind:"Informatie en oefeningen",description:"Praktische uitleg over vallen voorkomen en veilig bewegen.",url:"https://www.veiligheid.nl/themas/valpreventie"},
+ {name:"Rijksoverheid – gezond en sterk ouder worden",kind:"Officiële informatie",description:"Lees over valrisico, trainingen en mogelijke vergoedingen.",url:"https://www.rijksoverheid.nl/themas/familie-zorg-en-gezondheid/gezondheid-en-preventie/gezond-en-sterk-ouder-worden"},
+ {name:"Regelhulp – hulp voor ouderen",kind:"Hulp en voorzieningen",description:"Bekijk welke ondersteuning en hulpmiddelen mogelijk zijn.",url:"https://www.regelhulp.nl/onderwerpen/mijn-situatie/ouderen"}],
+ health:[
+ {name:"Apotheek.nl – ouderen en medicijngebruik",kind:"Medicijninformatie",description:"Uitleg over medicatie, bijwerkingen en hulp van de apotheker.",url:"https://www.apotheek.nl/zorg-van-de-apotheker/medicijngebruik-in-het-dagelijks-leven/ouderen-en-medicijngebruik"},
+ {name:"Regelhulp – hulp bij medicijngebruik",kind:"Praktische zorg",description:"Bekijk welke hulp thuis mogelijk is bij het beheren en innemen van medicijnen.",url:"https://www.regelhulp.nl/onderwerpen/welke-soort/verzorging-verpleging-behandeling/medicijngebruik"},
+ {name:"Thuisarts",kind:"Medische informatie",description:"Begrijpelijke informatie over klachten en wanneer u de huisarts belt.",url:"https://www.thuisarts.nl/"}],
+ connection:[
+ {name:"Thuisarts – eenzaamheid bij ouderen",kind:"Advies en hulp",description:"Mogelijkheden voor contact, activiteiten, een maatje en professionele steun.",url:"https://www.thuisarts.nl/eenzaamheid/ik-voel-me-eenzaam-informatie-voor-ouderen"},
+ {name:"Eén tegen eenzaamheid – hulporganisaties",kind:"Activiteiten en organisaties",description:"Vind organisaties voor bezoek, activiteiten en sociaal contact.",url:"https://www.eentegeneenzaamheid.nl/wat-is-eenzaamheid/eenzaamheid-doorbreken/aanbod-hulporganisaties"},
+ {name:"Ouderenfonds – Welkom Online",kind:"Gratis digitale cursus",description:"Leer onder meer internet gebruiken, beeldbellen en sociale media.",url:"https://www.ouderenfonds.nl/activiteiten/welkom-online/"}],
+ home:[
+ {name:"Regelhulp – hulp voor ouderen",kind:"Wegwijzer naar ondersteuning",description:"Overzicht van hulp in huis, thuiszorg, begeleiding en hulpmiddelen.",url:"https://www.regelhulp.nl/onderwerpen/mijn-situatie/ouderen"},
+ {name:"Rijksoverheid – zorg en ondersteuning thuis",kind:"Officiële informatie",description:"Lees hoe u huishoudelijke hulp, thuiszorg en cliëntondersteuning regelt.",url:"https://www.rijksoverheid.nl/themas/familie-zorg-en-gezondheid/ouderezorg"},
+ {name:"Ouderenadviseur",kind:"Persoonlijk advies",description:"Ontdek hoe u via uw gemeente advies krijgt over zelfstandig wonen.",url:"https://www.regelhulp.nl/onderwerpen/mijn-situatie/ouderen/ouderenadviseur"}],
+ money:[
+ {name:"Geldfit",kind:"Gratis en anoniem advies",description:"Krijg advies over geldzorgen en vind hulp die bij uw situatie past.",url:"https://geldfit.nl/"},
+ {name:"Nibud",kind:"Stappenplannen en hulpmiddelen",description:"Werk aan overzicht in inkomsten, uitgaven en geldzaken.",url:"https://www.nibud.nl/"},
+ {name:"Fraudehelpdesk",kind:"Hulp bij oplichting",description:"Lees wat u kunt doen bij fraude, phishing of verdachte berichten.",url:"https://www.fraudehelpdesk.nl/"},
+ {name:"Regelhulp – hulp bij geldzaken",kind:"Hulp bij administratie en schulden",description:"Bekijk cursussen, vrijwilligershulp en ondersteuning via de gemeente.",url:"https://www.regelhulp.nl/onderwerpen/inkomen/hulp-bij-geldzaken"}],
+ digital:[
+ {name:"SeniorWeb – online cursussen",kind:"Online cursussen",description:"Oefen met e-mail, smartphone, tablet, internet en online veiligheid.",url:"https://www.seniorweb.nl/cursussen/online-cursussen"},
+ {name:"SeniorWeb – leslocaties",kind:"Cursus en persoonlijke hulp",description:"Zoek een bibliotheek of leslocatie met workshops en begeleiding.",url:"https://www.seniorweb.nl/over-seniorweb/leslocaties"},
+ {name:"Eenvoudig op Internet – hulp in de buurt",kind:"Cursussen en lokale hulp",description:"Zoek in uw gemeente hulp bij computer, internet, geld, reizen en zorg.",url:"https://www.eenvoudigopinternet.nl/nl/bij-jou-in-de-buurt/"},
+ {name:"Oefenen.nl",kind:"Online oefenen",description:"Oefen stap voor stap met digitale vaardigheden en dagelijkse situaties.",url:"https://www.oefenen.nl/"}]
+};
+function resourceLinks(topic){
+ return '<div class="resource-list"><h4>Websites en cursussen die hierbij kunnen helpen</h4>'+
+ resourcesByTopic[topic].map(item=>'<a class="resource-link" href="'+item.url+'" target="_blank" rel="noopener noreferrer"><strong>'+escapeHTML(item.name)+'</strong><span class="resource-kind">'+escapeHTML(item.kind)+'</span><span>'+escapeHTML(item.description)+'</span></a>').join("")+
+ '<p class="resource-disclaimer">Websites van externe organisaties. Cursusaanbod, kosten en beschikbaarheid kunnen veranderen. Controleer de voorwaarden bij de aanbieder.</p></div>';
+}
+
 const form = document.querySelector("#support-form");
 const input = document.querySelector("#issue");
 const results = document.querySelector("#results");
@@ -100,7 +135,7 @@ async function showResults(query) {
   const languageNote = language !== "nl" && !translatedSearch
     ? '<p class="translation-note">De vertaaldienst is tijdelijk niet beschikbaar. De resultaten worden daarom in het Nederlands getoond.</p>' : "";
   results.innerHTML = languageNote + '<h3 class="result-heading">'+escapeHTML(labels[0])+'</h3>' + localized.map(guide =>
-    '<article class="result-card"><span class="result-tag">'+escapeHTML(guide.tag)+'</span><h3>'+escapeHTML(guide.title)+'</h3><p>'+escapeHTML(guide.intro)+'</p><strong>'+escapeHTML(labels[1])+'</strong><ul>'+guide.steps.map(step=>'<li>'+escapeHTML(step)+'</li>').join("")+'</ul><p><strong>'+escapeHTML(labels[2])+'</strong> '+escapeHTML(guide.note)+'</p></article>'
+    '<article class="result-card"><span class="result-tag">'+escapeHTML(guide.tag)+'</span><h3>'+escapeHTML(guide.title)+'</h3><p>'+escapeHTML(guide.intro)+'</p><strong>'+escapeHTML(labels[1])+'</strong><ul>'+guide.steps.map(step=>'<li>'+escapeHTML(step)+'</li>').join("")+'</ul><p><strong>'+escapeHTML(labels[2])+'</strong> '+escapeHTML(guide.note)+'</p>'+resourceLinks(guide.id)+'</article>'
   ).join("");
   results.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
