@@ -12,56 +12,6 @@ navigation?.querySelectorAll("a").forEach(link => link.addEventListener("click",
 }));
 document.querySelector("#year").textContent = new Date().getFullYear();
 
-const textLarger = document.querySelector("#text-larger");
-const textSmaller = document.querySelector("#text-smaller");
-const contrastToggle = document.querySelector("#contrast-toggle");
-const readToggle = document.querySelector("#read-toggle");
-let speechActive = false;
-textLarger?.addEventListener("click", () => {
-  document.body.classList.remove("kp-small-text");
-  document.body.classList.add("kp-large-text");
-});
-textSmaller?.addEventListener("click", () => {
-  document.body.classList.remove("kp-large-text");
-  document.body.classList.add("kp-small-text");
-});
-contrastToggle?.addEventListener("click", () => {
-  const enabled = document.body.classList.toggle("kp-high-contrast");
-  contrastToggle.setAttribute("aria-pressed", String(enabled));
-});
-readToggle?.addEventListener("click", () => {
-  if (!("speechSynthesis" in window)) {
-    readToggle.querySelector("span").textContent = "Niet beschikbaar";
-    return;
-  }
-  if (speechActive) {
-    window.speechSynthesis.cancel();
-    speechActive = false;
-    readToggle.setAttribute("aria-pressed", "false");
-    readToggle.querySelector("span").textContent = "Lees voor";
-    readToggle.firstChild.textContent = "▶ ";
-    return;
-  }
-  const content = document.querySelector("#main").innerText;
-  const utterance = new SpeechSynthesisUtterance(content);
-  utterance.lang = "nl-NL";
-  utterance.rate = 0.9;
-  utterance.onend = utterance.onerror = () => {
-    speechActive = false;
-    readToggle.setAttribute("aria-pressed", "false");
-    readToggle.querySelector("span").textContent = "Lees voor";
-    readToggle.firstChild.textContent = "▶ ";
-  };
-  speechActive = true;
-  readToggle.setAttribute("aria-pressed", "true");
-  readToggle.querySelector("span").textContent = "Stop voorlezen";
-  readToggle.firstChild.textContent = "■ ";
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
-});
-document.querySelector("#print-page")?.addEventListener("click", () => window.print());
-
-
 const guides = [
  {id:"mobility",title:"Veilig bewegen",tag:"Bewegen en valpreventie",keys:["val","vallen","gevallen","evenwicht","balans","wankel","lopen","wandelen","trap","struikelen","mobiliteit","rolstoel","rollator","stok","valangst"],intro:"Met een veiligere woning en passende ondersteuning wordt bewegen vaak makkelijker.",steps:["Vertel uw huisarts of zorgverlener over valpartijen, duizeligheid of veranderingen in uw evenwicht.","Vraag of een controle van uw medicijnen of een valrisico-onderzoek zinvol is.","Houd looppaden vrij, zorg voor goede verlichting en overweeg steunbeugels of andere woningaanpassingen.","Vraag iemand die u vertrouwt of een lokale ouderenorganisatie om hulp bij boodschappen of vervoer."],note:"Na een val met hoofdletsel, hevige pijn, niet kunnen opstaan of plotselinge zwakte is dringend medische hulp nodig."},
  {id:"health",title:"Gezondheid en medicijnen",tag:"Gezondheid",keys:["medicijn","medicijnen","medicatie","pillen","recept","huisarts","dokter","afspraak","gezondheid","pijn","symptoom","ziekenhuis","behandeling","dosering","bijwerking","apotheek"],intro:"Een zorgverlener of apotheker kan uitleg geven over behandelingen, medicijnen en vervolgstappen.",steps:["Schrijf op wat er is veranderd, wanneer het begon en welke vragen u wilt stellen.","Houd een actuele lijst van uw medicijnen bij en neem die mee naar afspraken.","Overleg met uw apotheker of voorschrijver voordat u een medicijn verandert of ermee stopt.","Vraag eventueel iemand die u vertrouwt om mee te gaan of een afspraak te regelen."],note:"Deze gids kan geen diagnose stellen of adviseren welk medicijn of welke dosis u moet nemen. Zoek dringend medische hulp bij plotselinge of ernstige klachten."},
