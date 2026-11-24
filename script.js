@@ -270,15 +270,81 @@ const courseCatalog = {
   ["Les 3 — Vraag persoonlijke digitale hulp","Neem uw eigen apparaat mee naar een bibliotheek of SeniorWeb-leslocatie. Vraag om uitleg in kleine stappen en schrijf de stappen op papier.","Waar kunt u in uw buurt terecht voor persoonlijke uitleg?","Geef uw apparaat niet onbeheerd mee en installeer geen software op verzoek van een onverwachte beller."]
  ]}
 };
+function courseVideoScenes(course){
+ return course.lessons.flatMap((lesson,index)=>[
+  {lesson:index+1,kind:"UITLEG",title:lesson[0],body:lesson[1],voice:lesson[1]},
+  {lesson:index+1,kind:"DOE MEE",title:"Probeer dit zelf",body:lesson[2],voice:lesson[2]},
+  {lesson:index+1,kind:"ONTHOUD",title:"Belangrijk om te onthouden",body:lesson[3],voice:lesson[3]}
+ ]);
+}
+function renderCourseScene(root,id,index){
+ const course=courseCatalog[id]; if(!course) return;
+ const scenes=courseVideoScenes(course);
+ const safeIndex=Math.max(0,Math.min(index,scenes.length-1));
+ const scene=scenes[safeIndex];
+ const player=root.querySelector('[data-video-player="'+id+'"]');
+ if(!player) return;
+ player.dataset.scene=String(safeIndex);
+ player.querySelector("[data-video-scene-count]").textContent="SCÈNE "+(safeIndex+1)+" / "+scenes.length;
+ player.querySelector("[data-video-lesson]").textContent="LES "+scene.lesson+" · "+scene.kind;
+ player.querySelector("[data-video-title]").textContent=scene.title;
+ player.querySelector("[data-video-body]").textContent=scene.body;
+ player.querySelector("[data-video-progress]").style.width=((safeIndex+1)/scenes.length*100)+"%";
+ player.querySelector("[data-video-prev]").disabled=safeIndex===0;
+ player.querySelector("[data-video-next]").disabled=safeIndex===scenes.length-1;
+ player.querySelector("[data-video-next]").textContent=safeIndex===scenes.length-1?"Einde cursus":"Volgende scène →";
+ const art=player.querySelector(".original-video-art");
+ art.classList.remove("scene-enter");
+ void art.offsetWidth;
+ art.classList.add("scene-enter");
+}
+function initCoursePlayer(root,id){
+ const player=root.querySelector('[data-video-player="'+id+'"]');
+ if(!player || player.dataset.ready==="true") return;
+ player.dataset.ready="true";
+ player.dataset.scene="0";
+ renderCourseScene(root,id,0);
+ player.querySelector("[data-video-prev]").addEventListener("click",()=>{
+  if("speechSynthesis" in window) window.speechSynthesis.cancel();
+  renderCourseScene(root,id,Number(player.dataset.scene)-1);
+ });
+ player.querySelector("[data-video-next]").addEventListener("click",()=>{
+  if("speechSynthesis" in window) window.speechSynthesis.cancel();
+  renderCourseScene(root,id,Number(player.dataset.scene)+1);
+ });
+ player.querySelector("[data-video-speak]").addEventListener("click",()=>{
+  if(!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)){
+   player.querySelector("[data-video-status]").textContent="Gesproken uitleg wordt niet door deze browser ondersteund.";
+   return;
+  }
+  window.speechSynthesis.cancel();
+  const scene=courseVideoScenes(courseCatalog[id])[Number(player.dataset.scene)];
+  const utterance=new SpeechSynthesisUtterance(scene.voice);
+  utterance.lang="nl-NL";
+  utterance.rate=0.88;
+  utterance.pitch=1;
+  utterance.onstart=()=>player.querySelector("[data-video-status]").textContent="De uitleg wordt voorgelezen…";
+  utterance.onend=()=>player.querySelector("[data-video-status]").textContent="U kunt de uitleg opnieuw beluisteren of verdergaan.";
+  window.speechSynthesis.speak(utterance);
+ });
+ player.querySelector("[data-video-stop]").addEventListener("click",()=>{
+  if("speechSynthesis" in window) window.speechSynthesis.cancel();
+  player.querySelector("[data-video-status]").textContent="De gesproken uitleg is gestopt.";
+ });
+}
 function renderCourse(guide){
  const c=courseCatalog[guide.id]; if(!c) return "";
- const video=c.video
-  ? '<div class="course-video"><iframe src="'+c.video+'" title="'+escapeHTML(c.videoTitle)+'" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>'
-  : '<a class="course-video-link" href="'+c.videoPage+'" target="_blank" rel="noopener noreferrer"><span class="play-symbol">▶</span><span><strong>Bekijk de instructievideo of videoreeks</strong><small>'+escapeHTML(c.videoTitle)+' — opent bij de aanbieder</small></span><span aria-hidden="true">↗</span></a>';
  const lessons=c.lessons.map((lesson,i)=>'<article class="course-lesson"><div class="lesson-number">LES '+(i+1)+'</div><div class="lesson-content"><h5>'+escapeHTML(lesson[0])+'</h5><p>'+escapeHTML(lesson[1])+'</p><div class="lesson-task"><strong>Doe-opdracht</strong><p>'+escapeHTML(lesson[2])+'</p></div><div class="lesson-check"><strong>Controleer uzelf</strong><p>'+escapeHTML(lesson[3])+'</p></div><label class="lesson-done"><input type="checkbox" data-course="'+guide.id+'" data-lesson="'+i+'"><span>Deze les heb ik afgerond</span></label></div></article>').join("");
- return '<section class="guided-course" data-course-panel="'+guide.id+'"><div class="course-header"><span class="result-tag">Gratis minicursus</span><h4>'+escapeHTML(c.name)+'</h4><p>'+escapeHTML(c.level)+' • 3 lessen • in uw eigen tempo</p><div class="course-progress"><span class="course-progress-fill" data-progress-fill="'+guide.id+'"></span></div><small data-progress-label="'+guide.id+'">0 van 3 lessen afgerond</small></div>'+video+'<p class="video-source">Video: '+escapeHTML(c.videoTitle)+' · <a href="'+c.source+'" target="_blank" rel="noopener noreferrer">Meer uitleg van de aanbieder</a></p><div class="course-lesson-list">'+lessons+'</div><div class="course-finish"><strong>Na deze minicursus</strong><p>U hebt de belangrijkste stappen geoefend. Gebruik daarna het stappenplan hierboven om passende hulp te regelen. U hoeft niets te bewijzen of perfect te doen.</p></div></section>';
+ return '<section class="guided-course" data-course-panel="'+guide.id+'"><div class="course-header"><span class="result-tag">Eigen KindPath-videocursus</span><h4>'+escapeHTML(c.name)+'</h4><p>'+escapeHTML(c.level)+' • 3 lessen • 9 korte videoscènes • in uw eigen tempo</p><div class="course-progress"><span class="course-progress-fill" data-progress-fill="'+guide.id+'"></span></div><small data-progress-label="'+guide.id+'">0 van 3 lessen afgerond</small></div>'+
+ '<div class="original-video-player" data-video-player="'+guide.id+'" aria-label="KindPath videocursus speler">'+
+  '<div class="original-video-screen"><div class="original-video-art scene-enter"><span class="video-art-orbit orbit-one"></span><span class="video-art-orbit orbit-two"></span><span class="video-art-symbol" aria-hidden="true">✳</span><span class="video-art-caption">KINDPATH · STAP VOOR STAP</span></div>'+
+   '<div class="original-video-copy"><span data-video-lesson>LES 1 · UITLEG</span><h5 data-video-title></h5><p data-video-body></p><small data-video-scene-count></small></div></div>'+
+  '<div class="video-timeline"><span data-video-progress></span></div>'+
+  '<div class="video-controls"><button type="button" data-video-prev disabled>← Vorige</button><div><button type="button" data-video-speak>▶ Luister naar uitleg</button><button type="button" data-video-stop>■ Stop</button></div><button type="button" data-video-next>Volgende scène →</button></div><p class="video-status" data-video-status aria-live="polite">Eigen KindPath-les. Gebruik ‘Luister naar uitleg’ voor gesproken tekst.</p></div>'+
+ '<p class="video-source">Dit is een originele, interactieve KindPath-videoles met eigen scènes en gesproken uitleg. Er worden geen externe video’s gebruikt.</p><div class="course-lesson-list">'+lessons+'</div><div class="course-finish"><strong>Na deze minicursus</strong><p>U hebt de belangrijkste stappen geoefend. Gebruik daarna het stappenplan hierboven om passende hulp te regelen. U hoeft niets te bewijzen of perfect te doen.</p></div></section>';
 }
 function initCourseProgress(root){
+ ["mobility","health","connection","home","money","digital"].forEach(id=>initCoursePlayer(root,id));
  root.querySelectorAll("[data-course]").forEach(input=>{
   const key="kindpath-course-"+input.dataset.course;
   let done=[];try{done=JSON.parse(localStorage.getItem(key)||"[]");}catch(e){}
