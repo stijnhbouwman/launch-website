@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Beschrijf uw vraag en ontdek praktische stappen en betrouwbare hulpbronnen."><meta name="theme-color" content="#f7f8f4"><title>Hulp vinden | KindPath</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css"><script src="script.js" defer></script></head><body>
+  <a class="skip-link" href="#main">Ga naar de hoofdinhoud</a>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="KindPath startpagina"><span class="brand-icon">k</span><span>kindpath</span></a>
+    <details class="site-menu">
+      <summary><span class="menu-lines" aria-hidden="true">☰</span> Menu <span class="menu-chevron" aria-hidden="true">⌄</span></summary>
+      <nav class="site-menu-panel" aria-label="Pagina's">
+        <a href="index.html">Startpagina <span>→</span></a>
+        <a href="hulp-vinden.html">Hulp vinden <span>→</span></a>
+        <a href="onderwerpen.html">Onderwerpen <span>→</span></a>
+        <a href="praktische-gidsen.html">Praktische gidsen <span>→</span></a>
+        <a href="naasten.html">Voor naasten <span>→</span></a>
+        <a href="veelgestelde-vragen.html">Veelgestelde vragen <span>→</span></a>
+      </nav>
+    </details>
+  </header>
+  <section class="accessibility-bar" aria-label="Toegankelijkheidsinstellingen">
+    <div class="accessibility-inner">
+      <span class="accessibility-label"><span aria-hidden="true">◐</span> Pas de website aan</span>
+      <div class="accessibility-actions">
+        <button type="button" id="text-smaller" aria-label="Tekst kleiner maken">A− <span>Kleiner</span></button>
+        <button type="button" id="text-larger" aria-label="Tekst groter maken">A+ <span>Groter</span></button>
+        <button type="button" id="contrast-toggle" aria-pressed="false">◑ <span>Hoog contrast</span></button>
+        <button type="button" id="read-toggle" aria-pressed="false">▶ <span>Lees voor</span></button>
+        <button type="button" id="print-page">⎙ <span>Afdrukken</span></button>
+      </div>
+    </div>
+  </section>
+<main id="main"><section class="page-intro"><p class="eyebrow">WE BEGINNEN BIJ U</p><h1>Vind een volgende stap die bij u past.</h1><p>Beschrijf in uw eigen woorden wat er speelt. U krijgt ideeën en concrete stappen om verder te komen.</p></section><section class="finder-section" id="finder">
+      <div class="section-heading">
+        <p class="eyebrow">WE BEGINNEN BIJ U</p>
+        <h2>Waar wilt u graag hulp bij?</h2>
+        <p>Beschrijf uw situatie in uw eigen woorden. Een paar details kunnen helpen om passende informatie te vinden.</p>
+      </div>
+      <form class="search-panel" id="support-form">
+        <label for="issue">Vertel wat er aan de hand is</label>
+        <textarea id="issue" name="issue" rows="4" maxlength="700" placeholder="Bijvoorbeeld: Ik voel me vaak alleen sinds ik niet meer autorijd. Ik zou graag nieuwe mensen ontmoeten." required></textarea>
+        <div class="form-bottom">
+          <span class="input-hint">Vermeld geen volledige naam, adres, wachtwoorden of andere privégegevens.</span>
+          <button class="primary-button search-button" type="submit">Zoek handige tips <span aria-hidden="true">⌕</span></button>
+        </div>
+        <div class="quick-prompts" aria-label="Voorbeelden van zoekopdrachten">
+          <span>Weet u niet goed wat u moet schrijven?</span>
+          <button type="button" data-prompt="Ik voel me eenzaam en zou graag andere mensen ontmoeten.">Ik voel me eenzaam</button>
+          <button type="button" data-prompt="Ik ben bang om te vallen en wil me thuis veilig kunnen bewegen.">Veilig thuis bewegen</button>
+          <button type="button" data-prompt="Ik heb hulp nodig bij mijn rekeningen en geldzaken.">Rekeningen en geldzaken</button>
+        </div>
+      </form>
+      <div id="results" class="results" aria-live="polite" aria-atomic="true"></div>
+    </section></main>
+  <footer class="site-footer" id="about">
+    <a class="brand" href="index.html"><span class="brand-icon">k</span><span>kindpath</span></a>
+    <p>Een beetje hulp. Een duidelijke volgende stap.</p>
+    <nav aria-label="Voettekst"><a href="hulp-vinden.html">Hulp vinden</a><a href="praktische-gidsen.html">Gidsen</a><a href="veelgestelde-vragen.html">Veelgestelde vragen</a></nav>
+    <span>© <span id="year"></span> KindPath</span>
+  </footer>
+</body></html>
