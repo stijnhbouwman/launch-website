@@ -24,25 +24,63 @@ const form = document.querySelector("#support-form");
 const input = document.querySelector("#issue");
 const results = document.querySelector("#results");
 const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
-function showResults(query) {
-  const words = query.toLowerCase().match(/[a-z0-9]+/g) || [];
-  const ranked = guides.map(guide => {
-    const score = guide.keys.reduce((total,key) => {
-      const k = key.toLowerCase();
-      return total + (query.toLowerCase().includes(k) ? (k.includes(" ") ? 4 : 2) : 0);
-    },0);
-    return {...guide,score};
-  }).filter(guide => guide.score > 0).sort((a,b) => b.score-a.score);
-  const chosen = ranked.slice(0,3);
-  if (!chosen.length) {
-    results.innerHTML = '<div class="no-results"><h3>Let’s try a different way</h3><p>We could not find a close match in our starter guide. Try a few simple words such as “lonely”, “fall”, “medication”, “bills”, or “help at home”. You can also speak with a trusted person or local support service.</p></div>';
-    results.scrollIntoView({behavior:"smooth",block:"nearest"});
-    return;
-  }
-  results.innerHTML = '<h3 class="result-heading">Some places to start</h3>' + chosen.map(guide =>
-    '<article class="result-card"><span class="result-tag">'+escapeHTML(guide.tag)+'</span><h3>'+escapeHTML(guide.title)+'</h3><p>'+escapeHTML(guide.intro)+'</p><strong>Things you could try:</strong><ul>'+guide.steps.map(step=>'<li>'+escapeHTML(step)+'</li>').join("")+'</ul><p><strong>Keep in mind:</strong> '+escapeHTML(guide.note)+'</p></article>'
-  ).join("");
+async function translateText(text, source, target) {
+  if (!text || source === target) return text;
+  const response = await fetch("https://translate.astian.org/translate", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({q:text, source, target, format:"text"})
+  });
+  if (!response.ok) throw new Error("Translation service unavailable");
+  const data = await response.json();
+  if (!data.translatedText) throw new Error("Translation unavailable");
+  return data.translatedText;
+}
+async function showResults(query) {
+  results.innerHTML = '<div class="no-results" role="status">Finding guidance in your language…</div>';
   results.scrollIntoView({behavior:"smooth",block:"nearest"});
+  try {
+    // The translation service detects the language while converting the query to English.
+    const detectionResponse = await fetch("https://translate.astian.org/translate", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({q:query,source:"auto",target:"en",format:"text"})
+    });
+    if (!detectionResponse.ok) throw new Error("Translation service unavailable");
+    const detected = await detectionResponse.json();
+    const englishQuery = detected.translatedText;
+    const language = detected.detectedLanguage?.language || "en";
+    const ranked = guides.map(guide => {
+      const haystack = englishQuery.toLowerCase();
+      const score = guide.keys.reduce((total,key) => {
+        const k = key.toLowerCase();
+        return total + (haystack.includes(k) ? (k.includes(" ") ? 4 : 2) : 0);
+      },0);
+      return {...guide,score};
+    }).filter(guide => guide.score > 0).sort((a,b) => b.score-a.score);
+    const chosen = ranked.slice(0,3);
+    if (!chosen.length) {
+      let message = "We could not find a close match in our starter guide. Try a few simple words such as “lonely”, “fall”, “medication”, “bills”, or “help at home”. You can also speak with a trusted person or local support service.";
+      if (language !== "en") message = await translateText(message,"en",language);
+      results.innerHTML = '<div class="no-results"><h3>Let’s try a different way</h3><p>'+escapeHTML(message)+'</p></div>';
+      results.scrollIntoView({behavior:"smooth",block:"nearest"});
+      return;
+    }
+    const localized = await Promise.all(chosen.map(async guide => ({
+      ...guide,
+      title: await translateText(guide.title,"en",language),
+      tag: await translateText(guide.tag,"en",language),
+      intro: await translateText(guide.intro,"en",language),
+      steps: await Promise.all(guide.steps.map(step=>translateText(step,"en",language))),
+      note: await translateText(guide.note,"en",language)
+    })));
+    results.innerHTML = '<h3 class="result-heading">'+escapeHTML(language === "en" ? "Some places to start" : "Suggested next steps")+'</h3>' + localized.map(guide =>
+      '<article class="result-card"><span class="result-tag">'+escapeHTML(guide.tag)+'</span><h3>'+escapeHTML(guide.title)+'</h3><p>'+escapeHTML(guide.intro)+'</p><strong>'+(language === "en" ? "Things you could try:" : " ")+'</strong><ul>'+guide.steps.map(step=>'<li>'+escapeHTML(step)+'</li>').join("")+'</ul><p><strong>'+(language === "en" ? "Keep in mind:" : "")+'</strong> '+escapeHTML(guide.note)+'</p></article>'
+    ).join("");
+    results.scrollIntoView({behavior:"smooth",block:"nearest"});
+  } catch (error) {
+    results.innerHTML = '<div class="no-results"><h3>We could not translate this search right now</h3><p>Please try again in a moment, or write your concern in English. Your description is sent to a third-party translation service so it can be matched and translated; please do not include names, addresses, passwords, or other sensitive information.</p></div>';
+  }
 }
 form.addEventListener("submit",event=>{
   event.preventDefault();
