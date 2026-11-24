@@ -192,6 +192,7 @@ async function showResults(query) {
   ).join("");
   results.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
+if (form && input && results) {
 form.addEventListener("submit",event=>{
   event.preventDefault();
   const query=input.value.trim();
@@ -208,6 +209,8 @@ document.querySelectorAll("[data-topic]").forEach(button=>button.addEventListene
   if(guide){input.value=guide.keys.slice(0,3).join(", ");showResults(input.value);}
   document.querySelector("#finder").scrollIntoView({behavior:"smooth"});
 }));
+
+}
 
 // KindPath concrete action plans: turn a broad topic match into a usable next step.
 const actionPlans = {
