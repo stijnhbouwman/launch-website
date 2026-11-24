@@ -35,3 +35,31 @@
 .safety-section h2{font:600 13px/1.5 "DM Sans",sans-serif;color:#78847c;margin:0 0 3px}
 .safety-section p{font-size:12px;line-height:1.65;color:#879189}
 @media(max-width:800px){.safety-section{margin:28px 7% 34px;padding:0}}
+
+
+/* Detailed, actionable support plans */
+.results-intro{color:var(--muted);font-size:15px;margin:-4px 0 18px}
+.detailed-result{padding:clamp(20px,3vw,32px);margin:18px 0 28px;border-radius:18px;box-shadow:0 12px 34px #304c370b}
+.detailed-result>h3{font-size:25px;margin-bottom:18px}
+.action-plan{margin-top:12px}
+.action-plan-head{padding:20px 22px;background:#f1f6ef;border-radius:14px;margin-bottom:18px}
+.action-plan-head h4{font:800 21px/1.3 Manrope;margin:4px 0 8px;color:var(--green-dark)}
+.action-plan-head p{font-size:15px;margin:0;color:#53645b}
+.action-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.action-columns>div,.action-subsection,.fallback-step{padding:19px 20px;border:1px solid var(--line);border-radius:13px;background:#fff}
+.action-plan h5{font:700 16px Manrope;color:var(--green-dark);margin:0 0 10px}
+.action-plan ol,.action-plan ul{margin:0;padding-left:21px}
+.action-plan li{font-size:14px;line-height:1.7;padding:0 0 9px 3px;color:#46584e}
+.action-plan li:last-child{padding-bottom:0}
+.action-subsection{margin-top:14px;background:#fafbf8}
+.call-script{margin-top:14px;padding:21px 22px;background:#edf3ed;border-radius:13px}
+.call-script>span{font-size:12px;letter-spacing:.5px;text-transform:uppercase;font-weight:700;color:#607b66}
+.call-script p{font:600 16px/1.7 "DM Sans",sans-serif;color:#304c39;margin:10px 0 14px}
+.copy-script{border:1px solid #b9cdbb;border-radius:22px;padding:9px 15px;background:white;color:var(--green-dark);font-size:13px;font-weight:700;cursor:pointer}
+.copy-script:hover{background:#f7faf6}
+.fallback-step{margin-top:14px}
+.fallback-step p,.urgency-note p{font-size:14px;line-height:1.7;color:#53645b;margin:0}
+.urgency-note{margin-top:14px;padding:16px 19px;border-left:3px solid #c9a66d;background:#fbf8f1;border-radius:0 10px 10px 0}
+.urgency-note strong{font-size:14px;color:#655333}
+.urgency-note p{margin-top:5px}
+@media(max-width:650px){.action-columns{grid-template-columns:1fr}.action-plan-head{padding:17px}.detailed-result>h3{font-size:22px}.call-script{padding:18px}}
