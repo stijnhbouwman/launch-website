@@ -3,12 +3,12 @@ const navigation = document.querySelector(".nav-links");
 menuButton?.addEventListener("click", () => {
   const open = navigation.classList.toggle("open");
   menuButton.setAttribute("aria-expanded", String(open));
-  menuButton.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+  menuButton.setAttribute("aria-label", open ? "Navigatie sluiten" : "Navigatie openen");
 });
 navigation?.querySelectorAll("a").forEach(link => link.addEventListener("click", () => {
   navigation.classList.remove("open");
   menuButton?.setAttribute("aria-expanded", "false");
-  menuButton?.setAttribute("aria-label", "Open navigation");
+  menuButton?.setAttribute("aria-label", "Navigatie openen");
 }));
 document.querySelector("#year").textContent = new Date().getFullYear();
 
@@ -40,7 +40,7 @@ async function showResults(query) {
   results.innerHTML = '<div class="no-results" role="status">We zoeken passende informatie…</div>';
   results.scrollIntoView({behavior:"smooth",block:"nearest"});
   try {
-    // The translation service detects the language while converting the query to English.
+    // The translation service detects the language while converting the query to Dutch.
     const detectionResponse = await fetch("https://translate.astian.org/translate", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
@@ -49,7 +49,7 @@ async function showResults(query) {
     if (!detectionResponse.ok) throw new Error("Translation service unavailable");
     const detected = await detectionResponse.json();
     const dutchQuery = detected.translatedText;
-    const language = detected.detectedLanguage?.language || "en";
+    const language = detected.detectedLanguage?.language || "nl";
     const ranked = guides.map(guide => {
       const haystack = dutchQuery.toLowerCase();
       const score = guide.keys.reduce((total,key) => {
@@ -62,7 +62,7 @@ async function showResults(query) {
     if (!chosen.length) {
       let message = "We kunnen geen passende tip vinden in onze startgids. Probeer een paar andere woorden of vraag iemand die u vertrouwt of een lokale hulporganisatie om advies.";
       if (language !== "nl") message = await translateText(message,"nl",language);
-      results.innerHTML = '<div class="no-results"><h3>Let’s try a different way</h3><p>'+escapeHTML(message)+'</p></div>';
+      results.innerHTML = '<div class="no-results"><h3>Laten we het anders proberen</h3><p>'+escapeHTML(message)+'</p></div>';
       results.scrollIntoView({behavior:"smooth",block:"nearest"});
       return;
     }
