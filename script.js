@@ -39,49 +39,70 @@ async function translateText(text, source, target) {
 async function showResults(query) {
   results.innerHTML = '<div class="no-results" role="status">We zoeken passende informatie…</div>';
   results.scrollIntoView({behavior:"smooth",block:"nearest"});
+
+  // Translation is optional: if the external service is unavailable, search
+  // the Dutch guide directly instead of blocking the user with an error.
+  let dutchQuery = query;
+  let language = "nl";
+  let translatedSearch = false;
   try {
-    // The translation service detects the language while converting the query to Dutch.
-    const detectionResponse = await fetch("https://translate.astian.org/translate", {
+    const detected = await translateText(query, "auto", "nl");
+    dutchQuery = detected;
+    translatedSearch = true;
+    // Language detection is returned by LibreTranslate alongside translatedText,
+    // so fetch it separately only when the provider is available.
+    const response = await fetch("https://translate.astian.org/detect", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({q:query,source:"auto",target:"nl",format:"text"})
+      body:JSON.stringify({q:query})
     });
-    if (!detectionResponse.ok) throw new Error("Translation service unavailable");
-    const detected = await detectionResponse.json();
-    const dutchQuery = detected.translatedText;
-    const language = detected.detectedLanguage?.language || "nl";
-    const ranked = guides.map(guide => {
-      const haystack = dutchQuery.toLowerCase();
-      const score = guide.keys.reduce((total,key) => {
-        const k = key.toLowerCase();
-        return total + (haystack.includes(k) ? (k.includes(" ") ? 4 : 2) : 0);
-      },0);
-      return {...guide,score};
-    }).filter(guide => guide.score > 0).sort((a,b) => b.score-a.score);
-    const chosen = ranked.slice(0,3);
-    if (!chosen.length) {
-      let message = "We kunnen geen passende tip vinden in onze startgids. Probeer een paar andere woorden of vraag iemand die u vertrouwt of een lokale hulporganisatie om advies.";
-      if (language !== "nl") message = await translateText(message,"nl",language);
-      results.innerHTML = '<div class="no-results"><h3>Laten we het anders proberen</h3><p>'+escapeHTML(message)+'</p></div>';
-      results.scrollIntoView({behavior:"smooth",block:"nearest"});
-      return;
+    if (response.ok) {
+      const languages = await response.json();
+      language = languages?.[0]?.language || "nl";
     }
-    const labels = await Promise.all(["Mogelijke startpunten","Dit kunt u proberen:","Goed om te weten:"].map(label => translateText(label,"nl",language)));
-    const localized = await Promise.all(chosen.map(async guide => ({
-      ...guide,
-      title: await translateText(guide.title,"nl",language),
-      tag: await translateText(guide.tag,"nl",language),
-      intro: await translateText(guide.intro,"nl",language),
-      steps: await Promise.all(guide.steps.map(step=>translateText(step,"nl",language))),
-      note: await translateText(guide.note,"nl",language)
-    })));
-    results.innerHTML = '<h3 class="result-heading">'+escapeHTML(labels[0])+'</h3>' + localized.map(guide =>
-      '<article class="result-card"><span class="result-tag">'+escapeHTML(guide.tag)+'</span><h3>'+escapeHTML(guide.title)+'</h3><p>'+escapeHTML(guide.intro)+'</p><strong>'+escapeHTML(labels[1])+'</strong><ul>'+guide.steps.map(step=>'<li>'+escapeHTML(step)+'</li>').join("")+'</ul><p><strong>'+escapeHTML(labels[2])+'</strong> '+escapeHTML(guide.note)+'</p></article>'
-    ).join("");
-    results.scrollIntoView({behavior:"smooth",block:"nearest"});
   } catch (error) {
-    results.innerHTML = '<div class="no-results"><h3>Vertalen lukt op dit moment niet</h3><p>Probeer het zo meteen opnieuw. Uw beschrijving wordt naar een externe vertaaldienst gestuurd om de juiste informatie te vinden en te vertalen. Vermeld geen namen, adressen, wachtwoorden of andere gevoelige gegevens.</p></div>';
+    dutchQuery = query;
+    language = "nl";
   }
+
+  const safeTranslate = async (value, source, target) => {
+    if (source === target) return value;
+    try { return await translateText(value, source, target); }
+    catch (error) { return value; }
+  };
+
+  const haystack = dutchQuery.toLocaleLowerCase("nl");
+  const ranked = guides.map(guide => {
+    const score = guide.keys.reduce((total,key) => {
+      const k = key.toLocaleLowerCase("nl");
+      return total + (haystack.includes(k) ? (k.includes(" ") ? 4 : 2) : 0);
+    },0);
+    return {...guide,score};
+  }).filter(guide => guide.score > 0).sort((a,b) => b.score-a.score);
+  const chosen = ranked.slice(0,3);
+  if (!chosen.length) {
+    let message = "We kunnen geen passende tip vinden in onze startgids. Probeer Nederlandse zoekwoorden zoals vallen, medicijnen, eenzaamheid, hulp in huis, geld of vervoer.";
+    message = await safeTranslate(message,"nl",language);
+    results.innerHTML = '<div class="no-results"><h3>Laten we het anders proberen</h3><p>'+escapeHTML(message)+'</p></div>';
+    results.scrollIntoView({behavior:"smooth",block:"nearest"});
+    return;
+  }
+
+  const labels = await Promise.all(["Mogelijke startpunten","Dit kunt u proberen:","Goed om te weten:"].map(label => safeTranslate(label,"nl",language)));
+  const localized = await Promise.all(chosen.map(async guide => ({
+    ...guide,
+    title: await safeTranslate(guide.title,"nl",language),
+    tag: await safeTranslate(guide.tag,"nl",language),
+    intro: await safeTranslate(guide.intro,"nl",language),
+    steps: await Promise.all(guide.steps.map(step=>safeTranslate(step,"nl",language))),
+    note: await safeTranslate(guide.note,"nl",language)
+  })));
+  const languageNote = language !== "nl" && !translatedSearch
+    ? '<p class="translation-note">De vertaaldienst is tijdelijk niet beschikbaar. De resultaten worden daarom in het Nederlands getoond.</p>' : "";
+  results.innerHTML = languageNote + '<h3 class="result-heading">'+escapeHTML(labels[0])+'</h3>' + localized.map(guide =>
+    '<article class="result-card"><span class="result-tag">'+escapeHTML(guide.tag)+'</span><h3>'+escapeHTML(guide.title)+'</h3><p>'+escapeHTML(guide.intro)+'</p><strong>'+escapeHTML(labels[1])+'</strong><ul>'+guide.steps.map(step=>'<li>'+escapeHTML(step)+'</li>').join("")+'</ul><p><strong>'+escapeHTML(labels[2])+'</strong> '+escapeHTML(guide.note)+'</p></article>'
+  ).join("");
+  results.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
 form.addEventListener("submit",event=>{
   event.preventDefault();
