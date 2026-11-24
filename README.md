@@ -1,22 +1,23 @@
-# KindPath — older-adult support guide
+# KindPath — Nederlandstalige wegwijzer voor ondersteuning
 
-KindPath is an accessible, responsive website starter for older adults and the people who support them. Visitors can describe an everyday concern and search a small, built-in guide for relevant topics and practical next steps.
+KindPath is een toegankelijke, mobielvriendelijke website voor ouderen en mensen die hen ondersteunen. Bezoekers kunnen in hun eigen woorden een alledaags probleem beschrijven en praktische eerste stappen bekijken.
 
-## Run locally
-Open `index.html` in a browser. The search runs in the browser using the guide data in `script.js`; no account or server is needed.
+## Lokaal openen
+Open `index.html` in een browser. De zoekfunctie gebruikt een kleine, samengestelde startgids in `script.js`.
 
-## Publish on Render
-This is a static HTML/CSS/JavaScript site. Connect this repository to a Render Static Site with:
+## Publiceren op Render
+Dit is een statische HTML/CSS/JavaScript-website. Render-instellingen:
 - Branch: `main`
-- Build command: leave empty
+- Buildopdracht: leeg laten
 - Publish directory: `.`
 
-## Important limitations
-- Search currently matches the visitor's words against a curated starter guide in the browser. It is **not live web search, an AI service, a medical assessment, or a diagnosis**.
-- Searches are not sent to a server or saved by this page.
-- The content is general information, not a substitute for a doctor, pharmacist, social worker, financial adviser, or local support organisation.
-- Emergency guidance is intentionally general. Add verified local emergency and support contacts before targeting a particular country or region.
-- Have the content reviewed by qualified health and older-adult support professionals before promoting this as a care service.
+## Meertalige zoekfunctie en privacy
+- De website-interface en de ingebouwde startgids zijn Nederlandstalig.
+- Zoekopdrachten in andere talen worden automatisch herkend en naar het Nederlands vertaald om onderwerpen te vinden. De gevonden uitleg wordt daarna terugvertaald naar de taal van de bezoeker.
+- Hiervoor wordt de externe vertaaldienst `translate.astian.org` gebruikt. De ingevoerde tekst wordt naar deze dienst verzonden; bezoekers worden hiervoor op de website gewaarschuwd.
+- De vertaaldienst is een externe afhankelijkheid en kan tijdelijk niet beschikbaar zijn. Ondersteuning voor talen en kwaliteit van vertalingen kunnen variëren.
+- De zoekfunctie doorzoekt alleen de ingebouwde startgids. Het is geen live zoekmachine, AI-dienst, medische beoordeling of diagnose.
+- De informatie is algemeen en vervangt geen arts, apotheker, maatschappelijk werker, financieel adviseur of lokale hulporganisatie.
 
-## Before launch
-Choose the countries and languages you will support, have the guidance professionally reviewed, and consider adding a secure server-side search over verified local services. Do not collect sensitive health or financial details unless you have appropriate privacy, security, and legal safeguards.
+## Voor ingebruikname
+Laat de informatie controleren door deskundigen op het gebied van ouderenzorg en gezondheid. Voeg gecontroleerde lokale contactgegevens en noodnummers toe voordat de website in een specifiek land of regio wordt gepromoot. Verzamel geen gevoelige gezondheids- of financiële gegevens zonder passende privacy-, beveiligings- en juridische waarborgen.
