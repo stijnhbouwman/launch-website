@@ -501,3 +501,67 @@ body.kp-high-contrast button{outline-offset:3px}
  .home-tile-grid{grid-template-columns:1fr}
  .home-tile{min-height:190px}
 }
+
+
+/* Expanded KindPath platform */
+.site-menu-panel{max-height:min(72vh,650px);overflow-y:auto;overscroll-behavior:contain}
+.site-menu-panel a{font-size:13px;padding:11px 13px}
+.home-tile-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.home-more{display:grid;grid-template-columns:1fr 1fr;gap:8%;align-items:center;padding:75px clamp(24px,9vw,130px);background:#eaf1e9}
+.home-more h2{font:800 clamp(30px,3.8vw,45px)/1.15 Manrope;letter-spacing:-1.8px;margin:0 0 14px}
+.home-more p:not(.eyebrow){color:#637369;line-height:1.75}
+.home-more-links{display:grid;gap:10px}
+.home-more-links a{display:flex;justify-content:space-between;align-items:center;padding:17px 20px;border:1px solid #d8e3d7;border-radius:13px;background:#fff;font-weight:700;color:#315f4b}
+.home-more-links a span{font-size:20px}
+.tool-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;max-width:1200px;margin:0 auto;padding:65px clamp(20px,7vw,90px) 85px}
+.tool-card,.directory-card,.detail-card{background:#fff;border:1px solid #e1e9e0;border-radius:20px;padding:clamp(21px,3vw,32px);box-shadow:0 10px 28px rgba(38,68,46,.045)}
+.tool-card h2{font:800 25px/1.2 Manrope;letter-spacing:-.7px;margin:7px 0 10px}
+.tool-card>p{font-size:15px;color:#66756e;line-height:1.7}
+.tool-kicker,.detail-card>span{font-size:11px;font-weight:800;letter-spacing:1.4px;color:#66856b}
+.tool-checklist{display:grid;gap:12px;margin:22px 0}
+.tool-checklist label{display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid #e7ece5;border-radius:12px;background:#fbfcfa;font-size:14px;line-height:1.55}
+.tool-checklist input{width:19px;height:19px;accent-color:#315f4b;flex:0 0 auto;margin-top:2px}
+.progress-track{height:9px;background:#e8eee7;border-radius:99px;overflow:hidden;margin-top:22px}
+.progress-track>div{height:100%;width:0;background:#6c9a70;border-radius:99px;transition:width .2s}
+.progress-label{font-size:12px!important;font-weight:700;color:#315f4b!important;margin:8px 0}
+.field-label{display:block;font-size:13px;font-weight:700;margin:17px 0 7px}
+.tool-input,.tool-textarea{width:100%;border:1px solid #ccd8cc;border-radius:11px;background:#fcfdfb;padding:12px 14px;font:inherit;font-size:15px;color:#24352f}
+.tool-textarea{resize:vertical;line-height:1.6}
+.tool-card .primary-button{margin-top:18px}
+.secondary-button{display:inline-flex;align-items:center;justify-content:center;border:1px solid #cbd9ca;border-radius:28px;background:#f7faf6;color:#315f4b;padding:11px 18px;font-size:14px;font-weight:700;cursor:pointer}
+.secondary-button:hover{background:#eaf2e8}
+.generated-note{margin:17px 0;padding:16px;border-radius:12px;background:#f1f6ef;border:1px solid #dce8d9;min-height:58px;font-size:14px;line-height:1.7;white-space:pre-wrap}
+button:disabled{opacity:.5;cursor:not-allowed}
+.privacy-callout{padding:16px 18px;border-left:4px solid #d7b477;background:#fff8ec;border-radius:0 12px 12px 0;color:#6b5b43;font-size:13px;line-height:1.7;margin-top:20px}
+.directory-section{max-width:1300px;margin:auto;padding:65px clamp(20px,7vw,90px) 80px}
+.directory-filter{max-width:780px;margin:0 auto 30px;padding:22px;background:#fff;border:1px solid #e1e9e0;border-radius:16px}
+.directory-filter label{display:block;font-weight:800;margin-bottom:9px}
+.directory-filter p{font-size:12px;color:#7a877e;margin:8px 0 0}
+.directory-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.directory-card{padding:23px;display:flex;flex-direction:column;align-items:flex-start}
+.directory-card h2{font:800 20px/1.25 Manrope;margin:12px 0 9px}
+.directory-card p{font-size:14px;line-height:1.7;color:#637369;margin:0 0 15px}
+.directory-card>a{font-size:14px;color:#315f4b;font-weight:800;text-decoration:underline;text-underline-offset:3px;margin-top:auto}
+.directory-card small{font-size:12px;color:#849087;line-height:1.55;margin-top:12px}
+.directory-tag{font-size:10px;letter-spacing:1.2px;font-weight:800;color:#66856b}
+.detail-content{max-width:1200px;margin:auto;padding:65px clamp(20px,7vw,90px) 90px}
+.detail-lead{max-width:780px;margin:0 auto 34px;text-align:center}
+.detail-lead h2{font:800 clamp(29px,4vw,42px)/1.15 Manrope;letter-spacing:-1.4px;margin:0 0 13px}
+.detail-lead p{color:#66756e;line-height:1.8}
+.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.detail-card h3{font:800 22px/1.25 Manrope;margin:12px 0}
+.detail-card ul{padding-left:20px;color:#596b60;font-size:14px;line-height:1.75}
+.detail-card li{padding:3px 0}
+.detail-card>a{display:inline-block;margin-top:8px;color:#315f4b;font-size:14px;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+.detail-callout,.next-step-band{display:flex;align-items:center;justify-content:space-between;gap:30px;margin-top:30px;padding:30px 34px;background:#edf4eb;border:1px solid #dce8d9;border-radius:20px}
+.detail-callout h2,.next-step-band h2{font:800 26px/1.2 Manrope;margin:0 0 8px}
+.detail-callout p,.next-step-band p:not(.eyebrow){font-size:14px;color:#637369;line-height:1.7;margin:0}
+.next-step-band{margin:45px clamp(20px,7vw,90px) 75px}
+.next-step-band>div:first-child{max-width:650px}
+.next-step-actions{display:flex;flex-wrap:wrap;gap:10px}
+.faq-extra{max-width:850px;margin:0 auto 70px;padding:0 20px}
+.faq-extra h2{font:800 27px Manrope;margin-bottom:20px}
+[hidden]{display:none!important}
+@media(max-width:1000px){.directory-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.home-more{grid-template-columns:1fr;gap:25px;padding:55px 22px}.tool-layout{grid-template-columns:1fr;padding:45px 18px 60px}.directory-section,.detail-content{padding:45px 18px 60px}.directory-grid,.detail-grid{grid-template-columns:1fr}.detail-callout,.next-step-band{align-items:flex-start;flex-direction:column;padding:24px;margin-left:18px;margin-right:18px}.next-step-actions{width:100%}.next-step-actions>*{flex:1}.site-menu-panel{max-height:75vh}}
+@media print{.tool-layout .secondary-button,.tool-layout .primary-button,.directory-filter{display:none!important}}
