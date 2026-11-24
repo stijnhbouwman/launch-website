@@ -50,8 +50,11 @@ const resourcesByTopic = {
  {name:"Oefenen.nl",kind:"Online oefenen",description:"Oefen stap voor stap met digitale vaardigheden en dagelijkse situaties.",url:"https://www.oefenen.nl/"}]
 };
 function resourceLinks(topic){
- return '<div class="resource-list"><h4>Websites en cursussen die hierbij kunnen helpen</h4>'+
- resourcesByTopic[topic].map(item=>'<a class="resource-link" href="'+item.url+'" target="_blank" rel="noopener noreferrer"><strong>'+escapeHTML(item.name)+'</strong><span class="resource-kind">'+escapeHTML(item.kind)+'</span><span>'+escapeHTML(item.description)+'</span></a>').join("")+
+ const coursePhoto = topic === "digital"
+  ? '<img class="resource-photo" src="https://storage.pubble.nl/fe5959ff/content/2020/1/9b3184c2-0d42-459b-8ab7-608c9553366c_thumb1440.jpg" alt="Ouderen krijgen in een bibliotheek hulp bij het leren werken met een computer" loading="lazy">'
+  : "";
+ return '<div class="resource-list"><h4>Websites en cursussen die hierbij kunnen helpen</h4>'+coursePhoto+
+ resourcesByTopic[topic].map(item=>'<a class="resource-link" href="'+item.url+'" target="_blank" rel="noopener noreferrer"><strong>'+escapeHTML(item.name)+'</strong><span class="resource-kind">'+escapeHTML(item.kind)+'</span><span>'+escapeHTML(item.description)+'</span><span class="resource-cta">Bekijk website of cursus →</span></a>').join("")+
  '<p class="resource-disclaimer">Websites van externe organisaties. Cursusaanbod, kosten en beschikbaarheid kunnen veranderen. Controleer de voorwaarden bij de aanbieder.</p></div>';
 }
 
