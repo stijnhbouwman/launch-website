@@ -28,3 +28,10 @@
  .resource-kind{text-align:left;width:max-content}
  .resource-photo{max-height:190px}
 }
+
+/* Keep the final help notice calm and unobtrusive */
+.safety-section{margin:34px 10% 42px;padding:0;background:transparent;border:0;border-radius:0;gap:0}
+.safety-icon{display:none}
+.safety-section h2{font:600 13px/1.5 "DM Sans",sans-serif;color:#78847c;margin:0 0 3px}
+.safety-section p{font-size:12px;line-height:1.65;color:#879189}
+@media(max-width:800px){.safety-section{margin:28px 7% 34px;padding:0}}
