@@ -111,6 +111,17 @@ function resourceLinks(topic){
 const form = document.querySelector("#support-form");
 const input = document.querySelector("#issue");
 const results = document.querySelector("#results");
+const topicFromLink = new URLSearchParams(window.location.search).get("topic");
+const topicPrompts = {
+  mobility:"Ik wil veiliger bewegen en ben bang om te vallen.",
+  health:"Ik heb vragen over mijn gezondheid of medicijnen.",
+  connection:"Ik voel me alleen en wil meer contact met anderen.",
+  home:"Ik heb hulp nodig bij dagelijkse taken in huis.",
+  money:"Ik maak me zorgen over rekeningen of geldzaken.",
+  digital:"Ik wil hulp bij digitale vaardigheden of vervoer."
+};
+if (input && topicPrompts[topicFromLink]) input.value = topicPrompts[topicFromLink];
+
 const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 async function translateText(text, source, target) {
   if (!text || source === target) return text;
