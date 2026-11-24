@@ -66,6 +66,7 @@ async function showResults(query) {
       results.scrollIntoView({behavior:"smooth",block:"nearest"});
       return;
     }
+    const labels = await Promise.all(["Some places to start","Things you could try:","Keep in mind:"].map(label => translateText(label,"en",language)));
     const localized = await Promise.all(chosen.map(async guide => ({
       ...guide,
       title: await translateText(guide.title,"en",language),
@@ -74,8 +75,8 @@ async function showResults(query) {
       steps: await Promise.all(guide.steps.map(step=>translateText(step,"en",language))),
       note: await translateText(guide.note,"en",language)
     })));
-    results.innerHTML = '<h3 class="result-heading">'+escapeHTML(language === "en" ? "Some places to start" : "Suggested next steps")+'</h3>' + localized.map(guide =>
-      '<article class="result-card"><span class="result-tag">'+escapeHTML(guide.tag)+'</span><h3>'+escapeHTML(guide.title)+'</h3><p>'+escapeHTML(guide.intro)+'</p><strong>'+(language === "en" ? "Things you could try:" : " ")+'</strong><ul>'+guide.steps.map(step=>'<li>'+escapeHTML(step)+'</li>').join("")+'</ul><p><strong>'+(language === "en" ? "Keep in mind:" : "")+'</strong> '+escapeHTML(guide.note)+'</p></article>'
+    results.innerHTML = '<h3 class="result-heading">'+escapeHTML(labels[0])+'</h3>' + localized.map(guide =>
+      '<article class="result-card"><span class="result-tag">'+escapeHTML(guide.tag)+'</span><h3>'+escapeHTML(guide.title)+'</h3><p>'+escapeHTML(guide.intro)+'</p><strong>'+labels[1]+'</strong><ul>'+guide.steps.map(step=>'<li>'+escapeHTML(step)+'</li>').join("")+'</ul><p><strong>'+labels[2]+'</strong> '+escapeHTML(guide.note)+'</p></article>'
     ).join("");
     results.scrollIntoView({behavior:"smooth",block:"nearest"});
   } catch (error) {
