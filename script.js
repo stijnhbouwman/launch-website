@@ -158,3 +158,99 @@ document.querySelectorAll("[data-topic]").forEach(button=>button.addEventListene
   if(guide){input.value=guide.keys.slice(0,3).join(", ");showResults(input.value);}
   document.querySelector("#finder").scrollIntoView({behavior:"smooth"});
 }));
+
+// KindPath concrete action plans: turn a broad topic match into a usable next step.
+const actionPlans = {
+ mobility:{
+  urgency:"Bij een recente val met mogelijk hoofdletsel, ernstige pijn, niet kunnen opstaan of plotselinge uitval: bel 112. Bij twijfel over letsel: bel vandaag de huisarts of huisartsenpost.",
+  today:["Zet losse kleedjes, snoeren en spullen uit de looproute. Zorg dat de route naar toilet en slaapkamer goed verlicht is.","Draag stevige schoenen met een gesloten hiel; loop niet op sokken over gladde vloeren.","Noteer wanneer u bijna viel of viel: waar, waardoor, duizeligheid, schoeisel en eventuele klachten."],
+  arrange:["Bel uw huisartspraktijk en vraag om een afspraak vanwege valangst, evenwichtsproblemen of een val. Vraag of een valrisicobeoordeling en medicatiecheck passend zijn.","Vraag de fysiotherapeut of huisarts naar een erkende valpreventieve beweeginterventie in uw buurt.","Neem contact op met het Wmo-loket van uw gemeente als u een woningaanpassing, hulpmiddel of ondersteuning nodig heeft."],
+  prepare:["Een lijst van uw medicijnen (ook middelen zonder recept).","Een korte beschrijving van valmomenten, duizeligheid en plekken in huis waar u onzeker bent.","Iemand die mee kan naar de afspraak, als u dat prettig vindt."],
+  say:"Ik ben de laatste tijd onzeker met lopen / ik ben gevallen. Ik wil graag laten beoordelen waardoor dat komt en wat ik kan doen om veilig te blijven bewegen. Kunt u met mij een valrisicobeoordeling bespreken?",
+  fallback:"Lukt het niet om de huisarts te bereiken? Bel opnieuw tijdens openingstijden en vraag naar de assistente. Buiten openingstijden belt u de huisartsenpost bij klachten die niet kunnen wachten. Voor woningaanpassingen kunt u rechtstreeks het Wmo-loket van uw gemeente benaderen."
+ },
+ health:{
+  urgency:"Bij levensbedreigende klachten zoals ernstige benauwdheid, pijn op de borst of verschijnselen van een beroerte: bel 112. Bij snel verergerende of urgente klachten: huisarts of huisartsenpost.",
+  today:["Schrijf uw klacht op: wanneer begonnen, waar last van, hoe vaak, wat maakt het beter of erger?","Maak een lijst van alle medicijnen, vitamines en zelfzorgmiddelen. Verander of stop medicatie niet op eigen initiatief.","Bel de huisartspraktijk als klachten nieuw zijn, aanhouden of u zich zorgen maakt; vraag of u dezelfde dag beoordeeld moet worden."],
+  arrange:["Vraag uw apotheek om een medicatiegesprek als u meerdere medicijnen gebruikt, bijwerkingen vermoedt of innemen lastig vindt.","Vraag uw huisarts om uitleg in gewone taal: wat is het doel, wat zijn mogelijke bijwerkingen en wanneer moet u terugbellen?","Vraag om een medicatieoverzicht en laat wijzigingen controleren door arts of apotheker."],
+  prepare:["Medicijndoosjes of een actueel medicatieoverzicht.","Uw vragen op papier en het moment waarop de klachten begonnen.","Eventueel een vertrouwd persoon om mee te luisteren."],
+  say:"Ik maak me zorgen over [klacht / medicijn]. Het begon op [moment]. Ik gebruik [medicijn(en)]. Kunt u uitleggen wat een verstandige volgende stap is en wanneer ik opnieuw contact moet opnemen?",
+  fallback:"Krijgt u geen gehoor en kunnen de klachten niet wachten? Neem contact op met de huisartsenpost. Bij een levensbedreigende situatie belt u 112. Voor uitleg over gebruik of bijwerkingen kunt u ook uw eigen apotheek bellen."
+ },
+ connection:{
+  urgency:"Als u zich niet veilig voelt of denkt aan zelfdoding: blijf er niet alleen mee. Bel 112 bij direct gevaar; in Nederland kunt u 113 of 0800-0113 bellen of chatten via 113.nl.",
+  today:["Kies één laagdrempelig contact: bel iemand, stuur een kort bericht of maak een afspraak voor koffie. Een klein contactmoment telt ook.","Ga deze week naar een vaste plek waar u mensen vaker tegenkomt, zoals de bibliotheek, het buurthuis, een wandelgroep of vereniging.","Vertel één persoon eerlijk: 'Ik merk dat ik me vaak alleen voel en zou graag wat vaker contact hebben.'"],
+  arrange:["Bel het welzijnswerk of sociaal wijkteam van uw gemeente en vraag naar een ouderenadviseur, maatjesproject of ontmoetingsgroep.","Vraag de bibliotheek of het buurthuis naar vaste activiteiten, vervoer en eventuele begeleiding bij de eerste keer.","Als verdriet, angst of somberheid blijft aanhouden: maak een afspraak met uw huisarts en vertel ook hoe het uw slaap en dagelijks leven beïnvloedt."],
+  prepare:["Bedenk welk contact bij u past: één-op-één, groep, telefonisch, buiten wandelen of thuis bezoek.","Noteer dagen en tijden waarop u meestal gezelschap mist.","Vraag eventueel iemand om de eerste keer met u mee te gaan."],
+  say:"Ik heb de laatste tijd weinig contact en voel me vaak alleen. Ik wil graag mensen ontmoeten, maar weet niet goed waar ik moet beginnen. Welke ontmoetingsactiviteiten of maatjesprojecten zijn er in mijn buurt?",
+  fallback:"Weet u niet welk loket u moet hebben? Bel het algemene nummer van uw gemeente en vraag naar welzijnswerk of het sociaal wijkteam. Vraag expliciet om iemand die met u de eerste stap kan regelen."
+ },
+ home:{
+  urgency:"Als u thuis direct gevaar loopt, essentiële zorg niet krijgt of uzelf niet veilig kunt verzorgen, bel uw huisarts of gemeente voor urgente ondersteuning; bij direct levensgevaar 112.",
+  today:["Maak twee lijstjes: wat lukt niet meer (bijvoorbeeld douchen, koken, schoonmaken) en wat zou meteen helpen.","Vraag iemand die u vertrouwt om tijdelijk één concrete taak over te nemen, zoals boodschappen of een maaltijd.","Voorkom onveilige situaties: gebruik geen stoel als trapje en vraag hulp bij zwaar of gevaarlijk werk."],
+  arrange:["Bel het Wmo-loket van uw gemeente en vraag om een gesprek over huishoudelijke hulp, begeleiding, dagbesteding of woningaanpassingen.","Vraag naar onafhankelijke cliëntondersteuning. Deze persoon kan gratis helpen uw vraag voor te bereiden en de aanvraag te begrijpen.","Bespreek persoonlijke verzorging of verpleging met uw huisarts of wijkverpleegkundige; wijkverpleging loopt doorgaans via de zorgverzekeraar."],
+  prepare:["Welke taken lukken niet, hoe vaak is hulp nodig en sinds wanneer?","Wat doet u zelf nog en wat doet een mantelzorger al?","Welke oplossing zou voor u het meeste verschil maken?"],
+  say:"Ik woon thuis en merk dat [taak] niet meer goed lukt. Ik wil graag zo zelfstandig mogelijk blijven wonen. Kunt u een Wmo-gesprek of een passende beoordeling met mij regelen?",
+  fallback:"Vraag de gemeente om uw melding te registreren en uit te leggen wat de vervolgstappen en termijnen zijn. Als u het niet eens bent met een besluit, vraag om een schriftelijke uitleg en hulp van onafhankelijke cliëntondersteuning."
+ },
+ money:{
+  urgency:"Bij een verdachte betaling of vermoeden dat iemand toegang heeft tot uw bankrekening: bel direct de fraudehelpdesk van uw bank via het nummer op uw bankpas of de officiële bankwebsite. Deel geen codes.",
+  today:["Open geen links uit onverwachte sms'jes, e-mails of WhatsApp-berichten en maak geen geld over op verzoek van een onbekende beller.","Leg ongeopende brieven en rekeningen op één plek. Noteer de uiterste betaaldatum; negeer aanmaningen niet.","Bel bij een onterechte of onduidelijke rekening de organisatie via een zelf opgezocht officieel telefoonnummer."],
+  arrange:["Maak gratis een afspraak bij Geldfit (geldfit.nl) of bel uw gemeente en vraag naar schuldhulpverlening of sociaal raadslieden.","Vraag bij de gemeente naar hulp met toeslagen, minimaregelingen, betalingsregelingen en het ordenen van administratie.","Bij een incasso of deurwaardersbrief: vraag direct om specificatie en advies; beloof geen betaling die u niet kunt nakomen."],
+  prepare:["Brieven, bedragen en uiterste data; scherm BSN, rekeningnummers en andere gevoelige gegevens af als u iets deelt.","Een overzicht van inkomsten en vaste lasten, voor zover beschikbaar.","Noteer wie u al hebt gesproken en welke afspraken zijn gemaakt."],
+  say:"Ik heb moeite met het overzicht van mijn rekeningen / ik kan een rekening niet betalen. Ik wil voorkomen dat het erger wordt. Kunt u mij verbinden met schuldhulpverlening of sociaal raadslieden?",
+  fallback:"Reageert een schuldeiser niet? Neem contact op met de gemeentelijke schuldhulpverlening en bewaar kopieën van uw berichten. Bij bankfraude belt u uw bank direct; bij phishing kunt u advies vragen aan de Fraudehelpdesk."
+ },
+ digital:{
+  urgency:"Heeft iemand u gevraagd een programma te installeren, een code te delen of geld over te maken? Stop het contact. Bel uw bank via het officiële nummer als bankgegevens gedeeld zijn.",
+  today:["Klik niet op onverwachte links en geef nooit uw wachtwoord, pincode of verificatiecode door, ook niet aan iemand die zegt van de bank of overheid te zijn.","Vraag een vertrouwd persoon om één handeling tegelijk met u te oefenen. Schrijf de stappen groot en duidelijk op.","Voor vervoer: noteer vertrekpunt, bestemming en gewenste aankomsttijd; controleer de reis samen via de officiële vervoerder."],
+  arrange:["Zoek via SeniorWeb (seniorweb.nl) een leslocatie of lidmaatschap met telefonische hulp; bibliotheken bieden vaak gratis digitale inloopspreekuren.","Vraag de bibliotheek naar het Informatiepunt Digitale Overheid (IDO) voor hulp bij DigiD, toeslagen, zorg en overheidswebsites.","Voor reizen met bus of trein: vraag de vervoerder naar reisassistentie, toegankelijkheid en telefonisch boeken."],
+  prepare:["Neem uw eigen apparaat en oplader mee naar een les of inloopspreekuur.","Schrijf op wat u wilt leren en welke foutmelding u ziet. Neem nooit uw wachtwoorden op papier mee.","Vraag vooraf of de hulp gratis is en of u een afspraak nodig hebt."],
+  say:"Ik wil graag leren hoe ik [handeling] veilig kan doen. Kunt u mij dit rustig stap voor stap laten zien, zodat ik het later zelf kan herhalen?",
+  fallback:"Lukt het online niet? Ga naar de bibliotheek en vraag bij de balie naar het Informatiepunt Digitale Overheid of een SeniorWeb-leslocatie. Geef uw apparaat niet onbeheerd mee en laat niemand op afstand meekijken tenzij u die persoon zelf hebt gekozen en vertrouwt."
+ }
+};
+function chooseGuide(query){
+ const text = query.toLocaleLowerCase("nl");
+ const ranked = guides.map(g => {
+  let score = 0;
+  for(const key of g.keys){const k=key.toLocaleLowerCase("nl");if(text.includes(k)) score += k.includes(" ") ? 5 : 2;}
+  const extra = {
+   mobility:["struikel","onvast","duizelig","rollator","traplopen","bang om te vallen"],
+   health:["bijwerking","pijn","dokters","recept","dosering","medicatie"],
+   connection:["niemand","bezoek","maatje","rouw","partner overleden","contact missen"],
+   home:["schoonmaak","wassen","verzorging","mantelzorg","huishoudelijke","traplift"],
+   money:["belasting","belastingbrief","incasso","deurwaarder","phishing","pinpas","betalingsregeling"],
+   digital:["digi d","digid","whatsapp","smartphone","computerles","inloggen","ov-chipkaart"]
+  }[g.id] || [];
+  for(const k of extra) if(text.includes(k)) score+=4;
+  return {...g,score};
+ }).sort((a,b)=>b.score-a.score);
+ return ranked[0]?.score>0 ? ranked.filter(g=>g.score>0 && g.score>=ranked[0].score*0.45).slice(0,2) : [];
+}
+function renderActionPlan(guide){
+ const p=actionPlans[guide.id];
+ const list=(items)=>items.map(x=>'<li>'+escapeHTML(x)+'</li>').join("");
+ return '<section class="action-plan"><div class="action-plan-head"><span class="result-tag">Persoonlijk stappenplan</span><h4>Wat u nu concreet kunt doen</h4><p>'+escapeHTML(guide.intro)+'</p></div>'+
+ '<div class="action-columns"><div><h5>Vandaag of morgen</h5><ol>'+list(p.today)+'</ol></div><div><h5>Hulp daadwerkelijk regelen</h5><ol>'+list(p.arrange)+'</ol></div></div>'+
+ '<div class="action-subsection"><h5>Leg dit alvast klaar</h5><ul>'+list(p.prepare)+'</ul></div>'+
+ '<div class="call-script"><span>Voorbeeld: zo kunt u het zeggen</span><p>“'+escapeHTML(p.say)+'”</p><button type="button" class="copy-script" data-copy="'+escapeHTML(p.say)+'">Kopieer voorbeeldtekst</button></div>'+
+ '<div class="fallback-step"><h5>Komt u niet verder?</h5><p>'+escapeHTML(p.fallback)+'</p></div>'+
+ '<div class="urgency-note"><strong>Wanneer sneller handelen?</strong><p>'+escapeHTML(p.urgency)+'</p></div></section>';
+}
+async function showResults(query){
+ results.innerHTML='<div class="no-results" role="status">Uw situatie wordt gekoppeld aan een concreet stappenplan…</div>';
+ results.scrollIntoView({behavior:"smooth",block:"nearest"});
+ const chosen=chooseGuide(query);
+ if(!chosen.length){
+  results.innerHTML='<div class="no-results"><h3>Ik wil u gerichter op weg helpen</h3><p>Ik herken nog niet goed welk soort hulp nodig is. Beschrijf in één extra zin wat er precies misgaat en wat u graag opgelost wilt hebben. Bijvoorbeeld: “Ik kan mijn huur niet betalen en heb volgende week een aanmaning” of “Ik durf niet meer alleen te douchen omdat ik bang ben om te vallen.”</p><p><strong>U hoeft geen naam, adres, BSN, rekeningnummer of medische documenten te delen.</strong></p></div>';
+  return;
+ }
+ results.innerHTML='<h3 class="result-heading">Uw concrete route naar een oplossing</h3><p class="results-intro">We hebben uw beschrijving gekoppeld aan '+(chosen.length===1?'een passend onderwerp.':'de twee onderwerpen die het meest lijken te passen.')+' Begin bij stap 1. U hoeft niet alles tegelijk te regelen.</p>'+chosen.map(g=>'<article class="result-card detailed-result"><span class="result-tag">'+escapeHTML(g.tag)+'</span><h3>'+escapeHTML(g.title)+'</h3>'+renderActionPlan(g)+resourceLinks(g.id)+'</article>').join("");
+ results.querySelectorAll("[data-copy]").forEach(button=>button.addEventListener("click",async()=>{
+  const value=button.dataset.copy;
+  try{await navigator.clipboard.writeText(value);button.textContent="Tekst gekopieerd";}
+  catch(error){button.textContent="Selecteer de voorbeeldtekst om te kopiëren";}
+ }));
+ results.scrollIntoView({behavior:"smooth",block:"start"});
+}
