@@ -238,136 +238,6 @@ function renderActionPlan(guide){
  '<div class="fallback-step"><h5>Komt u niet verder?</h5><p>'+escapeHTML(p.fallback)+'</p></div>'+
  '<div class="urgency-note"><strong>Wanneer sneller handelen?</strong><p>'+escapeHTML(p.urgency)+'</p></div></section>';
 }
-const courseCatalog = {
- mobility:{name:"Veilig en zeker bewegen",level:"Beginners • ongeveer 25 minuten",video:"https://www.youtube-nocookie.com/embed/WJpZg5R0YYA",videoTitle:"Valpreventie Ouderen — VeiligheidNL",source:"https://www.veiligheid.nl/themas/valpreventie",lessons:[
-  ["Les 1 — Begrijp uw valrisico","Bekijk de video en schrijf daarna twee situaties op waarin u onzeker bent: bijvoorbeeld opstaan, traplopen of buiten wandelen.","Welke drie dingen kunnen uw valrisico beïnvloeden? Denk aan zicht, medicijnen, evenwicht en uw woonomgeving.","U kunt uw antwoorden meenemen naar de huisarts."],
-  ["Les 2 — Maak uw huis veiliger","Loop alleen als dat veilig kan door uw woning. Controleer de route naar toilet, slaapkamer en voordeur. Verwijder losse kleedjes en snoeren; zorg voor licht en stevige schoenen.","Noem twee aanpassingen die u vandaag veilig kunt doen.","Ga niet zelf op een trap of stoel staan om iets aan te passen. Vraag hulp bij risicovol werk."],
-  ["Les 3 — Regel passende beweeghulp","Bel uw huisarts en vraag of een valrisicobeoordeling passend is. Vraag naar een erkende cursus zoals In Balans of Otago en bespreek eerst welke oefeningen veilig zijn voor u.","Wat vraagt u aan de huisarts?","Doe geen nieuwe evenwichtsoefeningen zonder steun als u duizelig bent of een hoog valrisico hebt."]
- ]},
- health:{name:"Medicijnen begrijpen en veilig gebruiken",level:"Beginners • ongeveer 20 minuten",videoPage:"https://www.apotheek.nl/over-apotheeknl/begrijpelijke-medicijninfo-voor-iedereen",videoTitle:"Instructievideo's en medicijnuitleg — Apotheek.nl",source:"https://www.apotheek.nl/",lessons:[
-  ["Les 1 — Begrijp waarvoor uw medicijnen zijn","Bekijk op Apotheek.nl de video over uw medicijn of de juiste manier van gebruiken. Kijk op het etiket en vergelijk de uitleg met wat u thuis doet.","Welke informatie staat op het etiket: hoeveelheid, tijdstip en bijzondere aanwijzingen?","Uw eigen etiket en voorschrift zijn leidend. Neem bij twijfel contact op met uw apotheek."],
-  ["Les 2 — Herken vragen en mogelijke bijwerkingen","Schrijf op wat u merkt, wanneer het gebeurt en wanneer u het medicijn inneemt. Zoek de bijsluiter of vraag de apotheker om uitleg in gewone taal.","Welke drie gegevens noteert u voordat u belt?","Stop of verander voorgeschreven medicijnen niet zelf."],
-  ["Les 3 — Bereid een medicatiegesprek voor","Leg uw actuele medicatieoverzicht en vragen klaar. Bel uw apotheek en vraag om een medicatiegesprek, zeker als u meerdere medicijnen gebruikt.","Welke vraag wilt u als eerste aan de apotheker stellen?","Bij ernstige of plotselinge klachten belt u direct huisarts of 112 afhankelijk van de ernst."]
- ]},
- connection:{name:"Meer contact en minder alleen",level:"Beginners • ongeveer 20 minuten",videoPage:"https://www.oranjefonds.nl/docuserie-samen-ouder",videoTitle:"Docuserie Samen Ouder — Oranje Fonds",source:"https://www.eentegeneenzaamheid.nl/",lessons:[
-  ["Les 1 — Ontdek welk contact bij u past","Bekijk een aflevering en let op welke activiteiten of vormen van contact u aanspreken. Kies wat bij uw karakter past: samen wandelen, koffie, bellen, vrijwilligerswerk of een club.","Voelt één-op-één contact of een groep voor u prettiger? Schrijf één reden op.","U hoeft niet meteen een grote groep in. Een klein en herhaald contactmoment is ook een begin."],
-  ["Les 2 — Zet een eerste contactstap","Kies één persoon of organisatie. Stuur een bericht, bel het buurthuis of loop binnen bij de bibliotheek. Vraag naar een activiteit waar u vrijblijvend kunt kennismaken.","Noteer wie u gaat benaderen en op welke dag u dat doet.","Vraag iemand die u vertrouwt om de eerste keer mee te gaan als dat helpt."],
-  ["Les 3 — Maak contact herhaalbaar","Kies een vast moment per week. Vraag bij welzijnswerk of gemeente naar een maatjesproject, ontmoetingsgroep of vervoer als reizen lastig is.","Welke activiteit zou u de komende twee weken één keer willen proberen?","Als somberheid of verdriet blijft aanhouden, bespreek dit ook met uw huisarts."]
- ]},
- home:{name:"Hulp thuis stap voor stap regelen",level:"Beginners • ongeveer 25 minuten",video:"https://www.youtube-nocookie.com/embed/GLPz3cgxerw",videoTitle:"Wmo uitgelegd: zo vraagt u hulp aan",source:"https://www.regelhulp.nl/onderwerpen/mijn-situatie/ouderen",lessons:[
-  ["Les 1 — Breng uw hulpvraag in kaart","Bekijk de video over de Wmo. Schrijf op welke taken niet meer lukken, hoe vaak hulp nodig is en wat u zelf nog kunt.","Noem één taak waarvoor u hulp wilt en wat een goede oplossing zou zijn.","De Wmo is voor ondersteuning via de gemeente; persoonlijke verpleging kan onder de zorgverzekering vallen."],
-  ["Les 2 — Neem contact op met de gemeente","Zoek de website of het telefoonnummer van uw eigen gemeente en vraag naar het Wmo-loket of sociaal wijkteam. Vraag hoe u een melding doet en wat u kunt verwachten.","Oefen uw openingszin: 'Ik wil graag bespreken welke ondersteuning thuis mogelijk is.'","Vraag zo nodig om onafhankelijke cliëntondersteuning. Die kan helpen bij voorbereiding en gesprekken."],
-  ["Les 3 — Bereid het gesprek voor","Leg uw lijst met taken, beperkingen, hulpmiddelen en gewenste ondersteuning klaar. Denk ook na over wat mantelzorgers al doen en wat haalbaar is.","Welke drie punten wilt u tijdens het gesprek zeker noemen?","Vraag om schriftelijke bevestiging van afspraken en wat de volgende stap is."]
- ]},
- money:{name:"Grip op geldzaken en geldzorgen",level:"Beginners • ongeveer 25 minuten",video:"https://www.youtube-nocookie.com/embed/U1Mogw_V2ic",videoTitle:"Geldplan Kom uit de geldzorgen — Nibud",source:"https://www.startpuntgeldzaken.nl/nibud/uitdezorgen/",lessons:[
-  ["Les 1 — Krijg overzicht zonder oordeel","Bekijk de introductievideo van het Nibud. Verzamel uw vaste lasten, inkomsten en openstaande rekeningen op één plek. Deel deze gegevens niet met onbekenden.","Welke rekening heeft de eerstvolgende betaaldatum?","Open geen links uit onverwachte berichten en deel nooit uw pincode of verificatiecode."],
-  ["Les 2 — Maak een eerste actieoverzicht","Markeer rekeningen die u niet op tijd kunt betalen. Neem zelf contact op met de organisatie en vraag naar een betalingsregeling. Negeer aanmaningen niet.","Welke organisatie belt u als eerste en wat wilt u vragen?","Doe geen toezegging die u niet kunt nakomen. Vraag om afspraken op papier."],
-  ["Les 3 — Schakel gratis hulp in","Bel uw gemeente en vraag naar schuldhulpverlening of sociaal raadslieden. U kunt ook Geldfit benaderen voor een eerste advies en passende doorverwijzing.","Welke documenten neemt u mee naar een gesprek?","Bij verdachte banktransacties belt u direct uw bank via het officiële nummer."]
- ]},
- digital:{name:"Digitaal vaardiger en veiliger worden",level:"Beginners • ongeveer 25 minuten",videoPage:"https://hetccv.nl/themas/cyberveiligheid/cybercrime/database-lokale-cyberprojecten/interactieve-training-cyberweerbaarheid-senioren/",videoTitle:"Echt of nep? — interactieve film voor senioren",source:"https://www.seniorweb.nl/cursussen/online-cursussen",lessons:[
-  ["Les 1 — Herken nepberichten en oplichting","Bekijk de interactieve film. Oefen met het herkennen van onverwachte berichten, nep-banken en verzoeken om codes of geld.","Wat doet u als iemand onverwacht om uw inlogcode vraagt?","Deel nooit wachtwoorden, pincodes of eenmalige codes. Bel zelf uw bank via het nummer op uw pas."],
-  ["Les 2 — Oefen één digitale handeling","Kies één taak, zoals een e-mail openen, videobellen of een website van de overheid bezoeken. Vraag een bibliotheek of SeniorWeb-leslocatie om rustig mee te oefenen.","Welke ene handeling wilt u zelfstandig kunnen uitvoeren?","Gebruik voor DigiD alleen de officiële website of app. Laat uw wachtwoord niet door een onbekende invoeren."],
-  ["Les 3 — Vraag persoonlijke digitale hulp","Neem uw eigen apparaat mee naar een bibliotheek of SeniorWeb-leslocatie. Vraag om uitleg in kleine stappen en schrijf de stappen op papier.","Waar kunt u in uw buurt terecht voor persoonlijke uitleg?","Geef uw apparaat niet onbeheerd mee en installeer geen software op verzoek van een onverwachte beller."]
- ]}
-};
-function courseVideoScenes(course){
- return course.lessons.flatMap((lesson,index)=>[
-  {lesson:index+1,kind:"UITLEG",title:lesson[0],body:lesson[1],voice:lesson[1]},
-  {lesson:index+1,kind:"DOE MEE",title:"Probeer dit zelf",body:lesson[2],voice:lesson[2]},
-  {lesson:index+1,kind:"ONTHOUD",title:"Belangrijk om te onthouden",body:lesson[3],voice:lesson[3]}
- ]);
-}
-function renderCourseScene(root,id,index){
- const course=courseCatalog[id]; if(!course) return;
- const scenes=courseVideoScenes(course);
- const safeIndex=Math.max(0,Math.min(index,scenes.length-1));
- const scene=scenes[safeIndex];
- const player=root.querySelector('[data-video-player="'+id+'"]');
- if(!player) return;
- player.dataset.scene=String(safeIndex);
- player.querySelector("[data-video-scene-count]").textContent="SCÈNE "+(safeIndex+1)+" / "+scenes.length;
- player.querySelector("[data-video-lesson]").textContent="LES "+scene.lesson+" · "+scene.kind;
- player.querySelector("[data-video-title]").textContent=scene.title;
- player.querySelector("[data-video-body]").textContent=scene.body;
- player.querySelector("[data-video-progress]").style.width=((safeIndex+1)/scenes.length*100)+"%";
- player.querySelector("[data-video-prev]").disabled=safeIndex===0;
- player.querySelector("[data-video-next]").disabled=safeIndex===scenes.length-1;
- player.querySelector("[data-video-next]").textContent=safeIndex===scenes.length-1?"Einde cursus":"Volgende scène →";
- const art=player.querySelector(".original-video-art");
- art.classList.remove("scene-enter");
- void art.offsetWidth;
- art.classList.add("scene-enter");
-}
-function initCoursePlayer(root,id){
- const player=root.querySelector('[data-video-player="'+id+'"]');
- if(!player || player.dataset.ready==="true") return;
- player.dataset.ready="true";
- player.dataset.scene="0";
- renderCourseScene(root,id,0);
- player.querySelector("[data-video-prev]").addEventListener("click",()=>{
-  if("speechSynthesis" in window) window.speechSynthesis.cancel();
-  renderCourseScene(root,id,Number(player.dataset.scene)-1);
- });
- player.querySelector("[data-video-next]").addEventListener("click",()=>{
-  if("speechSynthesis" in window) window.speechSynthesis.cancel();
-  renderCourseScene(root,id,Number(player.dataset.scene)+1);
- });
- player.querySelector("[data-video-speak]").addEventListener("click",()=>{
-  if(!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)){
-   player.querySelector("[data-video-status]").textContent="Gesproken uitleg wordt niet door deze browser ondersteund.";
-   return;
-  }
-  window.speechSynthesis.cancel();
-  const scene=courseVideoScenes(courseCatalog[id])[Number(player.dataset.scene)];
-  const utterance=new SpeechSynthesisUtterance(scene.voice);
-  utterance.lang="nl-NL";
-  utterance.rate=0.88;
-  utterance.pitch=1;
-  utterance.onstart=()=>player.querySelector("[data-video-status]").textContent="De uitleg wordt voorgelezen…";
-  utterance.onend=()=>player.querySelector("[data-video-status]").textContent="U kunt de uitleg opnieuw beluisteren of verdergaan.";
-  window.speechSynthesis.speak(utterance);
- });
- player.querySelector("[data-video-stop]").addEventListener("click",()=>{
-  if("speechSynthesis" in window) window.speechSynthesis.cancel();
-  player.querySelector("[data-video-status]").textContent="De gesproken uitleg is gestopt.";
- });
-}
-function renderCourse(guide){
- const c=courseCatalog[guide.id]; if(!c) return "";
- const lessons=c.lessons.map((lesson,i)=>'<article class="course-lesson"><div class="lesson-number">LES '+(i+1)+'</div><div class="lesson-content"><h5>'+escapeHTML(lesson[0])+'</h5><p>'+escapeHTML(lesson[1])+'</p><div class="lesson-task"><strong>Doe-opdracht</strong><p>'+escapeHTML(lesson[2])+'</p></div><div class="lesson-check"><strong>Controleer uzelf</strong><p>'+escapeHTML(lesson[3])+'</p></div><label class="lesson-done"><input type="checkbox" data-course="'+guide.id+'" data-lesson="'+i+'"><span>Deze les heb ik afgerond</span></label></div></article>').join("");
- return '<section class="guided-course" data-course-panel="'+guide.id+'"><div class="course-header"><span class="result-tag">Eigen KindPath-videocursus</span><h4>'+escapeHTML(c.name)+'</h4><p>'+escapeHTML(c.level)+' • 3 lessen • 9 korte videoscènes • in uw eigen tempo</p><div class="course-progress"><span class="course-progress-fill" data-progress-fill="'+guide.id+'"></span></div><small data-progress-label="'+guide.id+'">0 van 3 lessen afgerond</small></div>'+
- '<div class="original-video-player" data-video-player="'+guide.id+'" aria-label="KindPath videocursus speler">'+
-  '<div class="original-video-screen"><div class="original-video-art scene-enter"><span class="video-art-orbit orbit-one"></span><span class="video-art-orbit orbit-two"></span><span class="video-art-symbol" aria-hidden="true">✳</span><span class="video-art-caption">KINDPATH · STAP VOOR STAP</span></div>'+
-   '<div class="original-video-copy"><span data-video-lesson>LES 1 · UITLEG</span><h5 data-video-title></h5><p data-video-body></p><small data-video-scene-count></small></div></div>'+
-  '<div class="video-timeline"><span data-video-progress></span></div>'+
-  '<div class="video-controls"><button type="button" data-video-prev disabled>← Vorige</button><div><button type="button" data-video-speak>▶ Luister naar uitleg</button><button type="button" data-video-stop>■ Stop</button></div><button type="button" data-video-next>Volgende scène →</button></div><p class="video-status" data-video-status aria-live="polite">Eigen KindPath-les. Gebruik ‘Luister naar uitleg’ voor gesproken tekst.</p></div>'+
- '<p class="video-source">Dit is een originele, interactieve KindPath-videoles met eigen scènes en gesproken uitleg. Er worden geen externe video’s gebruikt.</p><div class="course-lesson-list">'+lessons+'</div><div class="course-finish"><strong>Na deze minicursus</strong><p>U hebt de belangrijkste stappen geoefend. Gebruik daarna het stappenplan hierboven om passende hulp te regelen. U hoeft niets te bewijzen of perfect te doen.</p></div></section>';
-}
-function initCourseProgress(root){
- ["mobility","health","connection","home","money","digital"].forEach(id=>initCoursePlayer(root,id));
- root.querySelectorAll("[data-course]").forEach(input=>{
-  const key="kindpath-course-"+input.dataset.course;
-  let done=[];try{done=JSON.parse(localStorage.getItem(key)||"[]");}catch(e){}
-  input.checked=done.includes(Number(input.dataset.lesson));
-  input.addEventListener("change",()=>{
-   let current=[];try{current=JSON.parse(localStorage.getItem(key)||"[]");}catch(e){}
-   const n=Number(input.dataset.lesson);
-   current=input.checked?[...new Set([...current,n])]:current.filter(x=>x!==n);
-   localStorage.setItem(key,JSON.stringify(current));
-   updateCourseProgress(root,input.dataset.course,current.length);
-  });
- });
- ["mobility","health","connection","home","money","digital"].forEach(id=>{
-  const inputs=[...root.querySelectorAll('[data-course="'+id+'"]')];
-  if(inputs.length) updateCourseProgress(root,id,inputs.filter(x=>x.checked).length);
- });
-}
-function updateCourseProgress(root,id,count){
- const fill=root.querySelector('[data-progress-fill="'+id+'"]');
- const label=root.querySelector('[data-progress-label="'+id+'"]');
- if(fill) fill.style.width=(count/3*100)+"%";
- if(label) label.textContent=count+" van 3 lessen afgerond"+(count===3?" — cursus voltooid!":"");
-}
 async function showResults(query){
  results.innerHTML='<div class="no-results" role="status">Uw situatie wordt gekoppeld aan een concreet stappenplan…</div>';
  results.scrollIntoView({behavior:"smooth",block:"nearest"});
@@ -376,8 +246,7 @@ async function showResults(query){
   results.innerHTML='<div class="no-results"><h3>Ik wil u gerichter op weg helpen</h3><p>Ik herken nog niet goed welk soort hulp nodig is. Beschrijf in één extra zin wat er precies misgaat en wat u graag opgelost wilt hebben. Bijvoorbeeld: “Ik kan mijn huur niet betalen en heb volgende week een aanmaning” of “Ik durf niet meer alleen te douchen omdat ik bang ben om te vallen.”</p><p><strong>U hoeft geen naam, adres, BSN, rekeningnummer of medische documenten te delen.</strong></p></div>';
   return;
  }
- results.innerHTML='<h3 class="result-heading">Uw concrete route naar een oplossing</h3><p class="results-intro">We hebben uw beschrijving gekoppeld aan '+(chosen.length===1?'een passend onderwerp.':'de twee onderwerpen die het meest lijken te passen.')+' Begin bij stap 1. U hoeft niet alles tegelijk te regelen.</p>'+chosen.map(g=>'<article class="result-card detailed-result"><span class="result-tag">'+escapeHTML(g.tag)+'</span><h3>'+escapeHTML(g.title)+'</h3>'+renderActionPlan(g)+renderCourse(g)+resourceLinks(g.id)+'</article>').join("");
- initCourseProgress(results);
+ results.innerHTML='<h3 class="result-heading">Uw concrete route naar een oplossing</h3><p class="results-intro">We hebben uw beschrijving gekoppeld aan '+(chosen.length===1?'een passend onderwerp.':'de twee onderwerpen die het meest lijken te passen.')+' Begin bij stap 1. U hoeft niet alles tegelijk te regelen.</p>'+chosen.map(g=>'<article class="result-card detailed-result"><span class="result-tag">'+escapeHTML(g.tag)+'</span><h3>'+escapeHTML(g.title)+'</h3>'+renderActionPlan(g)+resourceLinks(g.id)+'</article>').join("");
  results.querySelectorAll("[data-copy]").forEach(button=>button.addEventListener("click",async()=>{
   const value=button.dataset.copy;
   try{await navigator.clipboard.writeText(value);button.textContent="Tekst gekopieerd";}
