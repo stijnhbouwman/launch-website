@@ -463,3 +463,41 @@ body.kp-high-contrast button{outline-offset:3px}
  .hero,.finder-section,.topics-section,.how-section,.library-section,.care-section,.checklist-section,.faq-section{padding:18px 0;background:#fff;break-inside:avoid}
  a{color:#000;text-decoration:underline}
 }
+
+
+/* Multi-page navigation and layout */
+.site-menu{position:relative}
+.site-menu>summary{display:flex;align-items:center;gap:11px;list-style:none;cursor:pointer;background:#315f4b;color:#fff;border-radius:999px;padding:12px 20px;font-size:14px;font-weight:700;box-shadow:0 8px 20px rgba(49,95,75,.16);transition:transform .2s,background .2s}
+.site-menu>summary::-webkit-details-marker{display:none}
+.site-menu>summary:hover{background:#234938;transform:translateY(-1px)}
+.menu-lines{font-size:17px}
+.menu-chevron{font-size:18px;transition:transform .2s}
+.site-menu[open] .menu-chevron{transform:rotate(180deg)}
+.site-menu-panel{position:absolute;right:0;top:calc(100% + 13px);width:290px;padding:10px;background:#fff;border:1px solid #e2e9df;border-radius:20px;box-shadow:0 22px 55px rgba(31,58,39,.18);display:grid;gap:3px;z-index:100}
+.site-menu-panel a{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;border-radius:12px;font-size:14px;font-weight:600;color:#3e5645;transition:background .18s,color .18s}
+.site-menu-panel a:hover{background:#edf4eb;color:#234938}
+.site-menu-panel a span{color:#86a084}
+.page-intro{padding:75px 24px 55px;text-align:center;background:linear-gradient(180deg,#eef4eb,#f7f8f4)}
+.page-intro h1{max-width:850px;margin:0 auto 17px;font:800 clamp(38px,5.5vw,64px)/1.08 Manrope,sans-serif;letter-spacing:-2.8px;color:#24352f}
+.page-intro>p:last-child{max-width:700px;margin:0 auto;color:#66756e;font-size:18px;line-height:1.7}
+.home-tiles{padding:75px clamp(24px,9vw,130px) 100px}
+.home-tile-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;max-width:1250px;margin:auto}
+.home-tile{display:flex;flex-direction:column;align-items:flex-start;min-height:240px;padding:25px;border:1px solid #e2e9df;border-radius:23px;background:#fff;box-shadow:0 12px 32px rgba(38,68,46,.05);transition:transform .22s,box-shadow .22s,border-color .22s}
+.home-tile:hover{transform:translateY(-5px);box-shadow:0 20px 42px rgba(38,68,46,.1);border-color:#b8cdb4}
+.home-tile>span{display:grid;place-items:center;width:38px;height:38px;border-radius:13px;background:#edf4eb;color:#496f4f;font:800 13px Manrope}
+.home-tile h3{font:700 20px/1.25 Manrope;margin:20px 0 8px}
+.home-tile p{font-size:14px;color:#6b796f;line-height:1.65;margin:0 0 20px}
+.home-tile b{margin-top:auto;color:#315f4b;font-size:13px}
+.site-footer nav{display:flex;gap:18px;flex-wrap:wrap}
+.site-footer nav a{font-size:12px;color:#d3dfd2;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:900px){.home-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){
+ .site-header{height:70px}
+ .site-menu>summary{padding:10px 15px;font-size:13px}
+ .site-menu-panel{right:0;left:auto;width:min(290px,calc(100vw - 30px))}
+ .page-intro{padding:55px 22px 40px}
+ .page-intro h1{letter-spacing:-1.8px}
+ .home-tiles{padding:55px 20px 70px}
+ .home-tile-grid{grid-template-columns:1fr}
+ .home-tile{min-height:190px}
+}
