@@ -597,3 +597,28 @@ button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:480px){
   .site-header .site-menu>summary{padding:10px 15px;gap:8px;font-size:14px}
 }
+
+
+/* Menu label contrast and dedicated hip-recovery guide */
+.site-header .site-menu > summary,
+.site-header .site-menu > summary *{
+  color:#fff !important;
+  -webkit-text-fill-color:#fff !important;
+  opacity:1 !important;
+  visibility:visible !important;
+}
+.hip-intro{max-width:930px;margin:0 auto 42px;padding:28px 32px;background:#edf4eb;border:1px solid #dce8d9;border-radius:18px}
+.hip-intro h2{font:800 clamp(25px,3vw,34px)/1.2 Manrope;margin:12px 0;color:#234938}
+.hip-intro p{color:#53645b;line-height:1.8;margin:10px 0}
+.hip-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:1100px;margin:0 auto 48px}
+.hip-step{padding:23px;background:#fff;border:1px solid var(--line);border-radius:15px}
+.hip-step>span{font-size:11px;font-weight:800;letter-spacing:1.2px;color:#66856b}
+.hip-step h3{font:800 19px/1.3 Manrope;margin:10px 0 8px}
+.hip-step p{font-size:14px;color:#596b60;line-height:1.75;margin:0}
+.hip-callout{max-width:1000px;margin:32px auto;padding:25px 28px;background:#f2f6ef;border:1px solid #dce8d9;border-radius:16px}
+.hip-callout h2{font:800 22px Manrope;margin:0 0 10px;color:#234938}
+.hip-callout p{font-size:15px;line-height:1.8;color:#43584a;margin:0}
+.hip-alert{max-width:1000px;margin:35px auto;padding:24px 27px;background:#fff5eb;border-left:4px solid #c58a52;border-radius:0 14px 14px 0}
+.hip-alert h2{font:800 21px Manrope;color:#744b2a;margin:0 0 10px}
+.hip-alert p{font-size:14px;line-height:1.75;color:#6a5948;margin:8px 0}
+@media(max-width:650px){.hip-intro{padding:22px;margin:0 0 32px}.hip-steps{grid-template-columns:1fr}.hip-step{padding:19px}.hip-callout,.hip-alert{padding:20px;margin:24px 0}}
