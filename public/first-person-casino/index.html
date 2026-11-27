@@ -260,10 +260,10 @@ function ragdollNPC(n){
  const limbs=[...n.legs,...n.arms];
  n.ragdollPhysics={rootVelocity:new THREE.Vector3((Math.random()-.5)*1.8,0,(Math.random()-.5)*1.8),rootAngular:new THREE.Vector3((Math.random()-.5)*5,(Math.random()-.5)*2,(Math.random()-.5)*5),limbs:[]};
  for(const limb of limbs){
-  const side=limb.position.x<0?-1:1,isLeg=n.legs.includes(limb);
+  const home=limb.position.clone(),side=home.x<0?-1:1,isLeg=n.legs.includes(limb);
   const anchorLocal=isLeg?new THREE.Vector3(side*.135,.79,0):new THREE.Vector3(side*.31,1.49,0);
   scene.attach(limb);
-  n.ragdollPhysics.limbs.push({object:limb,anchorLocal,velocity:new THREE.Vector3((Math.random()-.5)*2,Math.random()*2,(Math.random()-.5)*2),angular:new THREE.Vector3((Math.random()-.5)*9,(Math.random()-.5)*4,(Math.random()-.5)*9),isLeg});
+  n.ragdollPhysics.limbs.push({object:limb,home,anchorLocal,velocity:new THREE.Vector3((Math.random()-.5)*2,Math.random()*2,(Math.random()-.5)*2),angular:new THREE.Vector3((Math.random()-.5)*9,(Math.random()-.5)*4,(Math.random()-.5)*9),isLeg});
  }
  n.g.position.y=.02;n.g.rotation.set((Math.random()-.5)*.35, n.g.rotation.y,(Math.random()-.5)*.35);
 }
@@ -374,7 +374,7 @@ function animate(){requestAnimationFrame(animate);const dt=Math.min(.04,clock.ge
     vel.addScaledVector(force,dt);obj.position.addScaledVector(vel,dt);
     limb.angular.multiplyScalar(Math.pow(.975,dt*60));
     obj.rotation.x+=limb.angular.x*dt;obj.rotation.y+=limb.angular.y*dt;obj.rotation.z+=limb.angular.z*dt;
-    const floor=limb.isLeg?.47:.43;
+    const floor=limb.isLeg ? .47 : .43;
     if(obj.position.y<floor){obj.position.y=floor;if(vel.y<0)vel.y*=-.18;vel.x*=.82;vel.z*=.82;limb.angular.multiplyScalar(.82)}
    }
   }
@@ -382,7 +382,7 @@ function animate(){requestAnimationFrame(animate);const dt=Math.min(.04,clock.ge
  }
  if(n.ragdollUntil){
   n.ragdollUntil=0;
-  for(const limb of [...n.legs,...n.arms]){n.g.attach(limb);limb.position.set(limb.position.x<0?-.135:.135,n.legs.includes(limb)?.79:1.49,0);limb.rotation.set(0,0,0)}
+  for(const state of n.ragdollPhysics?.limbs||[]){const limb=state.object;n.g.attach(limb);limb.position.copy(state.home);limb.rotation.set(0,0,0)}
   n.ragdollPhysics=null;n.g.position.y=0;n.g.rotation.set(0,n.g.rotation.y,0);
  }
  n.gameTimer-=dt;if(n.seated&&n.gameTimer<=0){n.playing=!n.playing;n.gameTimer=2.5+Math.random()*5}const target=n.path[n.index],dx=target.x-n.g.position.x,dz=target.z-n.g.position.z,dist=Math.hypot(dx,dz);const moving=!n.seated&&dist>.25;const swing=Math.sin(performance.now()*.006+n.phase);n.legs[0].rotation.x=moving?swing*.55:Math.sin(performance.now()*.001+n.phase)*.06;n.legs[1].rotation.x=moving?-swing*.55:Math.sin(performance.now()*.001+n.phase+1)*.06;n.arms[0].rotation.x=moving?-swing*.42:(n.playing?Math.sin(performance.now()*.004+n.phase)*.25:0);n.arms[1].rotation.x=moving?swing*.42:(n.playing?Math.cos(performance.now()*.004+n.phase)*.25:0);n.g.rotation.z=moving?Math.sin(performance.now()*.004+n.phase)*.025:Math.sin(performance.now()*.001+n.phase)*.012;if(n.seated){n.g.rotation.y+=Math.sin(performance.now()*.001+n.phase)*.0008;continue}if(dist<.65){n.index=(n.index+1)%n.path.length;n.stuck=0}else{const step=n.speed*dt,dirX=dx/dist,dirZ=dz/dist;let nx=n.g.position.x+dirX*step,nz=n.g.position.z+dirZ*step;
