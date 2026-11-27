@@ -254,11 +254,18 @@ function throwHeldBottle(){
  say('Bottle thrown!');
 }
 function ragdollNPC(n){
- const now=performance.now();n.ragdollUntil=now+20000;n.ragdollRoll=(Math.random()-.5)*1.4;n.ragdollPitch=(Math.random()-.5)*.65;
- n.g.position.y=.08;n.g.rotation.z=n.ragdollRoll;n.g.rotation.x=n.ragdollPitch;
- n.legs.forEach((leg,i)=>{leg.rotation.x=(i?1:-1)*(1.0+Math.random()*.9);leg.rotation.z=(Math.random()-.5)*.7});
- n.arms.forEach(arm=>{arm.rotation.x=(Math.random()-.5)*2.4;arm.rotation.z=(Math.random()-.5)*2.1});
- n.seated=false;n.playing=false;
+ if(n.ragdollUntil>performance.now())return;
+ const now=performance.now();n.ragdollUntil=now+20000;n.seated=false;n.playing=false;
+ n.g.updateMatrixWorld(true);
+ const limbs=[...n.legs,...n.arms];
+ n.ragdollPhysics={rootVelocity:new THREE.Vector3((Math.random()-.5)*1.8,0,(Math.random()-.5)*1.8),rootAngular:new THREE.Vector3((Math.random()-.5)*5,(Math.random()-.5)*2,(Math.random()-.5)*5),limbs:[]};
+ for(const limb of limbs){
+  const side=limb.position.x<0?-1:1,isLeg=n.legs.includes(limb);
+  const anchorLocal=isLeg?new THREE.Vector3(side*.135,.79,0):new THREE.Vector3(side*.31,1.49,0);
+  scene.attach(limb);
+  n.ragdollPhysics.limbs.push({object:limb,anchorLocal,velocity:new THREE.Vector3((Math.random()-.5)*2,Math.random()*2,(Math.random()-.5)*2),angular:new THREE.Vector3((Math.random()-.5)*9,(Math.random()-.5)*4,(Math.random()-.5)*9),isLeg});
+ }
+ n.g.position.y=.02;n.g.rotation.set((Math.random()-.5)*.35, n.g.rotation.y,(Math.random()-.5)*.35);
 }
 function buyDrink(cost,level,duration){
  if(chips<cost){document.querySelector('#game-result').textContent='Not enough chips for that drink.';return}
@@ -351,8 +358,33 @@ document.querySelector('#close').onclick=()=>{document.querySelector('#game').st
 function nearestTable(){let best=null,dist=seated?Infinity:3.8;for(const i of interactables){const d=i.pos.distanceTo(camera.position),dir=i.pos.clone().sub(camera.position).normalize();if(d<dist&&(seated||dir.dot(camera.getWorldDirection(new THREE.Vector3()))>.58)){best=i;dist=d}}return best}
 function npcBlocked(x,z,n){if(x<-29||x>29||z<-50||z>30)return true;for(const o of solidObstacles){if(Math.hypot(x-o.x,z-o.z)<o.r+.42)return true}for(const p of physicalProps){if(Math.hypot(x-p.x,z-p.z)<2.35)return true}for(const other of npcs){if(other!==n&&Math.hypot(x-other.g.position.x,z-other.g.position.z)<.82)return true}return false}
 function animate(){requestAnimationFrame(animate);const dt=Math.min(.04,clock.getDelta()),forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),move=new THREE.Vector3();if(locked){if(keys.KeyW)move.add(forward);if(keys.KeyS)move.sub(forward);if(keys.KeyD)move.add(right);if(keys.KeyA)move.sub(right);if(move.lengthSq()&&!seated){move.normalize().multiplyScalar((keys.ShiftLeft?9:5.2)*(1-Math.min(.78,drunkLevel*.23))*dt);const next=camera.position.clone().add(move);if(Math.abs(next.x)<30.5&&next.z>-50&&next.z<30&&!solidObstacles.some(o=>Math.hypot(next.x-o.x,next.z-o.z)<o.r+.38))camera.position.copy(next)}}if(!seated){verticalVelocity-=18*dt;camera.position.y+=verticalVelocity*dt;}if(camera.position.y<=1.7){camera.position.y=1.7;verticalVelocity=0;onGround=true}for(const n of npcs){
- if(n.ragdollUntil>performance.now()){n.g.position.y=Math.max(.05,n.g.position.y);continue}
- if(n.ragdollUntil){n.ragdollUntil=0;n.g.position.y=0;n.g.rotation.x=0;n.g.rotation.z=0;n.legs.forEach(leg=>{leg.rotation.x=0;leg.rotation.z=0});n.arms.forEach(arm=>{arm.rotation.x=0;arm.rotation.z=0});}
+ if(n.ragdollUntil>performance.now()){
+  const p=n.ragdollPhysics;if(p){
+   const gravity=9.8,now=performance.now();
+   p.rootVelocity.y-=gravity*dt;n.g.position.addScaledVector(p.rootVelocity,dt);
+   p.rootAngular.multiplyScalar(Math.pow(.985,dt*60));
+   n.g.rotation.x+=p.rootAngular.x*dt;n.g.rotation.y+=p.rootAngular.y*dt;n.g.rotation.z+=p.rootAngular.z*dt;
+   if(n.g.position.y<.02){n.g.position.y=.02;p.rootVelocity.y=Math.max(0,-p.rootVelocity.y*.12);p.rootVelocity.x*=.88;p.rootVelocity.z*=.88;p.rootAngular.multiplyScalar(.94)}
+   n.g.updateMatrixWorld(true);
+   for(const limb of p.limbs){
+    const target=n.g.localToWorld(limb.anchorLocal.clone());
+    const obj=limb.object,vel=limb.velocity;
+    const stiffness=limb.isLeg?32:25,damping=limb.isLeg?7:6;
+    const force=target.sub(obj.position).multiplyScalar(stiffness).add(new THREE.Vector3(0,-gravity,0)).addScaledVector(vel,-damping);
+    vel.addScaledVector(force,dt);obj.position.addScaledVector(vel,dt);
+    limb.angular.multiplyScalar(Math.pow(.975,dt*60));
+    obj.rotation.x+=limb.angular.x*dt;obj.rotation.y+=limb.angular.y*dt;obj.rotation.z+=limb.angular.z*dt;
+    const floor=limb.isLeg?.47:.43;
+    if(obj.position.y<floor){obj.position.y=floor;if(vel.y<0)vel.y*=-.18;vel.x*=.82;vel.z*=.82;limb.angular.multiplyScalar(.82)}
+   }
+  }
+  continue;
+ }
+ if(n.ragdollUntil){
+  n.ragdollUntil=0;
+  for(const limb of [...n.legs,...n.arms]){n.g.attach(limb);limb.position.set(limb.position.x<0?-.135:.135,n.legs.includes(limb)?.79:1.49,0);limb.rotation.set(0,0,0)}
+  n.ragdollPhysics=null;n.g.position.y=0;n.g.rotation.set(0,n.g.rotation.y,0);
+ }
  n.gameTimer-=dt;if(n.seated&&n.gameTimer<=0){n.playing=!n.playing;n.gameTimer=2.5+Math.random()*5}const target=n.path[n.index],dx=target.x-n.g.position.x,dz=target.z-n.g.position.z,dist=Math.hypot(dx,dz);const moving=!n.seated&&dist>.25;const swing=Math.sin(performance.now()*.006+n.phase);n.legs[0].rotation.x=moving?swing*.55:Math.sin(performance.now()*.001+n.phase)*.06;n.legs[1].rotation.x=moving?-swing*.55:Math.sin(performance.now()*.001+n.phase+1)*.06;n.arms[0].rotation.x=moving?-swing*.42:(n.playing?Math.sin(performance.now()*.004+n.phase)*.25:0);n.arms[1].rotation.x=moving?swing*.42:(n.playing?Math.cos(performance.now()*.004+n.phase)*.25:0);n.g.rotation.z=moving?Math.sin(performance.now()*.004+n.phase)*.025:Math.sin(performance.now()*.001+n.phase)*.012;if(n.seated){n.g.rotation.y+=Math.sin(performance.now()*.001+n.phase)*.0008;continue}if(dist<.65){n.index=(n.index+1)%n.path.length;n.stuck=0}else{const step=n.speed*dt,dirX=dx/dist,dirZ=dz/dist;let nx=n.g.position.x+dirX*step,nz=n.g.position.z+dirZ*step;
 if(npcBlocked(nx,nz,n)){const options=[[dirZ,-dirX],[-dirZ,dirX],[-dirX,-dirZ]];let moved=false;for(const [sx,sz] of options){const tx=n.g.position.x+sx*step,tz=n.g.position.z+sz*step;if(!npcBlocked(tx,tz,n)){nx=tx;nz=tz;moved=true;break}}if(!moved){n.stuck+=dt;if(n.stuck>1.5){n.index=(n.index+1)%n.path.length;n.stuck=0}}else n.stuck=0}else n.stuck=0;
 if(!npcBlocked(nx,nz,n)){n.g.position.x=nx;n.g.position.z=nz;n.g.rotation.y=Math.atan2(-dirX,-dirZ)}n.g.position.y=Math.abs(Math.sin(performance.now()*.006+n.phase))*.025}}if(performance.now()<drunkUntil&&drunkLevel>0){const t=performance.now()*.001,heavy=Math.min(1,drunkLevel/2.5);camera.rotation.z=Math.sin(t*(1.8+heavy*2.2))*(.035+heavy*.19)+Math.sin(t*5.1)*heavy*.045;camera.rotation.x=pitch+Math.sin(t*1.35)*heavy*.12+Math.sin(t*3.7)*heavy*.035;camera.rotation.y=yaw+Math.sin(t*.9)*heavy*.22+Math.sin(t*2.8)*heavy*.07;const blur=heavy*1.8;renderer.domElement.style.filter=blur>0.1?'blur('+blur.toFixed(2)+'px) saturate('+(1+heavy*.5)+')':'none';drunkOverlay.style.opacity=String(heavy*.78);drunkOverlay.style.background='radial-gradient(ellipse at center, transparent '+(72-heavy*28)+'%, rgba(70,8,18,'+(heavy*.34)+') 100%)'}else{drunkLevel=Math.max(0,drunkLevel-dt*.08);camera.rotation.z=0;camera.rotation.x=pitch;camera.rotation.y=yaw;renderer.domElement.style.filter='none';drunkOverlay.style.opacity='0'}const near=nearestTable();hint.style.opacity=near&&locked?'1':'0';if(near)hint.textContent='Press E to play · '+near.label;if(seated){camera.up.set(0,0,-1);camera.position.set(seatedReturnPosition?seatSpots.find(q=>q.pos.distanceTo(seatedReturnPosition)<3.2)?.look.x??camera.position.x:camera.position.x,9,seatedReturnPosition?seatSpots.find(q=>q.pos.distanceTo(seatedReturnPosition)<3.2)?.look.z??camera.position.z:camera.position.z);const seatView=seatSpots.find(q=>q.pos.distanceTo(seatedReturnPosition)<3.2);if(seatView)camera.lookAt(seatView.look.x,1.25,seatView.look.z)}for(const p of physicalProps){if(p.type==='roulette'&&p.ball){p.ball.userData.t+=dt*4.5;const a=p.ball.userData.t;p.ball.position.set(p.x+Math.cos(a)*.72,1.48,p.z+Math.sin(a)*.72)}}for(let i=thrownBottles.length-1;i>=0;i--){
