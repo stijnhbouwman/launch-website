@@ -20,7 +20,7 @@
 import * as THREE from 'three';
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x090b12);scene.fog=new THREE.Fog(0x090b12,28,105);
 const camera=new THREE.PerspectiveCamera(76,innerWidth/innerHeight,.1,125);camera.position.set(0,1.7,24);
-const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:"high-performance"});renderer.setPixelRatio(Math.min(devicePixelRatio,1.1));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;document.body.appendChild(renderer.domElement);
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:"high-performance"});renderer.setPixelRatio(Math.min(devicePixelRatio,.9));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;document.body.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xffe6bd,0x60402b,2.5));scene.add(new THREE.AmbientLight(0xffdfad,0.85));renderer.toneMappingExposure=1.65;
 const mat=(c,m=0,r=.55)=>new THREE.MeshStandardMaterial({color:c,metalness:m,roughness:r}),gold=mat(0xc99b4d,.75,.26),dark=mat(0x171b24,.15,.65),floorMat=mat(0x30202a,.2,.35),felt=mat(0x08714c),red=mat(0x7c2635),cream=mat(0xe8d9ba),skinTones=[0xe6b58d,0x9d674c,0xf0c8a2,0x704735,0xc88c68],suits=[0x263c50,0x442d39,0x293d30,0x34343c,0x7d3c35,0x403329];
 function box(w,h,d,material,x,y,z){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
@@ -196,7 +196,7 @@ function makeNPC(i,x,z){
  npcs.push({g,path,index:1,speed:.48+(i%4)*.09,phase:i*.83,homeX:x,homeZ:z,seated:false,legs,arms,playing:false,gameTimer:Math.random()*8,stuck:0,ragdollUntil:0,ragdollRoll:0,ragdollPitch:0});
 }
 // Restore the full original population grid; do not thin the crowd.
-for(let i=0;i<24;i++){const x=-26+(i%6)*10.2,z=-36+Math.floor(i/6)*12;makeNPC(i,x,z)}
+for(let i=0;i<16;i++){const x=-26+(i%4)*17.2,z=-36+Math.floor(i/4)*20;makeNPC(i,x,z)}
 // Restore guests around the eight lounge-table positions: three per table, same NPC pool.
 const loungeSpots=[[-24,-28],[-8,-28],[8,-28],[24,-28],[-24,12],[-8,12],[8,12],[24,12]];
 for(let i=0;i<loungeSpots.length;i++){
@@ -205,7 +205,7 @@ for(let i=0;i<loungeSpots.length;i++){
  const top=new THREE.Mesh(new THREE.CylinderGeometry(.72,.78,.13,28),dark);top.position.y=.88;lounge.add(top);
  const edge=new THREE.Mesh(new THREE.TorusGeometry(.72,.045,8,28),gold);edge.rotation.x=Math.PI/2;edge.position.y=.96;lounge.add(edge);
  const stem=new THREE.Mesh(new THREE.CylinderGeometry(.13,.2,.78,16),gold);stem.position.y=.43;lounge.add(stem);
- for(let j=0;j<3;j++){const n=npcs[(i*3+j)%24];const a=(j/3)*Math.PI*2+Math.PI/6;n.g.position.set(tx+Math.cos(a)*1.42,0,tz+Math.sin(a)*1.42);n.g.rotation.y=-a+Math.PI/2;n.seated=false;n.index=0;n.path=[new THREE.Vector3(n.g.position.x,0,n.g.position.z),new THREE.Vector3(n.g.position.x+Math.cos(a)*2.5,0,n.g.position.z+Math.sin(a)*2.5),new THREE.Vector3(n.g.position.x,0,n.g.position.z)];}
+ for(let j=0;j<2;j++){const n=npcs[(i*2+j)%npcs.length];const a=(j/3)*Math.PI*2+Math.PI/6;n.g.position.set(tx+Math.cos(a)*1.42,0,tz+Math.sin(a)*1.42);n.g.rotation.y=-a+Math.PI/2;n.seated=false;n.index=0;n.path=[new THREE.Vector3(n.g.position.x,0,n.g.position.z),new THREE.Vector3(n.g.position.x+Math.cos(a)*2.5,0,n.g.position.z+Math.sin(a)*2.5),new THREE.Vector3(n.g.position.x,0,n.g.position.z)];}
 }
 const keys={};let yaw=0,pitch=0,locked=false,paused=false,hasEnteredWorld=false,verticalVelocity=0,onGround=true,seated=false,seatedReturnPosition=null,seatedReturnYaw=0,seatedReturnPitch=0;const clock=new THREE.Clock();const ray=new THREE.Raycaster(),hint=document.querySelector('#hint'),toast=document.querySelector('#toast');let chips=50;let gameState={};
 const balanceEl=document.querySelector('#balance');function updateBalance(){balanceEl.textContent=chips.toLocaleString('en-US');if(chips>=10000){document.querySelector('#wallet').innerHTML='🏆 GOAL COMPLETE · 10,000 CHIPS';say('JACKPOT! You reached 10,000 chips!')}}
