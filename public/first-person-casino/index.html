@@ -293,6 +293,31 @@ function pokerRank(h){const vals=h.map(c=>c.v===11?14:c.v).sort((a,b)=>a-b),coun
 
 // Multiplayer lobby connection uses the casino's existing authoritative WebSocket rooms.
 let lobbySocket=null, lobbyReady=false, activeRoom='global', lobbyState=null;
+const remotePlayers=new Map();let lastWorldSync=0;
+function makeRemotePlayer(p){
+ const g=new THREE.Group(), color=new THREE.Color(p.avatarColor||'#d6b46a');
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.29,.62,4,8),new THREE.MeshStandardMaterial({color,roughness:.62}));
+ body.position.y=1.05;g.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.2,14,12),new THREE.MeshStandardMaterial({color:0xd9aa86,roughness:.8}));
+ head.position.y=1.72;g.add(head);
+ const hair=new THREE.Mesh(new THREE.SphereGeometry(.205,12,8,0,Math.PI*2,0,Math.PI*.55),new THREE.MeshStandardMaterial({color:0x30231d}));
+ hair.position.y=1.79;g.add(hair);
+ const nameCanvas=document.createElement('canvas');nameCanvas.width=512;nameCanvas.height=96;
+ const ctx=nameCanvas.getContext('2d');ctx.fillStyle='rgba(5,8,14,.78)';ctx.fillRect(8,8,496,80);ctx.strokeStyle='#e8c47c';ctx.lineWidth=3;ctx.strokeRect(8,8,496,80);
+ ctx.font='bold 38px system-ui';ctx.textAlign='center';ctx.fillStyle='#fff0cf';ctx.fillText(String(p.name||'Player').slice(0,18),256,61);
+ const tex=new THREE.CanvasTexture(nameCanvas);const label=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+ label.position.y=2.35;label.scale.set(2.2,.42,1);g.add(label);scene.add(g);
+ return {g,target:new THREE.Vector3(p.x,0,p.z),yaw:Number(p.yaw)||0,lastSeen:performance.now()};
+}
+function updateRemotePlayers(list){
+ const seen=new Set();
+ for(const p of list||[]){if(!p||p.id===playerId||!Number.isFinite(p.x)||!Number.isFinite(p.z))continue;
+  seen.add(p.id);let r=remotePlayers.get(p.id);if(!r){r=makeRemotePlayer(p);remotePlayers.set(p.id,r)}
+  r.target.set(p.x,0,p.z);r.yaw=Number(p.yaw)||0;r.lastSeen=performance.now();
+ }
+ for(const [id,r] of remotePlayers){if(!seen.has(id)){scene.remove(r.g);r.g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(o.material.map)o.material.map.dispose();o.material.dispose()}});remotePlayers.delete(id)}}
+}
+
 const nameInput=document.querySelector('#playerName'), lobbyMessage=document.querySelector('#lobbyMessage');
 let playerId=localStorage.getItem('gh-fps-player-id');
 if(!playerId){playerId=crypto.randomUUID();localStorage.setItem('gh-fps-player-id',playerId)}
@@ -345,6 +370,7 @@ function connectLobby(room='global',action=null){
       }
     }
     if(packet.type==='room-created'||packet.type==='room-joined')lobbySay('Lobby ready.');
+    if(packet.type==='world-state')updateRemotePlayers(packet.players);
   });
   socket.addEventListener('close',()=>{
     clearTimeout(timeout);
@@ -368,7 +394,7 @@ document.querySelector('#resumeGame').addEventListener('click',()=>{paused=false
 document.addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='KeyF'&&locked){if(seated){seated=false;camera.up.set(0,1,0);if(seatedReturnPosition)camera.position.copy(seatedReturnPosition);camera.position.y=1.7;yaw=seatedReturnYaw;pitch=seatedReturnPitch;camera.rotation.set(pitch,yaw,0,'YXZ');seatedReturnPosition=null;verticalVelocity=0;onGround=true;say('You stand up. Use WASD to walk.')}else{const seat=seatSpots.find(q=>q.pos.distanceTo(camera.position)<3.2);if(seat){seated=true;seatedReturnPosition=camera.position.clone();seatedReturnYaw=yaw;seatedReturnPitch=pitch;camera.up.set(0,0,-1);camera.position.set(seat.look.x,9,seat.look.z);camera.lookAt(seat.look.x,1.25,seat.look.z);camera.updateMatrixWorld(true);say('Seated · overhead table view. Press E to play, F or Space to stand.')}}}if(e.code==='Space'&&locked&&seated){seated=false;camera.up.set(0,1,0);if(seatedReturnPosition)camera.position.copy(seatedReturnPosition);camera.position.y=1.7;yaw=seatedReturnYaw;pitch=seatedReturnPitch;camera.rotation.set(pitch,yaw,0,'YXZ');seatedReturnPosition=null;verticalVelocity=0;onGround=true;say('You stand up. Use WASD to walk.')}else if(e.code==='Space'&&locked&&!seated&&onGround){verticalVelocity=7.5;onGround=false}if(e.code==='KeyE'&&locked){const item=nearestTable();if(item)openGame(item)}});document.addEventListener('keyup',e=>keys[e.code]=false);
 function nearestTable(){let best=null,dist=seated?Infinity:3.8;for(const i of interactables){const d=i.pos.distanceTo(camera.position),dir=i.pos.clone().sub(camera.position).normalize();if(d<dist&&(seated||dir.dot(camera.getWorldDirection(new THREE.Vector3()))>.58)){best=i;dist=d}}return best}
 function npcBlocked(x,z,n){if(x<-29||x>29||z<-50||z>30)return true;for(const o of solidObstacles){if(Math.hypot(x-o.x,z-o.z)<o.r+.42)return true}for(const p of physicalProps){if(Math.hypot(x-p.x,z-p.z)<2.35)return true}for(const other of npcs){if(other!==n&&Math.hypot(x-other.g.position.x,z-other.g.position.z)<.82)return true}return false}
-function animate(){requestAnimationFrame(animate);if(paused){renderer.render(scene,camera);return}const dt=Math.min(.04,clock.getDelta()),forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),move=new THREE.Vector3();if(locked){if(keys.KeyW)move.add(forward);if(keys.KeyS)move.sub(forward);if(keys.KeyD)move.add(right);if(keys.KeyA)move.sub(right);if(move.lengthSq()&&!seated){move.normalize().multiplyScalar((keys.ShiftLeft?9:5.2)*(1-Math.min(.78,drunkLevel*.23))*dt);const next=camera.position.clone().add(move);if(Math.abs(next.x)<30.5&&next.z>-50&&next.z<30&&!solidObstacles.some(o=>Math.hypot(next.x-o.x,next.z-o.z)<o.r+.38))camera.position.copy(next)}}if(!seated){verticalVelocity-=18*dt;camera.position.y+=verticalVelocity*dt;}if(camera.position.y<=1.7){camera.position.y=1.7;verticalVelocity=0;onGround=true}for(const n of npcs){
+function animate(){requestAnimationFrame(animate);if(lobbySocket&&lobbySocket.readyState===WebSocket.OPEN&&hasEnteredWorld&&!paused&&performance.now()-lastWorldSync>100){lastWorldSync=performance.now();lobbySocket.send(JSON.stringify({type:'world-move',x:camera.position.x,z:camera.position.z,yaw,active:true}))}for(const r of remotePlayers.values()){r.g.position.lerp(r.target,.28);r.g.rotation.y=r.yaw}if(paused){renderer.render(scene,camera);return}const dt=Math.min(.04,clock.getDelta()),forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),move=new THREE.Vector3();if(locked){if(keys.KeyW)move.add(forward);if(keys.KeyS)move.sub(forward);if(keys.KeyD)move.add(right);if(keys.KeyA)move.sub(right);if(move.lengthSq()&&!seated){move.normalize().multiplyScalar((keys.ShiftLeft?9:5.2)*(1-Math.min(.78,drunkLevel*.23))*dt);const next=camera.position.clone().add(move);if(Math.abs(next.x)<30.5&&next.z>-50&&next.z<30&&!solidObstacles.some(o=>Math.hypot(next.x-o.x,next.z-o.z)<o.r+.38))camera.position.copy(next)}}if(!seated){verticalVelocity-=18*dt;camera.position.y+=verticalVelocity*dt;}if(camera.position.y<=1.7){camera.position.y=1.7;verticalVelocity=0;onGround=true}for(const n of npcs){
  if(n.ragdollUntil>performance.now()){
   const p=n.ragdollPhysics;if(p){
    const gravity=9.8,now=performance.now();
