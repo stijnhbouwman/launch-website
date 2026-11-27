@@ -813,7 +813,7 @@ function handleMessage(socket, message) {
     if(now-(socket.lastWorldMoveAt||0)<80)return;
     socket.lastWorldMoveAt=now;
     player.worldPosition={x,z,yaw,updatedAt:now};
-    const packet=JSON.stringify({type:"world-state",players:connectedRoomPlayers(player.roomCode).filter(p=>p.worldPosition&&now-p.worldPosition.updatedAt<5000).map(p=>({id:p.id,name:p.name,avatarColor:p.avatarColor,x:p.worldPosition.x,z:p.worldPosition.z,yaw:p.worldPosition.yaw}))});
+    const packet=JSON.stringify({type:"world-state",players:connectedRoomPlayers(player.roomCode).filter(p=>p.worldPosition).map(p=>({id:p.id,name:p.name,avatarColor:p.avatarColor,x:p.worldPosition.x,z:p.worldPosition.z,yaw:p.worldPosition.yaw}))});
     for(const peer of sockets)if(peer.readyState===WebSocket.OPEN&&peer.playerId&&players.get(peer.playerId)?.roomCode===player.roomCode)peer.send(packet);
     return;
   }
