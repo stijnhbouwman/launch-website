@@ -226,21 +226,29 @@ function makeBottle(){
  const cap=new THREE.Mesh(new THREE.CylinderGeometry(.052,.052,.075,12),gold);cap.position.y=.77;g.add(cap);
  return g;
 }
-function equipBottle(){
+let heldDrink=null;
+function equipBottle(level,duration){
  if(heldBottle)camera.remove(heldBottle);
  heldBottle=makeBottle();heldBottle.position.set(.42,-.38,-.78);heldBottle.rotation.set(-.18,.12,-.22);camera.add(heldBottle);
+ heldDrink={level,duration};
  say('Bottle in hand · Left click to drink · Right click to throw');
 }
 function drinkHeldBottle(){
- if(!heldBottle)return;
+ if(!heldBottle||!heldDrink)return;
  camera.remove(heldBottle);heldBottle=null;
- say('You drink your bottle.');
+ const drink=heldDrink;heldDrink=null;
+ drunkLevel=Math.min(3.5,drunkLevel+drink.level);
+ drunkUntil=Math.max(performance.now(),drunkUntil)+drink.duration*1000;
+ const state=drunkLevel<.5?'You feel a little buzzed.':drunkLevel<1.3?'You are tipsy.':drunkLevel<2.3?'You are very drunk!':'YOU ARE ABSOLUTELY WASTED!';
+ updateBalance();
+ document.querySelector('#game-result').textContent='You drank your bottle · '+state;
+ say(state);
 }
 function throwHeldBottle(){
  if(!heldBottle)return;
  const start=new THREE.Vector3();heldBottle.getWorldPosition(start);
  const direction=new THREE.Vector3();camera.getWorldDirection(direction);
- camera.remove(heldBottle);heldBottle=null;
+ camera.remove(heldBottle);heldBottle=null;heldDrink=null;
  const bottle=makeBottle();bottle.position.copy(start);bottle.rotation.copy(camera.rotation);scene.add(bottle);
  thrownBottles.push({mesh:bottle,velocity:direction.multiplyScalar(17).add(new THREE.Vector3(0,2.2,0)),life:4});
  say('Bottle thrown!');
@@ -254,10 +262,9 @@ function ragdollNPC(n){
 }
 function buyDrink(cost,level,duration){
  if(chips<cost){document.querySelector('#game-result').textContent='Not enough chips for that drink.';return}
- chips-=cost;drunkLevel=Math.min(3.5,drunkLevel+level);drunkUntil=Math.max(performance.now(),drunkUntil)+duration*1000;updateBalance();
- const state=drunkLevel<.5?'You feel a little buzzed.':drunkLevel<1.3?'You are tipsy.':drunkLevel<2.3?'You are very drunk!':'YOU ARE ABSOLUTELY WASTED!';
- document.querySelector('#game-result').textContent='Drink served · '+state+' · Bottle equipped.';
- equipBottle();say(state);
+ chips-=cost;updateBalance();
+ document.querySelector('#game-result').textContent='Drink purchased · Bottle equipped. Left click to drink.';
+ equipBottle(level,duration);
 }
 function result(s){document.querySelector('#game-result').textContent=s;updateBalance()}
 function charge(){if(chips<gameState.bet){result('Not enough chips. Choose a smaller bet.');return false}chips-=gameState.bet;return true}
