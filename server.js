@@ -767,6 +767,7 @@ function handleMessage(socket, message) {
     player.avatarColor = avatarColor;
     player.character = character;
     player.connected = true;
+    player.worldPosition = player.worldPosition || null;
     player.sockets.add(socket);
     const registeredRoom = rooms.get(requestedRoom);
     const earnedDailyBonus =
@@ -805,6 +806,17 @@ function handleMessage(socket, message) {
   const player = players.get(socket.playerId);
   if (!player || !player.sockets.has(socket)) return;
 
+  if (message.type === "world-move") {
+    const x=Number(message.x), z=Number(message.z), yaw=Number(message.yaw);
+    if(!Number.isFinite(x)||!Number.isFinite(z)||!Number.isFinite(yaw)||x < -30||x > 30||z < -51||z > 31) return;
+    const now=Date.now();
+    if(now-(socket.lastWorldMoveAt||0)<80)return;
+    socket.lastWorldMoveAt=now;
+    player.worldPosition={x,z,yaw,updatedAt:now};
+    const packet=JSON.stringify({type:"world-state",players:connectedRoomPlayers(player.roomCode).filter(p=>p.worldPosition&&now-p.worldPosition.updatedAt<5000).map(p=>({id:p.id,name:p.name,avatarColor:p.avatarColor,x:p.worldPosition.x,z:p.worldPosition.z,yaw:p.worldPosition.yaw}))});
+    for(const peer of sockets)if(peer.readyState===WebSocket.OPEN&&peer.playerId&&players.get(peer.playerId)?.roomCode===player.roomCode)peer.send(packet);
+    return;
+  }
   if (message.type === "update-character") {
     player.character = safeCharacter(message.character);
     savePlayers();
@@ -2007,7 +2019,10 @@ webSocketServer.on("connection", (socket) => {
       if (player.sockets.size === 0) {
         player.connected = false;
         player.cursor = null;
+        player.worldPosition = null;
         broadcastCursors(player.roomCode);
+        const worldPacket=JSON.stringify({type:'world-state',players:connectedRoomPlayers(player.roomCode).filter(p=>p.worldPosition).map(p=>({id:p.id,name:p.name,avatarColor:p.avatarColor,x:p.worldPosition.x,z:p.worldPosition.z,yaw:p.worldPosition.yaw}))});
+        for(const peer of sockets)if(peer.readyState===WebSocket.OPEN&&peer.playerId&&players.get(peer.playerId)?.roomCode===player.roomCode)peer.send(worldPacket);
       }
       const room = rooms.get(player.roomCode);
       const blackjack = room?.blackjack;
